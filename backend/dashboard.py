@@ -10,12 +10,20 @@ from flask import Blueprint, Response, jsonify, request, render_template, stream
 # Import models and db from app module
 from .app import db, User, Room, RoomMembership, Queue, QueueEntry
 
+# Avoid circular import at module import time by importing inside function when needed
+def _get_room_player_status() -> Dict[str, Dict[int, Dict[str, Any]]]:
+    try:
+        from .app import _room_player_status  # type: ignore
+        return _room_player_status  # type: ignore
+    except Exception:
+        return {}
+
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
 
 def _active_rooms_snapshot() -> Dict[str, Any]:
-    """Build a snapshot of active rooms, their state, and users with per-user state."""
+    """Build a snapshot of active rooms, their state, users, and latest queue entries."""
     # Rooms with at least one active member
     active_room_rows: List[Room] = (
         db.session.query(Room)
@@ -36,21 +44,57 @@ def _active_rooms_snapshot() -> Dict[str, Any]:
             .order_by(RoomMembership.joined_at.asc())
             .all()
         )
-        users = [
-            {
+        users = []
+        for (m, u) in memberships:
+            rps = _get_room_player_status()
+            status = (rps.get(room.code, {}) or {}).get(int(u.id), {})
+            users.append({
                 "id": u.id,
                 "name": u.name,
                 "picture": u.picture,
                 "active": bool(m.active),
                 "last_seen": int(m.last_seen or 0),
-            }
-            for (m, u) in memberships
-        ]
+                "player": {
+                    "state": status.get("state") or ("idle" if not m.active else "unknown"),
+                    "is_ad": bool(status.get("is_ad") or False),
+                    "ts": int(status.get("ts") or 0),
+                }
+            })
+        # Latest queue and its entries (if any)
+        q = (
+            db.session.query(Queue)
+            .filter(Queue.room_id == room.id)
+            .order_by(Queue.created_at.desc())
+            .first()
+        )
+        entries: List[Dict[str, Any]] = []
+        queue_info: Dict[str, Any] | None = None
+        if q:
+            queue_info = {"id": int(q.id), "created_at": int(q.created_at or 0)}
+            q_entries: List[QueueEntry] = (
+                db.session.query(QueueEntry)
+                .filter(QueueEntry.queue_id == q.id, QueueEntry.status != "deleted")
+                .order_by(QueueEntry.position.asc(), QueueEntry.id.asc())
+                .limit(50)
+                .all()
+            )
+            for e in q_entries:
+                entries.append(
+                    {
+                        "id": int(e.id),
+                        "url": e.url,
+                        "title": e.title or "",
+                        "thumbnail_url": e.thumbnail_url or "",
+                        "position": int(e.position or 0),
+                    }
+                )
         rooms.append(
             {
                 "code": room.code,
                 "state": room.state,
                 "users": users,
+                "queue": queue_info,
+                "entries": entries,
             }
         )
 
@@ -212,5 +256,115 @@ def db_list():
             "total": int(total),
             "offset": int(offset),
             "limit": int(limit),
+        }
+    )
+
+
+@dashboard_bp.get("/api/db/queue_entries")
+def db_queue_entries():
+    """List entries for a specific queue id (read-only, dashboard use)."""
+    try:
+        qid = int(request.args.get("queue_id", "0"))
+    except Exception:
+        qid = 0
+    if qid <= 0:
+        return jsonify({"error": "invalid_queue_id"}), 400
+    # Only select relevant, non-private columns
+    entries: List[QueueEntry] = (
+        db.session.query(QueueEntry)
+        .filter(QueueEntry.queue_id == qid)
+        .order_by(QueueEntry.position.asc(), QueueEntry.id.asc())
+        .all()
+    )
+    def _entry_to_dict(e: QueueEntry) -> Dict[str, Any]:
+        return {
+            "id": int(e.id),
+            "queue_id": int(e.queue_id),
+            "added_by_id": int(e.added_by_id or 0),
+            "url": e.url,
+            "title": e.title or "",
+            "thumbnail_url": e.thumbnail_url or "",
+            "position": int(e.position or 0),
+            "added_at": int(e.added_at or 0),
+            "status": e.status or "",
+        }
+    return jsonify({
+        "queue_id": int(qid),
+        "entries": [_entry_to_dict(e) for e in entries],
+        "total": int(len(entries)),
+    })
+
+
+@dashboard_bp.get("/api/db/room_details")
+def db_room_details():
+    """Return room members and the most recent queue's entries for a room."""
+    try:
+        rid = int(request.args.get("room_id", "0"))
+    except Exception:
+        rid = 0
+    if rid <= 0:
+        return jsonify({"error": "invalid_room_id"}), 400
+    room: Room | None = db.session.get(Room, rid)
+    if not room:
+        return jsonify({"error": "not_found"}), 404
+    # Members (include inactive, ordered by joined time)
+    member_rows = (
+        db.session.query(RoomMembership, User)
+        .join(User, RoomMembership.user_id == User.id)
+        .filter(RoomMembership.room_id == room.id)
+        .order_by(RoomMembership.joined_at.asc())
+        .all()
+    )
+    members = [
+        {
+            "id": int(u.id),
+            "name": u.name,
+            "picture": u.picture,
+            "active": bool(m.active),
+            "last_seen": int(m.last_seen or 0),
+        }
+        for (m, u) in member_rows
+    ]
+    # Most recent queue and its entries (if any)
+    q = (
+        db.session.query(Queue)
+        .filter(Queue.room_id == room.id)
+        .order_by(Queue.created_at.desc())
+        .first()
+    )
+    entries: list[dict[str, Any]] = []
+    if q:
+        q_entries: List[QueueEntry] = (
+            db.session.query(QueueEntry)
+            .filter(QueueEntry.queue_id == q.id)
+            .order_by(QueueEntry.position.asc(), QueueEntry.id.asc())
+            .all()
+        )
+        for e in q_entries:
+            entries.append(
+                {
+                    "id": int(e.id),
+                    "queue_id": int(e.queue_id),
+                    "added_by_id": int(e.added_by_id or 0),
+                    "url": e.url,
+                    "title": e.title or "",
+                    "thumbnail_url": e.thumbnail_url or "",
+                    "position": int(e.position or 0),
+                    "added_at": int(e.added_at or 0),
+                    "status": e.status or "",
+                }
+            )
+    return jsonify(
+        {
+            "room": {
+                "id": int(room.id),
+                "code": room.code,
+                "state": room.state,
+                "created_at": int(room.created_at or 0),
+                "is_private": bool(room.is_private),
+            },
+            "members": members,
+            "queue": {"id": int(q.id)} if q else None,
+            "entries": entries,
         }
     )

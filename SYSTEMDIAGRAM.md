@@ -7,7 +7,7 @@ This document explains the overall architecture, core data models, APIs/events, 
 ```mermaid
 flowchart TD
   subgraph Browser[User Browser]
-    CS[Content Script\nShareTubeApp (zyX UI)]
+    CS[Content Script ShareTubeApp]
     POP[Extension Popup/Options]
   end
 

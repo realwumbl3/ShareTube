@@ -7,9 +7,11 @@ import {
 	fetchMetadataFromBackend,
 	extractUrlsFromDataTransfer,
 	isYouTubeUrl,
-	copyWatchroomUrl
+	copyWatchroomUrl,
+	extractVideoId
 } from "./utils.js";
 import { ensureSocket } from "./socket.js";
+import YouTubePlayerObserver from "./player.js";
 
 const { html, LiveVar, LiveList } = zyX;
 
@@ -25,6 +27,8 @@ export default class ShareTubeApp {
 		this.roomState = new LiveVar("idle");
 		this.justJoinedCode = null;
 		this.storageListener = null;
+		this.player = null;
+		this.adPlaying = new LiveVar(false);
 
 		html`
 			<div id="sharetube_main">
@@ -37,12 +41,10 @@ export default class ShareTubeApp {
 					</div>
 					<div class="queue-list" id="sharetube_queue_list" zyx-live-list=${{ list: this.queue }}></div>
 					<div class="queue-footer">
-						<button class="rounded_btn" zyx-click=${() => this.clearQueue()}>Clear Queue</button>
-						<button class="rounded_btn" zyx-click=${() => console.log("app state", this)}>Log App State</button>
 					</div>
 				</div>
 				<div id="sharetube_pill">
-					<span>ShareTube</span>
+					<span zyx-click=${() => console.log("app state", this)}>ShareTube</span>
 					<div class="presence" zyx-if=${[this.presence, v => v.length > 0]} zyx-live-list=${{ list: this.presence }}></div>
 					<button class="rounded_btn" title="Start or copy Watchroom link" zyx-click=${(z) => { z.e.stopPropagation(); this.handlePlusButton(); }}>+</button>
 					<button class="rounded_btn" zyx-click=${(z) => { z.e.stopPropagation(); this.toggleQueueVisibility(); }}>
@@ -103,6 +105,7 @@ export default class ShareTubeApp {
 		this.attachListeners();
 		this.setupDragAndDrop();
 		this.tryJoinFromUrlHash();
+		this.initPlayerObserver();
 	}
 
 	toggleQueueVisibility() {
@@ -176,7 +179,10 @@ export default class ShareTubeApp {
 		this.roomCode.set(code || "");
 		this.justJoinedCode = code || null;
 		copyWatchroomUrl(code);
-		// No need to push queue; server adopts existing personal queue on room creation
+		// Ensure the room has the queue the user already started.
+		// If a personal queue exists, server adoption keeps it.
+		// If not (e.g., user queued items before signing in), push local queue now.
+		// Server adopts existing personal queue; nothing else to send here
 	}
 
 	onRoomJoinResult(res) {
@@ -234,27 +240,6 @@ export default class ShareTubeApp {
 		} catch { }
 	}
 
-	serializeQueue() {
-		const out = [];
-		const list = this.queue && Array.isArray(this.queue) ? this.queue : [];
-		const max = list.length;
-		for (let i = 0; i < max; i++) {
-			const item = this.queue[i];
-			if (!item) continue;
-			out.push({ url: item.url });
-		}
-		return out;
-	}
-
-	async pushQueueToServer(code) {
-		try {
-			const sock = await ensureSocket(this);
-			if (!sock || !code) return;
-			const items = this.serializeQueue();
-			sock.emit("queue_replace", { code, items });
-		} catch { }
-	}
-
 	onQueueSnapshot(payload) {
 		try {
 			const code = this.roomCode.get();
@@ -306,12 +291,26 @@ export default class ShareTubeApp {
 		try {
 			const code = this.roomCode.get();
 			if (!payload || payload.code !== code) return;
+			const initial = this.roomState.get();
 			const state = payload.state === 'playing' ? 'playing' : 'idle';
 			this.roomState.set(state);
-			if (state === 'playing') {
+			if (this.player) {
+				this.player.setDesiredState(state === 'playing' ? 'playing' : 'paused');
+					// Emit immediately on state transitions to keep dashboard accurate
+					this.emitPlayerStatus(this.adPlaying.get(), true);
+			}
+			if (initial === 'idle' && state === 'playing') {
 				const first = this.queue[0];
 				if (first && first.url) {
 					try {
+						const currentId = (() => { try { return extractVideoId(location.href); } catch { return ''; } })();
+						const targetId = (() => { try { return extractVideoId(first.url); } catch { return ''; } })();
+						if (currentId && targetId && currentId === targetId) {
+							if (location.hash !== `#sharetube:${code}`) {
+								location.hash = `sharetube:${code}`;
+							}
+							return;
+						}
 						const u = (() => { try { return new URL(first.url, location.href); } catch { return null; } })();
 						if (u) {
 							u.hash = `sharetube:${code}`;
@@ -322,6 +321,35 @@ export default class ShareTubeApp {
 					} catch { }
 				}
 			}
+		} catch { }
+	}
+
+	initPlayerObserver() {
+		try {
+			this.player = new YouTubePlayerObserver({
+				onTimeUpdate: (t, isAd) => { this.emitPlayerStatus(isAd, false); },
+				onAdChange: (isAd) => { this.adPlaying.set(!!isAd); try { console.log("Ad status changed:", isAd); } catch { } this.emitPlayerStatus(isAd, true); },
+				onPause: () => { this.emitPlayerStatus(this.adPlaying.get(), true); },
+				onPlay: () => { this.emitPlayerStatus(this.adPlaying.get(), true); }
+			});
+			this.player.start();
+			const desired = this.roomState.get() === 'playing' ? 'playing' : 'paused';
+			this.player.setDesiredState(desired);
+		} catch { }
+	}
+
+	emitPlayerStatus(isAdNow, forceImmediate) {
+		try {
+			const sock = this.socket;
+			if (!sock) return;
+			const code = this.roomCode.get();
+			if (!code) return;
+			const now = Date.now();
+			const last = sock._lastPlayerEmit || 0;
+			if (!forceImmediate && (now - last < 800)) return; // throttle ~1.25 Hz
+			sock._lastPlayerEmit = now;
+			const state = this.roomState.get() === 'playing' ? (this.player && this.player.video && !this.player.video.paused ? 'playing' : 'paused') : 'idle';
+			sock.emit('player_status', { code, state, is_ad: !!isAdNow, ts: now });
 		} catch { }
 	}
 

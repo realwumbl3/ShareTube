@@ -13,6 +13,22 @@
     tr:hover td { background: rgba(255,255,255,.03); }
     .meta { color: var(--fg-dim); font-size: 12px; margin: 8px 0; }
     .pager { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+    /* Nested entries under a row */
+    .child-row td { background: rgba(255,255,255,.02); }
+    .nested-container { padding: 8px 4px 12px 28px; }
+    .nested-entry { display:flex; gap:10px; align-items:center; padding:6px 0; border-bottom: 1px dashed var(--border); }
+    .nested-entry:last-child { border-bottom: none; }
+    .nested-thumb { width: 56px; height: 32px; background: #111827; border:1px solid var(--border); border-radius: 6px; object-fit: cover; }
+    .nested-title { font-size: 13px; }
+    .nested-meta { font-size: 12px; color: var(--fg-dim); }
+    .nested-section-title { font-size: 12px; color: var(--fg-dim); margin: 6px 0 6px; text-transform: uppercase; letter-spacing: .3px; }
+    .members { padding: 4px 0 10px 0; }
+    .member-item { display:flex; gap:10px; align-items:center; padding:6px 0; border-bottom: 1px dashed var(--border); }
+    .member-item:last-child { border-bottom:none; }
+    .member-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background:#111827; border:1px solid var(--border); }
+    .member-info { display:flex; flex-direction:column; }
+    .member-name { font-size: 13px; }
+    .member-meta { font-size: 12px; color: var(--fg-dim); }
   </style>
 {% endblock %}
 {% block content %}
@@ -37,6 +53,89 @@
   </div>
   <script>
     let offset = 0;
+    function renderQueueEntries(entries) {
+      const wrap = document.createElement('div');
+      wrap.className = 'nested-container';
+      if (!Array.isArray(entries) || entries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'nested-meta';
+        empty.textContent = 'No entries in this queue';
+        wrap.appendChild(empty);
+        return wrap;
+      }
+      for (const e of entries) {
+        const row = document.createElement('div');
+        row.className = 'nested-entry';
+        const img = document.createElement('img');
+        img.className = 'nested-thumb';
+        img.src = e.thumbnail_url || '';
+        img.alt = '';
+        const info = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'nested-title';
+        title.textContent = (e.title && e.title.trim()) ? e.title : (e.url || '');
+        const meta = document.createElement('div');
+        meta.className = 'nested-meta';
+        const pos = (e.position !== undefined && e.position !== null) ? `#${e.position}` : '';
+        const status = e.status ? ` · ${e.status}` : '';
+        meta.textContent = `${pos}${status}`;
+        info.appendChild(title);
+        info.appendChild(meta);
+        row.appendChild(img);
+        row.appendChild(info);
+        wrap.appendChild(row);
+      }
+      return wrap;
+    }
+    function renderMembers(members) {
+      const wrap = document.createElement('div');
+      wrap.className = 'members';
+      if (!Array.isArray(members) || members.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'nested-meta';
+        empty.textContent = 'No members';
+        wrap.appendChild(empty);
+        return wrap;
+      }
+      for (const m of members) {
+        const row = document.createElement('div');
+        row.className = 'member-item';
+        const img = document.createElement('img');
+        img.className = 'member-avatar';
+        img.src = m.picture || '';
+        img.alt = '';
+        const info = document.createElement('div');
+        info.className = 'member-info';
+        const name = document.createElement('div');
+        name.className = 'member-name';
+        name.textContent = m.name || `User ${m.id}`;
+        const meta = document.createElement('div');
+        meta.className = 'member-meta';
+        const active = m.active ? 'active' : 'inactive';
+        meta.textContent = `${active}`;
+        info.appendChild(name);
+        info.appendChild(meta);
+        row.appendChild(img);
+        row.appendChild(info);
+        wrap.appendChild(row);
+      }
+      return wrap;
+    }
+    function renderRoomDetails(details) {
+      const wrap = document.createElement('div');
+      wrap.className = 'nested-container';
+      const membersTitle = document.createElement('div');
+      membersTitle.className = 'nested-section-title';
+      membersTitle.textContent = 'Members';
+      wrap.appendChild(membersTitle);
+      wrap.appendChild(renderMembers(details.members || []));
+      const qTitle = document.createElement('div');
+      qTitle.className = 'nested-section-title';
+      qTitle.textContent = 'Queue Entries';
+      wrap.appendChild(qTitle);
+      wrap.appendChild(renderQueueEntries(details.entries || []));
+      return wrap;
+    }
     async function loadModels() {
       const sel = document.getElementById('model');
       const res = await fetch('/dashboard/api/db/models');
@@ -66,6 +165,78 @@
       for (const row of j.rows) {
         const tr = document.createElement('tr');
         for (const c of j.columns) { const td = document.createElement('td'); td.textContent = (row[c] !== undefined && row[c] !== null) ? String(row[c]) : ''; tr.appendChild(td); }
+        if (model === 'Queue') {
+          tr.style.cursor = 'pointer';
+          tr.title = 'Click to view entries';
+          tr.addEventListener('click', async () => {
+            // Toggle child row under this queue
+            const next = tr.nextSibling;
+            if (next && next.nodeType === 1 && next.classList && next.classList.contains('child-row')) {
+              next.parentNode.removeChild(next);
+              return;
+            }
+            // Remove any existing open child immediately under this row (safety)
+            if (next && next.classList && next.classList.contains('child-row')) {
+              next.remove();
+            }
+            const qid = row.id;
+            try {
+              const r = await fetch(`/dashboard/api/db/queue_entries?queue_id=${encodeURIComponent(qid)}`);
+              const jr = await r.json();
+              const child = document.createElement('tr');
+              child.className = 'child-row';
+              const td = document.createElement('td');
+              td.colSpan = j.columns.length;
+              td.appendChild(renderQueueEntries(jr.entries || []));
+              child.appendChild(td);
+              tr.insertAdjacentElement('afterend', child);
+            } catch (e) {
+              const child = document.createElement('tr');
+              child.className = 'child-row';
+              const td = document.createElement('td');
+              td.colSpan = j.columns.length;
+              const err = document.createElement('div');
+              err.className = 'nested-meta';
+              err.textContent = 'Failed to load entries';
+              td.appendChild(err);
+              child.appendChild(td);
+              tr.insertAdjacentElement('afterend', child);
+            }
+          });
+        } else if (model === 'Room') {
+          tr.style.cursor = 'pointer';
+          tr.title = 'Click to view members and entries';
+          tr.addEventListener('click', async () => {
+            const next = tr.nextSibling;
+            if (next && next.nodeType === 1 && next.classList && next.classList.contains('child-row')) {
+              next.parentNode.removeChild(next);
+              return;
+            }
+            const rid = row.id;
+            try {
+              const r = await fetch(`/dashboard/api/db/room_details?room_id=${encodeURIComponent(rid)}`);
+              const jr = await r.json();
+              const child = document.createElement('tr');
+              child.className = 'child-row';
+              const td = document.createElement('td');
+              td.colSpan = j.columns.length;
+              td.appendChild(renderRoomDetails(jr || {}));
+              child.appendChild(td);
+              tr.insertAdjacentElement('afterend', child);
+            } catch (e) {
+              const child = document.createElement('tr');
+              child.className = 'child-row';
+              const td = document.createElement('td');
+              td.colSpan = j.columns.length;
+              const err = document.createElement('div');
+              err.className = 'nested-meta';
+              err.textContent = 'Failed to load room details';
+              td.appendChild(err);
+              child.appendChild(td);
+              tr.insertAdjacentElement('afterend', child);
+            }
+          });
+        }
         tbody.appendChild(tr);
       }
       table.appendChild(tbody);

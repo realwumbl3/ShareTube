@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import secrets
 import time
-from typing import Optional
+from typing import Optional, Dict, Any
 import json
 import threading
 import psutil
@@ -42,9 +42,69 @@ def create_app() -> Flask:
 
     with app.app_context():
         db.create_all()
+        try:
+            _maybe_migrate_nullable_queue_room_id()
+        except Exception:
+            logging.exception("startup migration check failed")
 
     register_routes(app)
     return app
+
+
+def _maybe_migrate_nullable_queue_room_id() -> None:
+    """Ensure Queue.room_id is nullable in the underlying DB schema.
+
+    - SQLite: detect NOT NULL and rebuild table to drop NOT NULL.
+    - Postgres/MySQL: execute ALTER TABLE to drop NOT NULL if needed.
+    Safe to run repeatedly.
+    """
+    eng = db.engine
+    dialect = eng.dialect.name
+    if dialect == "sqlite":
+        # Inspect pragma table_info for NOT NULL
+        with eng.connect() as conn:
+            res = conn.execute(db.text("PRAGMA table_info('queue')"))
+            cols = res.fetchall()
+        room_col = None
+        for c in cols:
+            # PRAGMA table_info: cid, name, type, notnull, dflt_value, pk
+            if (c[1] or "").lower() == "room_id":
+                room_col = c
+                break
+        if room_col is None:
+            return
+        notnull = int(room_col[3] or 0)
+        if notnull == 0:
+            return
+        # Rebuild table without NOT NULL on room_id
+        with eng.begin() as conn:
+            conn.execute(db.text("PRAGMA foreign_keys=off"))
+            # Create new table schema (matches ORM types)
+            conn.execute(db.text(
+                """
+                CREATE TABLE IF NOT EXISTS queue_new (
+                    id INTEGER PRIMARY KEY,
+                    room_id INTEGER REFERENCES room (id),
+                    created_by_id INTEGER REFERENCES user (id),
+                    created_at INTEGER
+                );
+                """
+            ))
+            # Copy data
+            conn.execute(db.text("INSERT INTO queue_new (id, room_id, created_by_id, created_at) SELECT id, room_id, created_by_id, created_at FROM queue"))
+            # Swap tables
+            conn.execute(db.text("DROP TABLE queue"))
+            conn.execute(db.text("ALTER TABLE queue_new RENAME TO queue"))
+            conn.execute(db.text("CREATE INDEX IF NOT EXISTS ix_queue_room_id ON queue (room_id)"))
+            conn.execute(db.text("PRAGMA foreign_keys=on"))
+    else:
+        # Attempt generic ALTER to drop NOT NULL if present
+        try:
+            with eng.begin() as conn:
+                conn.execute(db.text("ALTER TABLE queue ALTER COLUMN room_id DROP NOT NULL"))
+        except Exception:
+            # Ignore if already nullable or unsupported
+            pass
 
 
 class User(db.Model):
@@ -85,7 +145,7 @@ class RoomMembership(db.Model):
 
 class Queue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    room_id = db.Column(db.Integer, db.ForeignKey("room.id"), nullable=False, index=True)
+    room_id = db.Column(db.Integer, db.ForeignKey("room.id"), nullable=True, index=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_at = db.Column(db.Integer, default=lambda: int(time.time()))
 
@@ -134,7 +194,9 @@ def register_routes(app: Flask) -> None:
     try:
         from .dashboard import dashboard_bp
         app.register_blueprint(dashboard_bp)
-    except Exception:
+    except Exception as e:
+        logging.exception("dashboard blueprint import failed")
+        logger.exception(e)
         # If dashboard cannot be imported, continue without it
         pass
     @app.get("/")
@@ -319,6 +381,7 @@ app = create_app()
 # -----------------------------
 _sid_to_user_id = {}
 _sid_to_room_codes = {}
+_room_player_status: Dict[str, Dict[int, Dict[str, Any]]] = {}
 
 def _room_name_from_code(code: str) -> str:
     return f"room:{code}"
@@ -525,40 +588,7 @@ def handle_ping(data):
     emit("pong", {"ts": int(time.time() * 1000)})
 
 
-@socketio.on("queue_replace")
-def handle_queue_replace(data):
-    user = _get_user_for_current_sid()
-    if not user:
-        return emit("queue_replace_result", {"ok": False, "error": "unauthorized"})
-    code = (data or {}).get("code") if isinstance(data, dict) else None
-    items = (data or {}).get("items") if isinstance(data, dict) else None
-    if not isinstance(items, list):
-        return emit("queue_replace_result", {"ok": False, "error": "invalid_payload"})
-    if code:
-        room = _get_room_by_code(code)
-        if not room:
-            return emit("queue_replace_result", {"ok": False, "error": "not_found"})
-        q = _get_or_create_room_queue(room)
-    else:
-        q = _get_or_create_user_queue(user)
-    # Clear existing entries
-    QueueEntry.query.filter_by(queue_id=q.id).delete()
-    db.session.commit()
-    # Insert new entries in order
-    pos = 0
-    for it in items:
-        url = (it or {}).get("url") or ""
-        if not url:
-            continue
-        title = (it or {}).get("title") or ""
-        thumb = (it or {}).get("thumbnail_url") or ""
-        e = QueueEntry(queue_id=q.id, added_by_id=user.id, url=url, title=title, thumbnail_url=thumb, position=pos)
-        db.session.add(e)
-        pos += 1
-    db.session.commit()
-    if code:
-        _emit_queue_snapshot(code)
-    emit("queue_replace_result", {"ok": True})
+## queue_replace removed: adoption/personal queue + incremental adds make it unnecessary
 
 
 @socketio.on("queue_add")
@@ -646,6 +676,26 @@ def _emit_room_state(code: str) -> None:
     if not room:
         return
     socketio.emit("room_state_change", {"code": code, "state": room.state}, room=_room_name_from_code(code))
+
+
+@socketio.on("player_status")
+def handle_player_status(data):
+    """Receive per-user player status from clients.
+    data: { code, state: 'playing'|'paused'|'idle', is_ad: bool, ts?: ms }
+    """
+    user = _get_user_for_current_sid()
+    if not user:
+        return
+    code = (data or {}).get("code") if isinstance(data, dict) else None
+    state = (data or {}).get("state") if isinstance(data, dict) else None
+    is_ad = bool((data or {}).get("is_ad")) if isinstance(data, dict) else False
+    ts = int((data or {}).get("ts") or int(time.time() * 1000))
+    if not code or state not in ("playing", "paused", "idle"):
+        return
+    try:
+        _room_player_status.setdefault(code, {})[int(user.id)] = {"state": state, "is_ad": bool(is_ad), "ts": ts}
+    except Exception:
+        pass
 
 
 @socketio.on("room_state_set")
@@ -754,6 +804,14 @@ def handle_room_leave(data):
         memb.last_seen = int(time.time())
         db.session.commit()
     _emit_room_presence(code)
+    # Clear player status for this user in this room
+    try:
+        if code in _room_player_status and user.id in _room_player_status.get(code, {}):
+            _room_player_status[code].pop(user.id, None)
+            if not _room_player_status[code]:
+                _room_player_status.pop(code, None)
+    except Exception:
+        pass
 
 
 @socketio.on("disconnect")
@@ -773,6 +831,13 @@ def handle_disconnect():
         db.session.commit()
         for code in list(codes):
             _emit_room_presence(code)
+            try:
+                if code in _room_player_status and user_id in _room_player_status.get(code, {}):
+                    _room_player_status[code].pop(user_id, None)
+                    if not _room_player_status[code]:
+                        _room_player_status.pop(code, None)
+            except Exception:
+                pass
 
 
 

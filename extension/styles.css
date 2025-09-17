@@ -200,6 +200,7 @@ h1 {
 #sharetube_queue .queue-item {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     padding: 6px 8px;
     border-radius: 8px;

@@ -20,6 +20,7 @@ export async function ensureSocket(app) {
 		app.socket.on("room_presence", (payload) => app.onRoomPresence(payload));
 		app.socket.on("queue_snapshot", (payload) => app.onQueueSnapshot(payload));
 		app.socket.on("room_state_change", (payload) => app.onRoomStateChange(payload));
+		app.socket._lastPlayerEmit = 0;
 	} catch (e) {
 		console.warn("socket.io connect failed", e);
 		app.socket = null;

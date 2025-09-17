@@ -15,10 +15,22 @@
     .user { display:flex; align-items:center; gap:10px; padding:8px 10px; background: var(--panel-2); border:1px solid var(--border); border-radius:10px; }
     .avatar { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#0b0f14; background: linear-gradient(135deg, #a78bfa, #34d399); border:1px solid rgba(255,255,255,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
     .name { font-weight:600; }
-    .state { font-size:12px; color: var(--fg-dim); margin-left:auto; }
+    .state { font-size:12px; color: var(--fg-dim); margin-left:auto; display:flex; align-items:center; gap:8px; }
+    .badge { font-size:11px; padding:2px 6px; border-radius:999px; border:1px solid var(--border); background: var(--panel-2); color: var(--fg-dim); }
+    .badge.playing { background: rgba(34,197,94,.12); color:#b7f7c9; border-color: rgba(34,197,94,.35); }
+    .badge.idle { background: rgba(100,116,139,.16); color:#cbd5e1; border-color: rgba(100,116,139,.35); }
+    .badge.ad { background: rgba(234,88,12,.18); color:#ffd1b3; border-color: rgba(234,88,12,.45); }
     .state.active { color:#a7f3d0; }
     .metaRow { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
     .chip { font-size:11px; color:var(--fg-dim); padding:6px 10px; border:1px solid var(--border); border-radius:999px; background: var(--panel-2); }
+    .queue { margin-top:12px; }
+    .entry { display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background: var(--panel); }
+    .entry + .entry { margin-top:6px; }
+    .thumb { width:64px; height:36px; background:#111; border-radius:6px; object-fit:cover; border:1px solid var(--border); }
+    .entryTitle { font-weight:600; }
+    .entryUrl { font-size:12px; color: var(--fg-dim); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; }
+    .queueHeader { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
+    .queueHeader .label { font-size:12px; color: var(--fg-dim); }
   </style>
 {% endblock %}
 {% block subright %}—{% endblock %}
@@ -76,11 +88,44 @@
             const avatar = document.createElement('div'); avatar.className = 'avatar'; avatar.textContent = getInitials(u.name || '');
             const name = document.createElement('div'); name.className = 'name'; name.textContent = u.name || ('User #' + u.id);
             const state = document.createElement('div'); state.className = 'state ' + (u.active ? 'active' : '');
-            state.textContent = u.active ? 'active' : ('inactive · ' + new Date((u.last_seen||0)*1000).toLocaleTimeString());
+            const basic = document.createElement('span'); basic.textContent = u.active ? 'active' : ('inactive · ' + new Date((u.last_seen||0)*1000).toLocaleTimeString());
+            state.appendChild(basic);
+            const p = u.player || {};
+            const badge = document.createElement('span');
+            const st = (p.state === 'playing' || p.state === 'paused' || p.state === 'idle') ? p.state : 'unknown';
+            badge.className = 'badge ' + (st === 'playing' ? 'playing' : (st === 'idle' ? 'idle' : ''));
+            badge.textContent = st === 'unknown' ? 'player: ?' : ('player: ' + st + (p.is_ad ? ' (AD)' : ''));
+            state.appendChild(badge);
             row.appendChild(avatar); row.appendChild(name); row.appendChild(state); users.appendChild(row);
           }
         }
-        card.appendChild(users); container.appendChild(card);
+        card.appendChild(users);
+
+        // Queue section
+        const queueWrap = document.createElement('div'); queueWrap.className = 'queue';
+        const qHeader = document.createElement('div'); qHeader.className = 'queueHeader';
+        const qLabel = document.createElement('div'); qLabel.className = 'label';
+        const entries = Array.isArray(room.entries) ? room.entries : [];
+        qLabel.textContent = 'Queue ' + (room.queue && room.queue.id ? ('#' + room.queue.id) : '(none)') + ' · ' + entries.length + ' item' + (entries.length === 1 ? '' : 's');
+        qHeader.appendChild(qLabel); queueWrap.appendChild(qHeader);
+        if (entries.length === 0) {
+          const empty = document.createElement('div'); empty.className = 'sub'; empty.textContent = 'No entries'; queueWrap.appendChild(empty);
+        } else {
+          for (const it of entries) {
+            const row = document.createElement('div'); row.className = 'entry';
+            const pos = document.createElement('div'); pos.className = 'chip'; pos.textContent = String((it.position ?? 0) + 1);
+            const img = document.createElement('img'); img.className = 'thumb'; img.loading = 'lazy'; img.alt = '';
+            img.src = it.thumbnail_url || '';
+            const meta = document.createElement('div'); meta.style.flex = '1 1 auto';
+            const title = document.createElement('div'); title.className = 'entryTitle'; title.textContent = it.title || '(no title)';
+            const url = document.createElement('div'); url.className = 'entryUrl'; url.textContent = it.url || '';
+            meta.appendChild(title); meta.appendChild(url);
+            row.appendChild(pos); row.appendChild(img); row.appendChild(meta);
+            queueWrap.appendChild(row);
+          }
+        }
+        card.appendChild(queueWrap);
+        container.appendChild(card);
       }
     }
     function boot() {
