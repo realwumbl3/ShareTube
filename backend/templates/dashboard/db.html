@@ -1,0 +1,79 @@
+{% extends 'dashboard/base.html' %}
+{% set title = 'ShareTube Ops · DB Browser' %}
+{% block head %}
+  <style>
+    .controls { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+    select, input, button { padding:8px 10px; border-radius:10px; border:1px solid var(--border); background: var(--panel-2); color: var(--fg); }
+    select { appearance:none; -webkit-appearance:none; -moz-appearance:none; background-image: linear-gradient(45deg, transparent 50%, #C8B6FF 50%), linear-gradient(135deg, #C8B6FF 50%, transparent 50%); background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 11px) calc(50% - 3px); background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 28px; }
+    select option { background: #111827; color: #E5E7EB; }
+    button { background: linear-gradient(180deg, rgba(124,58,237,.35), rgba(124,58,237,.22)); border-color: rgba(124,58,237,.4); cursor:pointer; }
+    table { width: 100%; border-collapse: collapse; border-radius: 12px; overflow:hidden; border:1px solid var(--border); }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left; font-size: 13px; }
+    th { background: rgba(255,255,255,.04); color: var(--fg-dim); font-weight: 600; letter-spacing: .3px; }
+    tr:hover td { background: rgba(255,255,255,.03); }
+    .meta { color: var(--fg-dim); font-size: 12px; margin: 8px 0; }
+    .pager { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+  </style>
+{% endblock %}
+{% block content %}
+  <h1>DB Browser</h1>
+  <div class="controls">
+    <label>Model
+      <select id="model"></select>
+    </label>
+    <label>Order
+      <input id="order" value="-id" />
+    </label>
+    <label>Limit
+      <input id="limit" type="number" value="50" min="1" max="500" />
+    </label>
+    <button id="refresh">Refresh</button>
+  </div>
+  <div class="meta" id="meta"></div>
+  <div id="table"></div>
+  <div class="pager">
+    <button id="prev">Prev</button>
+    <button id="next">Next</button>
+  </div>
+  <script>
+    let offset = 0;
+    async function loadModels() {
+      const sel = document.getElementById('model');
+      const res = await fetch('/dashboard/api/db/models');
+      const j = await res.json();
+      sel.innerHTML = '';
+      for (const m of j.models) {
+        const opt = document.createElement('option');
+        opt.value = m; opt.textContent = m; sel.appendChild(opt);
+      }
+    }
+    async function loadData() {
+      const model = document.getElementById('model').value;
+      const order = document.getElementById('order').value;
+      const limit = parseInt(document.getElementById('limit').value || '50', 10);
+      const res = await fetch(`/dashboard/api/db/list?model=${encodeURIComponent(model)}&order=${encodeURIComponent(order)}&limit=${limit}&offset=${offset}`);
+      const j = await res.json();
+      const meta = document.getElementById('meta');
+      meta.textContent = `Showing ${j.rows.length} of ${j.total} rows (offset ${j.offset})`;
+      const cont = document.getElementById('table');
+      cont.innerHTML = '';
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+      for (const c of j.columns) { const th = document.createElement('th'); th.textContent = c; trh.appendChild(th); }
+      thead.appendChild(trh); table.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      for (const row of j.rows) {
+        const tr = document.createElement('tr');
+        for (const c of j.columns) { const td = document.createElement('td'); td.textContent = (row[c] !== undefined && row[c] !== null) ? String(row[c]) : ''; tr.appendChild(td); }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      cont.appendChild(table);
+    }
+    document.getElementById('refresh').onclick = () => { offset = 0; loadData(); };
+    document.getElementById('prev').onclick = () => { const limit = parseInt(document.getElementById('limit').value||'50',10); offset = Math.max(0, offset - limit); loadData(); };
+    document.getElementById('next').onclick = () => { const limit = parseInt(document.getElementById('limit').value||'50',10); offset += limit; loadData(); };
+    loadModels().then(() => loadData());
+  </script>
+{% endblock %}

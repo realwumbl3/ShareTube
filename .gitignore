@@ -1,0 +1,16 @@
+/.venv
+*.env
+*.db
+*.sock
+*.pid
+*.log
+*.access.log
+*.error.log
+*.gunicorn.log
+*.gunicorn.access.log
+*.gunicorn.error.log
+*.gunicorn.pid
+
+
+git config --global user.name "realwumbl3"
+git config --global user.email "wumbl3@gmail.com"

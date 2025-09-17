@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "ShareTube - Share Youtube",
+  "version": "0.0.1",
+  "description": "Barebones MV3 extension wired to a Flask backend.",
+  "permissions": [
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://*/",
+    "https://*/"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "NewApp"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://youtube.com/*"
+      ],
+      "js": [
+        "socket.io.min.js",
+        "zyX-es6.umd.js",
+        "contentScript.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "fullapp/*",
+        "cs/*"
+      ],
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://youtube.com/*"
+      ]
+    }
+  ]
+}
