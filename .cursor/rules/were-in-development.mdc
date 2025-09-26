@@ -1,0 +1,16 @@
+---
+description:
+globs:w
+alwaysApply: true
+---
+
+
+We're in development, don't worry about interupting "runtime", the app can be restarted at any time.
+
+Always include line-by-line commenting explaining in detail the logic and flow of data.
+
+Update system-diagram.md and README.md whenever needed.
+
+This app was recently, quickly and sloppily put together using AI.
+
+It's in dire need of refactoring to improve the code quality and maintainability.

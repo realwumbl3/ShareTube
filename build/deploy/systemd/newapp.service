@@ -9,14 +9,13 @@ WorkingDirectory=/home/wumbl3wsl/ShareTube
 
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=SOCKETIO_MESSAGE_QUEUE=
+# Force gevent async mode for Flask-SocketIO
+Environment=SOCKETIO_ASYNC_MODE=gevent
 UMask=007
 
 ExecStart=/home/wumbl3wsl/ShareTube/.venv/bin/gunicorn \
-  --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker \
-  --workers 1 \
-  --bind unix:/home/wumbl3wsl/ShareTube/instance/newapp.sock \
-  --graceful-timeout 5 \
-  --error-logfile - --access-logfile - --log-level info \
+  -c /home/wumbl3wsl/ShareTube/backend/gunicorn.conf.py \
   backend.app:app
 
 Restart=always

@@ -7,7 +7,7 @@ This document explains the overall architecture, core data models, APIs/events, 
 ```mermaid
 flowchart TD
   subgraph Browser[User Browser]
-    CS[Content Script ShareTubeApp]
+  CS[Content Script ShareTubeApp\n+  - AdOverlayManager\n+  - socketUtil]
     POP[Extension Popup/Options]
   end
 
@@ -46,11 +46,14 @@ flowchart TD
 ## Core Data Model (SQLAlchemy)
 
 - **User**: `id, google_sub, email, name, picture`
-- **Room**: `id, code, created_by_id, created_at, is_private, state('idle'|'playing')`
+- **Room**: `id, code, created_by_id, created_at, is_private, state('idle'|'starting'|'playing_ad'|'playing'), prev_state_before_ads`
 - **RoomMembership**: `id, room_id, user_id, joined_at, last_seen, active`
   - Unique `(room_id, user_id)`; toggled `active` on join/leave/disconnect
 - **Queue**: `id, room_id, created_by_id, created_at`
-- **QueueEntry**: `id, queue_id, added_by_id, url, title, thumbnail_url, position, added_at, status`
+- **QueueEntry**: `id, queue_id, added_by_id, url, title, thumbnail_url, position, added_at, status, duration, progress, playing_since`
+
+Additional real-time fields tracked on memberships (server-derived):
+- `RoomMembership.player_state ('playing'|'paused'|'idle')`, `player_is_ad (bool)`, `player_ts (ms)`
 
 ## Public Interface
 
@@ -59,13 +62,30 @@ flowchart TD
   - `GET /api/youtube/metadata?url=...|id=...` → `{id?, title, thumbnail_url, channel_title?}`
   - `GET /auth/google/start` → redirects to Google OAuth
   - `GET /auth/google/callback` → issues short-lived JWT (HS256) and returns it to opener via `postMessage({type:'newapp_auth', token})`
+- Controls (authoritative helpers)
+  - `POST /api/room/state { code, state:'idle'|'starting'|'playing'|'playing_ad' }`
+  - `POST /api/room/seek { code, progress_ms, play }`
+  - `POST /api/room/next { code }` (skip current; advances queue and sets `starting`)
 - Dashboard
   - `GET /dashboard/` → HTML page
   - `GET /dashboard/api/snapshot` → JSON with active rooms + presence
   - `GET /dashboard/stream` → SSE stream of snapshots (1s cadence)
-- Socket.IO (names are event-based)
-  - Client→Server: `ping`, `room_create`, `room_join`, `room_leave`, `queue_replace`, `queue_add`, `queue_remove`, `room_state_set`
-  - Server→Client: `hello`, `pong`, `room_create_result`, `room_join_result`, `room_presence`, `queue_snapshot`, `room_state_change`, `system_stats`
+ - Socket.IO (names are event-based)
+  - Client→Server
+    - `ping {}`
+    - `room_create {}` / `room_join { code }` / `room_leave { code }`
+    - `queue_add { code?, item:{url|id} }` / `queue_remove { code?, id }` / `queue_replace { code, items }`
+    - `room_state_set { code, state:'idle'|'starting'|'playing'|'playing_ad' }`
+    - `room_seek { code, progress_ms, play }`
+    - `player_status { code, state:'playing'|'paused'|'idle', is_ad, current_ms, duration_ms, ts }`
+    - `vote_skip { code }`, `ops_rooms_list {}`, `ops_room_subscribe { code }`
+  - Server→Client
+    - `hello { user }`, `pong { ts }`, `system_stats { ... }`
+    - `room_create_result { ok, code }`, `room_join_result { ok, code }`
+    - `room_presence { code, members[...] }`
+    - `queue_snapshot { code, items[...] }`
+    - `room_state_change { code, state }`, `room_seek { code, progress_ms, play }`, `room_playback { code, state, entry:{duration,progress,playing_since} }`
+    - Ads: `room_ad_pause { code, by_user_id }`, `room_ad_resume { code }`, `room_ad_status { code, active_user_ids:[...] }`
 
 ## Frontend Lifecycle (Content Script)
 
@@ -80,9 +100,13 @@ flowchart TD
    - Registers handlers for presence, queue snapshots, room state, etc.
 4) URL hash auto-join
    - If location hash is `#sharetube:<ROOM_CODE>`, emits `room_join` and stores `roomCode`.
-5) Queue management
+5) Ad overlay + playback enforcement
+   - Observes YouTube player for time/ad/pause/play; emits `player_status` with throttling/dedup.
+  - AdOverlayManager: shows overlay when self/others are in ads or while `starting`.
+   - Enforces local play/pause according to room state; never pauses ads explicitly.
+6) Queue management
    - Local queue holds `ShareTubeQueueItem`s; metadata filled from page when possible, else fetched via `/api/youtube/metadata` and/or synced from server snapshots.
-6) Leave/cleanup
+7) Leave/cleanup
    - On `beforeunload`, emits `room_leave` for the current room.
 
 ## Backend Lifecycle (Server)
@@ -199,11 +223,11 @@ sequenceDiagram
   participant SIO as Socket.IO Server
   participant DB as Database
 
-  CS->>SIO: room_state_set {code, state:'playing'|'idle'}
+  CS->>SIO: room_state_set {code, state:'idle'|'starting'|'playing'}
   SIO->>DB: update room.state
   SIO-->>Room: room_state_change {code, state}
-  opt state == 'playing'
-    CS->>CS: navigate to first queue item (append #sharetube:CODE) [[[UPDATE THIS: Only if initial state was "starting"]]]
+  opt state transitions 'idle'→'starting'→'playing'
+    CS->>CS: if not already on target video id, navigate to first queue url and append #sharetube:CODE
   end
 ```
 
@@ -237,6 +261,46 @@ sequenceDiagram
   end
 ```
 
+### H) Skip Vote Flow
+
+```mermaid
+sequenceDiagram
+  participant CS as Content Script
+  participant SIO as Socket.IO Server
+  participant DB as Database
+
+  CS->>SIO: vote_skip { code }
+  SIO->>DB: mark current entry status=skipped + recalc positions
+  alt next entry exists
+    SIO->>DB: set room.state='starting'
+    SIO-->>Room: room_state_change { code, state:'starting' }
+  else
+    SIO->>DB: set room.state='idle'
+    SIO-->>Room: room_state_change { code, state:'idle' }
+  end
+  SIO-->>Room: queue_snapshot { items }
+  SIO-->>Room: room_playback { ... }
+```
+
+### I) Ad Handling Flow
+
+```mermaid
+sequenceDiagram
+  participant CS as Content Script
+  participant SIO as Socket.IO Server
+  participant DB as Database
+
+  CS->>SIO: room_ad_start { code }
+  SIO->>DB: mark membership.player_is_ad=true + maybe transition room.state→'playing_ad'
+  SIO-->>Room: room_ad_pause { code, by_user_id }
+  SIO-->>Room: room_ad_status { code, active_user_ids }
+  CS->>CS: show overlay + enforce paused content if needed
+  CS->>SIO: room_ad_end { code }
+  SIO->>DB: membership.player_is_ad=false + when none active, restore prev_state_before_ads or idle
+  SIO-->>Room: room_ad_resume { code }
+  SIO-->>Room: room_playback { ... } (snap clients)
+```
+
 ## Event Catalog (Socket.IO)
 
 - Client→Server
@@ -246,13 +310,17 @@ sequenceDiagram
   - `queue_add {code, item:{url|id}}` or `{items:[...]}` → Append one/many.
   - `queue_remove {code, id}` → Soft-delete entry.
   - `room_state_set {code, state}` → Update room state.
-  - `ping {}` → Healthcheck.
+  - `room_seek {code, progress_ms, play}` → Seek + optionally set playing.
+  - `player_status {code, state, is_ad, current_ms, duration_ms, ts}` → Client telemetry.
+  - `vote_skip {code}` → Skip current entry and transition room state.
+  - Ops: `ops_rooms_list {}` / `ops_room_subscribe {code}`.
 - Server→Client
   - `hello {user}` on connect; `pong {ts}` reply to `ping`.
   - `room_create_result {ok, code}` / `room_join_result {ok, code}`.
   - `room_presence {code, members:[{id, name, email, picture}]}`.
   - `queue_snapshot {code, items:[{id, url, title, thumbnail_url, position}]}`.
-  - `room_state_change {code, state}`.
+  - `room_state_change {code, state}`; `room_seek {code, progress_ms, play}`; `room_playback {code, state, entry:...}`.
+  - Ads: `room_ad_pause`, `room_ad_resume`, `room_ad_status`.
   - `system_stats {cpu_percent, mem_total, mem_available, mem_percent, ts}`.
 
 ## Notes & Constraints

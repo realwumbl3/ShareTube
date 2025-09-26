@@ -92,6 +92,24 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
     }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .sidebar {
+      position: sticky;
+      top: 18px;
+      max-height: calc(100vh - 72px);
+      overflow: auto;
+      padding: 10px;
+    }
+    .roomsList .roomRow { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px; border:1px solid var(--border); border-radius:10px; background: var(--panel-2); }
+    .roomsList .roomRow + .roomRow { margin-top:6px; }
+    .roomsList .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 10ch; }
+    .roomsList .meta { display:flex; align-items:center; gap:8px; color: var(--fg-dim); font-size:12px; }
+    .roomsList .joinBtn { padding:4px 8px; border:1px solid var(--border); background: var(--panel); color: var(--fg); border-radius:8px; cursor:pointer; }
   </style>
   {% block head %}{% endblock %}
 </head>

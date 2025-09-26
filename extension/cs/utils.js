@@ -1,17 +1,21 @@
+// Log module load for diagnostics
 console.log("cs/utils.js loaded");
 
+// Decode a JWT payload into an object without verification (for avatar display)
 export function decodeJwt(token) {
 	try {
 		const payload = token.split(".")[1];
 		const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
 		return JSON.parse(decodeURIComponent(escape(json)));
-	} catch (e) { return null; }
+	} catch (e) { try { console.debug("[ShareTube] decodeJwt failed", e); } catch (_) {} return null; }
 }
 
+// Convert a possibly relative URL to an absolute URL based on current location
 export function toAbsoluteUrl(href) {
-	try { return new URL(href, location.href).toString(); } catch { return null; }
+	try { return new URL(href, location.href).toString(); } catch (e) { try { console.debug("[ShareTube] toAbsoluteUrl failed", e); } catch (_) {} return null; }
 }
 
+// Extract a YouTube video ID from various URL forms or raw text
 export function extractVideoId(u) {
 	try {
 		const url = new URL(u, location.href);
@@ -24,14 +28,16 @@ export function extractVideoId(u) {
 		}
 		const m = u.match(/[a-zA-Z0-9_-]{11}/);
 		return m ? m[0] : '';
-	} catch { return ''; }
+	} catch (e) { try { console.debug("[ShareTube] extractVideoId failed", e); } catch (_) {} return ''; }
 }
 
+// Construct a high-quality thumbnail URL from a YouTube video ID
 export function youtubeThumbFromId(id) {
 	if (!id) return '';
 	return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 }
 
+// Remove common noise from titles found on YouTube grids/results
 export function sanitizeTitle(t) {
 	if (!t) return '';
 	let s = t;
@@ -42,6 +48,7 @@ export function sanitizeTitle(t) {
 	return s;
 }
 
+// Try several selectors to find a reasonable video title within a DOM node
 export function extractCleanTitle(root) {
 	if (!root) return '';
 	const selectors = [
@@ -76,6 +83,7 @@ export function extractCleanTitle(root) {
 	return sanitizeTitle(raw);
 }
 
+// Find metadata (title/thumbnail) on the current page for a given YouTube URL
 export function findOnPageYouTubeMeta(url) {
 	try {
 		const vid = extractVideoId(url);
@@ -106,19 +114,21 @@ export function findOnPageYouTubeMeta(url) {
 			}
 		}
 		return null;
-	} catch { return null; }
+	} catch (e) { try { console.debug("[ShareTube] findOnPageYouTubeMeta failed", e); } catch (_) {} return null; }
 }
 
+// Ask the backend to resolve metadata when not present on the page
 export async function fetchMetadataFromBackend(url) {
 	try {
 		const { newapp_backend } = await chrome.storage.sync.get(["newapp_backend"]);
-		const base = newapp_backend || "http://localhost:5100";
+		const base = newapp_backend || "https://sharetube.wumbl3.xyz";
 		const r = await fetch(`${base}/api/youtube/metadata?url=${encodeURIComponent(url)}`, { method: 'GET' });
 		if (!r.ok) return null;
 		return await r.json();
-	} catch { return null; }
+	} catch (e) { try { console.debug("[ShareTube] fetchMetadataFromBackend failed", e); } catch (_) {} return null; }
 }
 
+// Extract URLs from a drag-and-drop DataTransfer payload
 export function extractUrlsFromDataTransfer(dt) {
 	const urls = [];
 	try {
@@ -129,7 +139,7 @@ export function extractUrlsFromDataTransfer(dt) {
 				urls.push(line.trim());
 			});
 		}
-	} catch { }
+	} catch (e) { try { console.debug("[ShareTube] extractUrlsFromDataTransfer uri-list failed", e); } catch (_) {} }
 	try {
 		const text = dt.getData && dt.getData("text/plain");
 		if (text) {
@@ -139,7 +149,7 @@ export function extractUrlsFromDataTransfer(dt) {
 				urls.push(m[0]);
 			}
 		}
-	} catch { }
+	} catch (e) { try { console.debug("[ShareTube] extractUrlsFromDataTransfer text failed", e); } catch (_) {} }
 	const seen = new Set();
 	const out = [];
 	for (const u of urls) {
@@ -150,6 +160,7 @@ export function extractUrlsFromDataTransfer(dt) {
 	return out;
 }
 
+// Check whether a URL belongs to YouTube properties
 export function isYouTubeUrl(u) {
 	try {
 		const url = new URL(u);
@@ -161,6 +172,7 @@ export function isYouTubeUrl(u) {
 	} catch { return false; }
 }
 
+// Copy a ShareTube watchroom URL to clipboard, with fallback for older browsers
 export function copyWatchroomUrl(code) {
 	const url = `https://www.youtube.com/#sharetube:${code}`;
 	console.log("Copying watchroom URL", url);

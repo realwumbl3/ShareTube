@@ -1,153 +1,39 @@
+# Enable future annotations for cleaner typing
 from __future__ import annotations
 
-import json
-import time
-from typing import Dict, Any, List
-import logging
+# Typing helpers for clarity in API payloads
+from typing import Any, List
 
-from flask import Blueprint, Response, jsonify, request, render_template, stream_with_context
+# Flask constructs for blueprints, JSON responses, request parsing, and templates
+from flask import (
+    Blueprint,
+    jsonify,
+    request,
+    render_template,
+)
 
 # Import models and db from app module
-from .app import db, User, Room, RoomMembership, Queue, QueueEntry
+from .app import db
 
-# Avoid circular import at module import time by importing inside function when needed
-def _get_room_player_status() -> Dict[str, Dict[int, Dict[str, Any]]]:
-    try:
-        from .app import _room_player_status  # type: ignore
-        return _room_player_status  # type: ignore
-    except Exception:
-        return {}
+# Import ORM models used by the dashboard
+from .models import User, Room, RoomMembership, Queue, QueueEntry
 
-
+# Create the dashboard blueprint with a URL prefix for routing
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
 
-def _active_rooms_snapshot() -> Dict[str, Any]:
-    """Build a snapshot of active rooms, their state, users, and latest queue entries."""
-    # Rooms with at least one active member
-    active_room_rows: List[Room] = (
-        db.session.query(Room)
-        .join(RoomMembership, RoomMembership.room_id == Room.id)
-        .filter(RoomMembership.active == True)
-        .group_by(Room.id)
-        .order_by(Room.created_at.desc())
-        .all()
-    )
-
-    rooms: List[Dict[str, Any]] = []
-    for room in active_room_rows:
-        # All users who have ever joined the room, include their current membership state
-        memberships = (
-            db.session.query(RoomMembership, User)
-            .join(User, RoomMembership.user_id == User.id)
-            .filter(RoomMembership.room_id == room.id)
-            .order_by(RoomMembership.joined_at.asc())
-            .all()
-        )
-        users = []
-        for (m, u) in memberships:
-            rps = _get_room_player_status()
-            status = (rps.get(room.code, {}) or {}).get(int(u.id), {})
-            users.append({
-                "id": u.id,
-                "name": u.name,
-                "picture": u.picture,
-                "active": bool(m.active),
-                "last_seen": int(m.last_seen or 0),
-                "player": {
-                    "state": status.get("state") or ("idle" if not m.active else "unknown"),
-                    "is_ad": bool(status.get("is_ad") or False),
-                    "ts": int(status.get("ts") or 0),
-                }
-            })
-        # Latest queue and its entries (if any)
-        q = (
-            db.session.query(Queue)
-            .filter(Queue.room_id == room.id)
-            .order_by(Queue.created_at.desc())
-            .first()
-        )
-        entries: List[Dict[str, Any]] = []
-        queue_info: Dict[str, Any] | None = None
-        if q:
-            queue_info = {"id": int(q.id), "created_at": int(q.created_at or 0)}
-            q_entries: List[QueueEntry] = (
-                db.session.query(QueueEntry)
-                .filter(QueueEntry.queue_id == q.id, QueueEntry.status != "deleted")
-                .order_by(QueueEntry.position.asc(), QueueEntry.id.asc())
-                .limit(50)
-                .all()
-            )
-            for e in q_entries:
-                entries.append(
-                    {
-                        "id": int(e.id),
-                        "url": e.url,
-                        "title": e.title or "",
-                        "thumbnail_url": e.thumbnail_url or "",
-                        "position": int(e.position or 0),
-                    }
-                )
-        rooms.append(
-            {
-                "code": room.code,
-                "state": room.state,
-                "users": users,
-                "queue": queue_info,
-                "entries": entries,
-            }
-        )
-
-    return {"ts": int(time.time() * 1000), "rooms": rooms}
-
-
+# Render the main dashboard landing page listing rooms
 @dashboard_bp.get("/")
 def dashboard_page():
+    # Render Jinja template and mark active nav tab
     return render_template("dashboard/rooms.html", active_page="rooms")
-
-
-@dashboard_bp.get("/api/snapshot")
-def dashboard_snapshot():
-    return jsonify(_active_rooms_snapshot())
-
-
-@dashboard_bp.get("/stream")
-def dashboard_stream():
-    def gen():
-        # Initial retry suggestion for EventSource clients
-        yield "retry: 1000\n\n"
-        # Send initial event immediately
-        try:
-            yield f"data: {json.dumps(_active_rooms_snapshot())}\n\n"
-        except Exception:
-            logging.exception("dashboard_stream initial snapshot error")
-            yield "data: {}\n\n"
-        # Stream periodic updates
-        while True:
-            try:
-                payload = json.dumps(_active_rooms_snapshot())
-                yield f"data: {payload}\n\n"
-            except Exception:
-                logging.exception("dashboard_stream loop error")
-                yield "data: {}\n\n"
-            # Non-blocking sleep when gevent is available
-            try:
-                from gevent import sleep as gsleep  # type: ignore
-                gsleep(1)
-            except Exception:
-                time.sleep(1)
-
-    headers = {
-        "Cache-Control": "no-cache",
-        "X-Accel-Buffering": "no",  # disable proxy buffering if behind nginx
-    }
-    return Response(stream_with_context(gen()), mimetype="text/event-stream", headers=headers)
 
 
 # -----------------------------
 # Simple DB browser (read-only)
 # -----------------------------
 
+# Map model names to their SQLAlchemy classes for dynamic browsing
 _MODEL_MAP = {
     "User": User,
     "Room": Room,
@@ -156,6 +42,7 @@ _MODEL_MAP = {
     "QueueEntry": QueueEntry,
 }
 
+# Default privacy blocklist of column names we never show in the dashboard
 _DEFAULT_PRIVATE_KEYS = {
     # common PII/secret-ish columns we never want to show in the dashboard
     "email",
@@ -168,10 +55,12 @@ _DEFAULT_PRIVATE_KEYS = {
 }
 
 
+# Helper to list column names for a model
 def _model_columns(model):
     return [c.name for c in model.__table__.columns]
 
 
+# Convert a SQLAlchemy row to a dict with simple int normalization
 def _row_to_dict(model, row):
     out = {}
     for c in model.__table__.columns:
@@ -185,16 +74,19 @@ def _row_to_dict(model, row):
     return out
 
 
+# Render the DB browser page container (client fetches data via API below)
 @dashboard_bp.get("/db")
 def db_browser_page():
     return render_template("dashboard/db.html", active_page="db")
 
 
+# List available models for the DB browser
 @dashboard_bp.get("/api/db/models")
 def db_models():
     return jsonify({"models": list(_MODEL_MAP.keys())})
 
 
+# List rows for a specified model with simple ordering and pagination
 @dashboard_bp.get("/api/db/list")
 def db_list():
     model_name = request.args.get("model", "User")
@@ -260,6 +152,7 @@ def db_list():
     )
 
 
+# Return queue entries for a specific queue id (read-only)
 @dashboard_bp.get("/api/db/queue_entries")
 def db_queue_entries():
     """List entries for a specific queue id (read-only, dashboard use)."""
@@ -276,6 +169,7 @@ def db_queue_entries():
         .order_by(QueueEntry.position.asc(), QueueEntry.id.asc())
         .all()
     )
+
     def _entry_to_dict(e: QueueEntry) -> Dict[str, Any]:
         return {
             "id": int(e.id),
@@ -288,13 +182,17 @@ def db_queue_entries():
             "added_at": int(e.added_at or 0),
             "status": e.status or "",
         }
-    return jsonify({
-        "queue_id": int(qid),
-        "entries": [_entry_to_dict(e) for e in entries],
-        "total": int(len(entries)),
-    })
+
+    return jsonify(
+        {
+            "queue_id": int(qid),
+            "entries": [_entry_to_dict(e) for e in entries],
+            "total": int(len(entries)),
+        }
+    )
 
 
+# Provide combined room details used by the dashboard room inspector
 @dashboard_bp.get("/api/db/room_details")
 def db_room_details():
     """Return room members and the most recent queue's entries for a room."""
