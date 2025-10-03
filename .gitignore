@@ -12,5 +12,4 @@
 *.gunicorn.pid
 
 
-git config --global user.name "realwumbl3"
-git config --global user.email "wumbl3@gmail.com"
+instance/*
