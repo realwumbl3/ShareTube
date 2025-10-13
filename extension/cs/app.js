@@ -67,22 +67,26 @@ export default class ShareTubeApp {
 			</div>
 			<div id="sharetube_pill">
 					<img alt="Profile" src=${this.avatarUrl.interp(v => v || "")} />
-					<span zyx-click=${() => console.log("app state", this)}>ShareTube</span>
+					<span id="sharetube_log_self_button" zyx-click=${() => console.log("app state", this)}>ShareTube</span>
 					<div class="room_presence">
 						<div class="presence" zyx-if=${[this.presence, v => v.length > 0]} zyx-live-list=${{ list: this.presence }}></div>
-						<button class="rounded_btn" title="Start or copy Watchroom link" zyx-click=${(z) => { z.e.stopPropagation(); this.handlePlusButton(); }}>
+						<button class="rounded_btn" id="sharetube_plus_button" title="Start or copy Watchroom link" zyx-click=${(z) => { z.e.stopPropagation(); this.handlePlusButton(); }}>
 							+
 						</button>
 					</div>
 					<button class="rounded_btn" zyx-if=${[this.queue, (v) => v.length > 0]} zyx-click=${() => this.toggleQueueVisibility()}>
 						${this.queue.interp(v => v.length)} queued
-					<button class="rounded_btn" title="Play/Pause" this="control_button" zyx-click=${(z) => { z.e.stopPropagation(); this.onControlButtonClicked(); }}>
+					<button class="rounded_btn" id="sharetube_control_button" title="Play/Pause" this="control_button" zyx-click=${(z) => { z.e.stopPropagation(); this.onControlButtonClicked(); }}>
 						Play
 					</button>
 					</button>
 				</div>
 			</div>
 		`.bind(this);
+	}
+
+	logSelf() {
+		console.log("ShareTubeApp", this);
 	}
 
 	async applyAvatarFromToken() {
@@ -135,6 +139,7 @@ export default class ShareTubeApp {
 		// Ensure control button label matches initial state
 		try { this.updateControlButtonLabel(); } catch {}
 		this.ignorePersistUntil = Date.now() + 2500;
+		this.logSelf();
 	}
 
 	toggleQueueVisibility() {

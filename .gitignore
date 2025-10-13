@@ -13,3 +13,11 @@
 
 
 instance/*
+.browsers/
+tests/.profiles/
+tests/artifacts/
+tests/report/
+tests/test-results/
+
+node_modules/
+.node_modules/

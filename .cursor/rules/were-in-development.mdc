@@ -1,10 +1,6 @@
 ---
-description:
-globs:w
-alwaysApply: true
+alwaysApply: false
 ---
-
-
 We're in development, don't worry about interupting "runtime", the app can be restarted at any time.
 
 Always include line-by-line commenting explaining in detail the logic and flow of data.
