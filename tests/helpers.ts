@@ -2,6 +2,19 @@ import { Page, expect, Frame, BrowserContext, chromium } from "@playwright/test"
 import path from "path";
 import fs from "fs";
 
+// Profiles are stored under tests/.pw-multi so they don't collide with single-user tests
+const PROFILE_A = path.join(process.cwd(), "tests", ".profiles", "A");
+const PROFILE_B = path.join(process.cwd(), "tests", ".profiles", "B");
+
+
+export async function launchExtensionContextWithTwoPages() {
+    const contextA = await launchExtensionContext(PROFILE_A, { headless: false, windowPosition: { x: 0, y: 0 }, windowSize: { width: 1280, height: 800 } });
+    const contextB = await launchExtensionContext(PROFILE_B, { headless: false, windowPosition: { x: 1280, y: 0 }, windowSize: { width: 1280, height: 800 } });
+    const pageA = await contextA.newPage();
+    const pageB = await contextB.newPage();
+    return { contextA, contextB, pageA, pageB };
+}
+
 export async function addConsentCookies(_context: BrowserContext) {
     // Intentionally left as a no-op for now; hook for setting consent cookies if needed.
 }
@@ -56,7 +69,7 @@ export async function getShareTubeState(page: Page, opts?: { timeoutMs?: number;
                                 seen.add(value);
                                 return Array.from(value as any).map((v) => serialize(v, seen, depth + 1));
                             }
-                        } catch {}
+                        } catch { }
 
                         if (t === "object") {
                             seen.add(value);
@@ -64,7 +77,7 @@ export async function getShareTubeState(page: Page, opts?: { timeoutMs?: number;
                             for (const key of Object.keys(value)) {
                                 try {
                                     out[key] = serialize((value as any)[key], seen, depth + 1);
-                                } catch {}
+                                } catch { }
                             }
                             return out;
                         }
@@ -73,15 +86,15 @@ export async function getShareTubeState(page: Page, opts?: { timeoutMs?: number;
 
                     const seen = new WeakSet<any>();
                     const base = serialize(app, seen, 0) || {};
-                    try { (base as any).queueLength = Array.isArray((app as any).queue) ? (app as any).queue.length : (typeof (app as any).queue?.length === "number" ? (app as any).queue.length : undefined); } catch {}
-                    try { (base as any).socketConnected = !!(app as any).socket?.connected; } catch {}
-                    try { (base as any).userId = (app as any).userId ?? (base as any).userId; } catch {}
+                    try { (base as any).queueLength = Array.isArray((app as any).queue) ? (app as any).queue.length : (typeof (app as any).queue?.length === "number" ? (app as any).queue.length : undefined); } catch { }
+                    try { (base as any).socketConnected = !!(app as any).socket?.connected; } catch { }
+                    try { (base as any).userId = (app as any).userId ?? (base as any).userId; } catch { }
                     return base;
                 });
                 clearTimeout(timer);
                 page.off("console", onConsole);
                 resolve(snapshot);
-            } catch {}
+            } catch { }
         };
 
         const timer = setTimeout(() => {
@@ -99,19 +112,32 @@ export async function getShareTubeState(page: Page, opts?: { timeoutMs?: number;
 
 // Launch a persistent Chromium context with the extension loaded for a given profile directory.
 // Ensures the profile directory exists and grants clipboard permissions for YouTube origins.
-export async function launchExtensionContext(profileDir: string, options?: { headless?: boolean }): Promise<BrowserContext> {
+export async function launchExtensionContext(
+    profileDir: string,
+    options?: { headless?: boolean; windowPosition?: { x: number; y: number }; windowSize?: { width: number; height: number } }
+): Promise<BrowserContext> {
     const headless = options?.headless ?? false;
     if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
     const EXT_PATH = path.join(process.cwd(), "extension");
+    const args: string[] = [
+        `--disable-extensions-except=${EXT_PATH}`,
+        `--load-extension=${EXT_PATH}`,
+        "--no-sandbox",
+        "--disable-features=IsolateOrigins,site-per-process",
+    ];
+    if (options?.windowPosition) {
+        const { x, y } = options.windowPosition;
+        args.push(`--window-position=${x},${y}`);
+    }
+    if (options?.windowSize) {
+        const { width, height } = options.windowSize;
+        args.push(`--window-size=${width},${height}`);
+    }
+    const viewport = options?.windowSize ? { width: options.windowSize.width, height: options.windowSize.height } : { width: 1280, height: 800 };
     const context = await chromium.launchPersistentContext(profileDir, {
         headless,
-        viewport: { width: 1280, height: 800 },
-        args: [
-            `--disable-extensions-except=${EXT_PATH}`,
-            `--load-extension=${EXT_PATH}`,
-            "--no-sandbox",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ],
+        viewport,
+        args,
     });
     await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://www.youtube.com" });
     await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://youtube.com" });

@@ -6,6 +6,7 @@ import fs from 'fs';
 // Resolve the unpacked Chrome extension path to the repo's `extension/` directory.
 // This avoids relying on the current working directory and prevents Windows UNC issues under WSL.
 const EXTENSION_PATH = path.join(process.cwd(), 'extension');
+const BROWSER_PATH = path.join(process.cwd(), '.browsers/chromium-1194/chrome-linux/chrome');
 
 export default defineConfig({
   testDir: __dirname,
@@ -25,39 +26,7 @@ export default defineConfig({
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: {
-      executablePath: (() => {
-        // Prefer repo-local Chromium installed under .browsers
-        const repoRoot = path.join(__dirname, '..');
-        const browsersDir = path.join(repoRoot, '.browsers');
-        if (fs.existsSync(browsersDir)) {
-          const candidates = ['chrome', 'chromium'];
-          // Shallow scan a few common nesting levels
-          const queue = [browsersDir];
-          const visited = new Set<string>();
-          while (queue.length) {
-            const dir = queue.shift()!;
-            if (visited.has(dir)) continue;
-            visited.add(dir);
-            let entries: string[] = [];
-            try {
-              entries = fs.readdirSync(dir).map((n) => path.join(dir, n));
-            } catch { /* ignore */ }
-            for (const p of entries) {
-              let stat; try { stat = fs.statSync(p); } catch { continue; }
-              if (stat.isDirectory()) {
-                // Avoid descending too deep
-                if (dir.split(path.sep).length - browsersDir.split(path.sep).length < 6) queue.push(p);
-              } else if (stat.isFile()) {
-                const base = path.basename(p);
-                if (candidates.includes(base)) {
-                  try { fs.accessSync(p, fs.constants.X_OK); return p; } catch { /* not executable */ }
-                }
-              }
-            }
-          }
-        }
-        return undefined;
-      })(),
+      executablePath: BROWSER_PATH,
       args: [
         `--disable-extensions-except=${EXTENSION_PATH}`,
         `--load-extension=${EXTENSION_PATH}`,
