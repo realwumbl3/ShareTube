@@ -144,6 +144,26 @@ h1 {
     padding: 0px 0px 8px;
     background: #00000000;
 }
+#sharetube_join_sync {
+	position: absolute;
+	bottom: 100px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: rgba(17, 24, 39, 0.9);
+	color: var(--yt-spec-text-primary, #e5e7eb);
+	border: 1px solid rgba(148, 163, 184, .28);
+	backdrop-filter: blur(12px) saturate(1.05);
+	border-radius: 999px;
+	padding: 6px 10px;
+	font-size: 13px;
+	pointer-events: auto;
+	z-index: 10000001;
+}
+
+#sharetube_join_sync .title {
+	font-weight: 600;
+	margin-left: 4px;
+}
 
 #sharetube_main img {
     width: 27px;

@@ -14,7 +14,7 @@ if [[ ! -d "$EXT_PATH" ]]; then
 fi
 
 # Allow overriding the profile directory and initial URL via args
-PROFILE_DIR="${1:-/home/wumbl3wsl/ShareTube/tests/.profiles/A}"
+PROFILE_DIR="${1:-/home/wumbl3wsl/ShareTube/tests/.profiles/B}"
 START_URL="${2:-https://www.youtube.com/}"
 LOCAL_BROWSERS_DIR="$PROJECT_ROOT/.browsers"
 

@@ -7,107 +7,88 @@ const PROFILE_A = path.join(process.cwd(), "tests", ".profiles", "A");
 const PROFILE_B = path.join(process.cwd(), "tests", ".profiles", "B");
 
 
-export async function launchExtensionContextWithTwoPages() {
-    const contextA = await launchExtensionContext(PROFILE_A, { headless: false, windowPosition: { x: 0, y: 0 }, windowSize: { width: 1280, height: 800 } });
-    const contextB = await launchExtensionContext(PROFILE_B, { headless: false, windowPosition: { x: 1280, y: 0 }, windowSize: { width: 1280, height: 800 } });
-    const pageA = await contextA.newPage();
-    const pageB = await contextB.newPage();
-    return { contextA, contextB, pageA, pageB };
+export async function launchExtensionContextWithTwoPages({ launchA, launchB }: { launchA: boolean, launchB: boolean } = { launchA: true, launchB: true }) {
+    const out = { contextA: null as BrowserContext | null, contextB: null as BrowserContext | null, pageA: null as Page | null, pageB: null as Page | null };
+    if (launchA) {
+        out.contextA = await launchExtensionContext(PROFILE_A, { headless: false, windowPosition: { x: 0, y: 0 }, windowSize: { width: 1280, height: 800 } });
+        out.pageA = await out.contextA.newPage();
+    }
+    if (launchB) {
+        out.contextB = await launchExtensionContext(PROFILE_B, { headless: false, windowPosition: { x: 1280, y: 0 }, windowSize: { width: 1280, height: 800 } });
+        out.pageB = await out.contextB.newPage();
+    }
+    return out;
 }
 
 export async function addConsentCookies(_context: BrowserContext) {
     // Intentionally left as a no-op for now; hook for setting consent cookies if needed.
 }
 
-export async function getShareTubeState(page: Page, opts?: { timeoutMs?: number; clickSelector?: string; labels?: string[]; }): Promise<any> {
-    const timeoutMs = opts?.timeoutMs ?? 5000;
-    const clickSelector = opts?.clickSelector ?? "#sharetube_log_self_button";
-    const labels = opts?.labels ?? ["app state", "ShareTubeApp"]; // support both formats
+export async function getShareTubeState(page: Page, opts?: { timeoutMs?: number; }): Promise<any> {
+    const _ = opts; // reserved for future options
 
-    const captured = new Promise<any>((resolve, reject) => {
-        const onConsole = async (msg: any) => {
-            try {
-                if (msg.type() !== "log") return;
-                const args = msg.args();
-                if (!args || args.length < 2) return;
-                const first = await args[0].jsonValue().catch(() => null);
-                if (!labels.includes(first)) return;
-                const snapshot = await args[1].evaluate((app: any) => {
-                    function isPlainObject(value: any) {
-                        return Object.prototype.toString.call(value) === "[object Object]";
-                    }
-                    function serialize(value: any, seen: WeakSet<any>, depth: number): any {
-                        if (value === null || value === undefined) return value;
-                        const t = typeof value;
-                        if (t === "string" || t === "number" || t === "boolean") return value;
-                        if (t === "function") return undefined;
-                        if (seen.has(value)) return "[Circular]";
-                        if (depth > 2) return "[MaxDepth]";
-
-                        if (typeof Element !== "undefined" && value instanceof Element) {
-                            return { $el: true, tag: value.tagName, id: (value as any).id || "", class: (value as any).className || "" };
-                        }
-                        if (typeof Map !== "undefined" && value instanceof Map) {
-                            const obj: any = {};
-                            seen.add(value);
-                            for (const [k, v] of value.entries()) obj[String(k)] = serialize(v, seen, depth + 1);
-                            return obj;
-                        }
-                        if (typeof Set !== "undefined" && value instanceof Set) {
-                            seen.add(value);
-                            return Array.from(value.values()).map((v) => serialize(v, seen, depth + 1));
-                        }
-                        if (Array.isArray(value)) {
-                            seen.add(value);
-                            return value.map((v) => serialize(v, seen, depth + 1));
-                        }
-                        if (isPlainObject(value) && "value" in value && "initialValue" in value && "eventListeners" in value) {
-                            return serialize((value as any).value, seen, depth + 1);
-                        }
-                        try {
-                            if (typeof (value as any)[Symbol.iterator] === "function") {
-                                seen.add(value);
-                                return Array.from(value as any).map((v) => serialize(v, seen, depth + 1));
-                            }
-                        } catch { }
-
-                        if (t === "object") {
-                            seen.add(value);
-                            const out: any = {};
-                            for (const key of Object.keys(value)) {
-                                try {
-                                    out[key] = serialize((value as any)[key], seen, depth + 1);
-                                } catch { }
-                            }
-                            return out;
-                        }
-                        return undefined;
-                    }
-
-                    const seen = new WeakSet<any>();
-                    const base = serialize(app, seen, 0) || {};
-                    try { (base as any).queueLength = Array.isArray((app as any).queue) ? (app as any).queue.length : (typeof (app as any).queue?.length === "number" ? (app as any).queue.length : undefined); } catch { }
-                    try { (base as any).socketConnected = !!(app as any).socket?.connected; } catch { }
-                    try { (base as any).userId = (app as any).userId ?? (base as any).userId; } catch { }
-                    return base;
+    async function requestBridgeState(): Promise<any | null> {
+        const id = Math.random().toString(36).slice(2);
+        try {
+            const res: any = await page.evaluate(({ id }) => {
+                return new Promise((resolve) => {
+                    try {
+                        const onResp = (ev) => {
+                            try {
+                                const d = ev && ev.detail;
+                                if (!d || d.id !== id) return;
+                                window.removeEventListener('sharetube:test:resp', onResp, true);
+                                resolve({ ok: !!d.ok, result: d.result, error: d.error });
+                            } catch { resolve(null); }
+                        };
+                        window.addEventListener('sharetube:test:resp', onResp, true);
+                        window.dispatchEvent(new CustomEvent('sharetube:test', { detail: { id, action: 'getState' } }));
+                        setTimeout(() => {
+                            try { window.removeEventListener('sharetube:test:resp', onResp, true); } catch { }
+                            resolve(null);
+                        }, 800);
+                    } catch { resolve(null); }
                 });
-                clearTimeout(timer);
-                page.off("console", onConsole);
-                resolve(snapshot);
-            } catch { }
-        };
+            }, { id });
+            return res && res.ok ? res.result : null;
+        } catch {
+            return null; // navigation or context loss
+        }
+    }
 
-        const timer = setTimeout(() => {
-            page.off("console", onConsole);
-            reject(new Error("Timed out waiting for ShareTube state log"));
-        }, timeoutMs);
+    // Try bridge; if it fails, wait for reinjection once, then try again.
+    let state = await requestBridgeState();
+    if (!state) {
+        try { await page.waitForLoadState('domcontentloaded', { timeout: 3000 }); } catch { }
+        try { await page.waitForSelector('#sharetube_pill', { timeout: 3000 }); } catch { }
+        state = await requestBridgeState();
+    }
+    if (state) return state;
+    throw new Error("ShareTube test bridge unavailable or not ready");
+}
 
-        // Attach listener; it will resolve once the specific log is seen
-        page.on("console", onConsole);
-    });
-
-    await page.locator(clickSelector).click();
-    return captured;
+export async function callShareTube(page: Page, method: string, ...args: any[]): Promise<any> {
+    const id = Math.random().toString(36).slice(2);
+    const res = await page.evaluate(({ id, method, args }) => {
+        return new Promise((resolve, reject) => {
+            try {
+                const onResp = (ev) => {
+                    try {
+                        const d = ev && ev.detail;
+                        if (!d || d.id !== id) return;
+                        window.removeEventListener('sharetube:test:resp', onResp, true);
+                        if (d.ok) resolve(d.result);
+                        else reject(new Error(d.error || 'ShareTube call failed'));
+                    } catch (e) { reject(e); }
+                };
+                window.addEventListener('sharetube:test:resp', onResp, true);
+                const detail = { id, action: 'call', method, args };
+                window.dispatchEvent(new CustomEvent('sharetube:test', { detail }));
+                setTimeout(() => { try { window.removeEventListener('sharetube:test:resp', onResp, true); } catch { } reject(new Error('ShareTube bridge timeout')); }, 1500);
+            } catch (e) { reject(e); }
+        });
+    }, { id, method, args });
+    return res;
 }
 
 // Launch a persistent Chromium context with the extension loaded for a given profile directory.
@@ -124,6 +105,7 @@ export async function launchExtensionContext(
         `--load-extension=${EXT_PATH}`,
         "--no-sandbox",
         "--disable-features=IsolateOrigins,site-per-process",
+        "--autoplay-policy=no-user-gesture-required",
     ];
     if (options?.windowPosition) {
         const { x, y } = options.windowPosition;
@@ -181,9 +163,15 @@ export async function addRickRollToQueue(page: Page) {
 }
 
 // Click the + button to create a room and return the clipboard contents (invite/link).
-export async function createRoom(page: Page): Promise<string> {
+export async function createRoom(page: Page, { clearClipboard }: { clearClipboard?: boolean } = { clearClipboard: true }): Promise<string> {
+    if (clearClipboard) {
+        console.log("[Clearing clipboard]");
+        await page.evaluate(() => navigator.clipboard.writeText(""));
+    }
+    console.log("[Clicking + button to create room]");
     await page.locator("#sharetube_plus_button").click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
     const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+    console.log("[Clipboard contents]:", clipboard);
     return clipboard ?? "";
 }

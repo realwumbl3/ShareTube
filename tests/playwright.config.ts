@@ -31,7 +31,8 @@ export default defineConfig({
         `--disable-extensions-except=${EXTENSION_PATH}`,
         `--load-extension=${EXTENSION_PATH}`,
         '--no-sandbox',
-        '--disable-features=IsolateOrigins,site-per-process'
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--autoplay-policy=no-user-gesture-required'
       ]
     }
   }

@@ -2,7 +2,7 @@
 console.log("cs/player.js loaded");
 
 // Lightweight observer/controller around the active <video> element on YouTube
-export default class YouTubePlayerObserver {
+export default class YoutubePlayerManager {
 	constructor(opts = {}) {
         // Desired content state enforced by room logic: 'paused' | 'playing'
         this.desiredState = "paused"; // 'paused' | 'playing'
@@ -198,6 +198,14 @@ export default class YouTubePlayerObserver {
     isPlayAllowedNow() {
 		if (this.desiredState === 'playing') return true;
 		return performance.now() < this.allowPlayUntilMs;
+	}
+
+	// Expose a minimal player state string for external readers/tests
+	getPlayerState() {
+		try {
+			if (!this.video) return 'idle';
+			return this.video.paused ? 'paused' : 'playing';
+		} catch { return 'idle'; }
 	}
 
     // Guard against external play when room desires 'paused', except during ads

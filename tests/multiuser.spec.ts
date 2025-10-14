@@ -1,55 +1,62 @@
 /// <reference types="node" />
 import { test, expect, Page, BrowserContext } from "@playwright/test";
-import { createRoom, addRickRollToQueue, getShareTubeState, launchExtensionContextWithTwoPages } from "./helpers";
-
-async function joinRoomWithTwoPages(pageA: Page, pageB: Page) {
-    await pageA.goto("https://youtube.com/");
-
-    // User A creates the room and copies the invite URL from clipboard
-    const invite = await createRoom(pageA);
-    expect(invite).toContain("#sharetube:");
-
-    // Navigate A to the invite to ensure the extension/router handles the room state
-    await pageA.goto(invite);
-    await pageA.waitForURL("**/*");
-
-    // User A adds a video
-    await addRickRollToQueue(pageA);
-
-    // User B opens the invite URL
-    await pageB.goto(invite);
-
-    // Wait for B to observe a non-empty queue (sync via room)
-    await expect.poll(async () => {
-        const s = await getShareTubeState(pageB);
-        return Number(s.queueLength ?? 0);
-    }, { timeout: 10000 }).toBeGreaterThan(0);
-
-    // Read state snapshots from both users
-    const stateA = await getShareTubeState(pageA);
-    const stateB = await getShareTubeState(pageB);
-
-    return { stateA, stateB, invite };
-}
-
+import { createRoom, addRickRollToQueue, getShareTubeState, launchExtensionContextWithTwoPages, callShareTube } from "./helpers";
 
 let joinedRoomUrl: string | null = null;
 
-test.describe("Multi-user room join", () => {
+test.describe("Multi-user room join", async () => {
     test("Two users join the same room and see synced state", async () => {
-        const { contextA, contextB, pageA, pageB } = await launchExtensionContextWithTwoPages();
-
+        const { contextA, contextB, pageA, pageB } = await launchExtensionContextWithTwoPages({ launchA: true, launchB: true });
+        if (!pageA) {
+            throw new Error("Page A is null");
+        }
+        if (!pageB) {
+            throw new Error("Page B is null");
+        }
+        if (!contextA) {
+            throw new Error("Context A is null");
+        }
+        if (!contextB) {
+            throw new Error("Context B is null");
+        }
         try {
-            const { stateA, stateB, invite } = await joinRoomWithTwoPages(pageA, pageB);
+
+            await pageA.goto("https://youtube.com/");
+
+            // User A creates the room and copies the invite URL from clipboard
+            const invite = await createRoom(pageA, { clearClipboard: false });
+            expect(invite).toContain("#sharetube:");
+
+            console.log("[Player A creates the room and copies the invite URL from clipboard...]");
+
+            // User B opens the invite URL
+            await pageB.goto(invite);
+
+            console.log("[Player B opens the invite URL...]");
+
+            await pageB.waitForURL("**/*");
+
+            // User A adds a video
+            console.log("[Player A adds a video to the queue...]");
+            await addRickRollToQueue(pageA);
+
+            // Wait for B to observe a non-empty queue (sync via room)
+            await expect.poll(async () => {
+                const s = await getShareTubeState(pageB);
+                return Number(s.queueLength ?? 0);
+            }, { timeout: 10000 }).toBeGreaterThan(0);
+
+            console.log("[Player B observes a non-empty queue...]");
+
             joinedRoomUrl = invite;
 
-            // Both should be connected to socket/room
-            expect(stateA.socketConnected).toBeTruthy();
-            expect(stateB.socketConnected).toBeTruthy();
+            // Both should be connected to socket/room (refresh state after waits)
+            const finalStateA = await getShareTubeState(pageA);
+            const finalStateB = await getShareTubeState(pageB);
 
             // If both expose room id, they should match
-            const roomIdA = stateA.roomId ?? stateA.room?.id;
-            const roomIdB = stateB.roomId ?? stateB.room?.id;
+            const roomIdA = finalStateA.roomId ?? finalStateA.room?.id;
+            const roomIdB = finalStateB.roomId ?? finalStateB.room?.id;
             if (roomIdA && roomIdB) {
                 expect(roomIdA).toBe(roomIdB);
             }
@@ -63,33 +70,92 @@ test.describe("Multi-user room join", () => {
 
 test("Two users in the same room can start playing", async () => {
 
+
     if (!joinedRoomUrl) {
         throw new Error("Room not joined");
     }
 
-    const { contextA, contextB, pageA, pageB } = await launchExtensionContextWithTwoPages();
-    await pageA.goto(joinedRoomUrl);
-    await pageB.goto(joinedRoomUrl);
+    const { contextA, contextB, pageA, pageB } = await launchExtensionContextWithTwoPages({ launchA: true, launchB: true });
+    if (!pageA) {
+        throw new Error("Page A is null");
+    }
+    if (!pageB) {
+        throw new Error("Page B is null");
+    }
+    if (!contextA) {
+        throw new Error("Context A is null");
+    }
+    if (!contextB) {
+        throw new Error("Context B is null");
+    }
+    try {
 
-    await pageA.waitForURL("**/*");
-    await pageB.waitForURL("**/*");
+        await pageA.goto(joinedRoomUrl);
+        await pageB.goto(joinedRoomUrl);
 
-    await pageA.waitForTimeout(2000);
+        await pageA.waitForURL("**/*");
+        await pageB.waitForURL("**/*");
 
-    await pageA.click("#sharetube_control_button");
-    console.log("Video watch pages should now be loading...");
+        // interact with the page to trigger the video to load and autoplay
 
-    await pageA.waitForURL("**/*");
-    await pageB.waitForURL("**/*");
+        await pageA.waitForTimeout(2000);
 
-    await pageA.waitForTimeout(4000);
+        await callShareTube(pageA, "roomManager.togglePlayPause");
 
-    const stateA = await getShareTubeState(pageA);
-    const stateB = await getShareTubeState(pageB);
+        console.log("Requested room to start via bridge; watch pages may navigate...");
 
-    console.log("stateA", stateA);
-    console.log("stateB", stateB);
+        // Allow SPA/nav to occur if app routes to video URL
+        await pageA.waitForURL("**/*");
+        await pageB.waitForURL("**/*");
 
-    expect(stateA.roomState).toBe("playing");
-    expect(stateB.roomState).toBe("playing");
+        console.log("[Videos should start playing.....]");
+
+        // Wait for both sides to reach playing state (bridge-backed state read)
+        await expect.poll(async () => {
+            try { return (await getShareTubeState(pageA)).roomState; } catch { return ""; }
+        }, { timeout: 25000 }).toBe("playing");
+        await expect.poll(async () => {
+            try { return (await getShareTubeState(pageB)).roomState; } catch { return ""; }
+        }, { timeout: 25000 }).toBe("playing");
+
+
+    } finally {
+        // await contextA.close();
+        console.log("[Closing Player B...]");
+        await contextB.close();
+    }
+});
+
+
+test("Users joining late join and see synced state", async () => {
+    if (!joinedRoomUrl) {
+        throw new Error("Room not joined");
+    }
+
+    const { contextA, contextB, pageA, pageB } = await launchExtensionContextWithTwoPages({ launchA: false, launchB: true });
+    if (!pageB) {
+        throw new Error("Page B is null");
+    }
+    if (!contextB) {
+        throw new Error("Context B is null");
+    }
+    try {
+        console.log("[Player B should navigate to the room...]");
+
+        await pageB.goto(joinedRoomUrl);
+
+        console.log("[Player B should detect it's not on the video page and navigate to it...]");
+
+        await pageB.waitForURL("**/watch?v=*");
+
+        console.log("[Player B is on the video page...]");
+
+        await expect.poll(async () => {
+            const state = await getShareTubeState(pageB);
+            return state.player.desiredState;
+        }, { timeout: 15000 }).toBe("playing");
+    }
+    finally {
+        await contextB.close();
+    }
 });

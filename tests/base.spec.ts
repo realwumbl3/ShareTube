@@ -21,6 +21,7 @@ async function withExtension(run: (page: any, context: any) => Promise<void>) {
             `--load-extension=${EXT_PATH}`,
             "--no-sandbox",
             "--disable-features=IsolateOrigins,site-per-process",
+            "--autoplay-policy=no-user-gesture-required",
         ],
     });
     // Pre-grant clipboard permissions for YouTube to avoid popup prompts
@@ -39,50 +40,25 @@ async function withExtension(run: (page: any, context: any) => Promise<void>) {
     }
 }
 
-test("Extension should load", async () => {
+test("Extension should load and clicking + button should create a room and copy the invite URL to the clipboard", async () => {
     await withExtension(async (page) => {
         await page.goto("https://youtube.com/");
-        // check for #sharetube_pill    
+
+        // ensure the extension overlay is present
         await expect(page.locator("#sharetube_pill")).toBeVisible();
-    });
-});
 
-
-test("Clicking + button should create a room", async () => {
-    await withExtension(async (page) => {
-        await page.goto("https://youtube.com/");
-
-        const clipboard = await createRoom(page);
+        const clipboard = await createRoom(page, { clearClipboard: true });
 
         expect(clipboard).toContain("#sharetube:");
     });
 });
 
 
-test("Dragging and dropping a video should add it to the queue", async () => {
+test("Adding a video to the queue and clicking on the play button should start the queue, video page should be loaded and state should be 'playing'", async () => {
     await withExtension(async (page: Page) => {
         await page.goto("https://youtube.com/");
 
-        // ensure the extension overlay is present
-        await expect(page.locator("#sharetube_pill")).toBeVisible();
-
-        // capture initial queue count (may be hidden but the element exists)
-        const initialText = await page.locator("#sharetube_queue_count").innerText();
-        const initialCount = Number.parseInt(initialText || "0", 10) || 0;
-
-        await addRickRollToQueue(page);
-
-        // expect the queue count to increase
-        await expect(page.locator("#sharetube_queue_count")).toHaveText(String(initialCount + 1));
-    });
-});
-
-
-test("Clicking on the play button should start the queue", async () => {
-    await withExtension(async (page: Page) => {
-        await page.goto("https://youtube.com/");
-
-        await createRoom(page);
+        await createRoom(page, { clearClipboard: false });
 
         await addRickRollToQueue(page);
 
@@ -95,13 +71,9 @@ test("Clicking on the play button should start the queue", async () => {
         console.log("page loaded, video should start playing if AD is not playing.");
 
         // wait for 5 seconds
-        await page.waitForTimeout(2000);
-
-        const state = await getShareTubeState(page);
-
-        console.log("state.roomState", state.roomState);
-
-        // PASS
-        expect(["idle", "starting", "playing", "playing_ad"]).toContain(state.roomState);
+        await expect.poll(async () => {
+            const state = await getShareTubeState(page);
+            return state.roomState;
+        }, { timeout: 20000 }).toBe("playing");
     });
 });

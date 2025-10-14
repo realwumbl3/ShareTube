@@ -7,12 +7,12 @@ export function decodeJwt(token) {
 		const payload = token.split(".")[1];
 		const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
 		return JSON.parse(decodeURIComponent(escape(json)));
-	} catch (e) { try { console.debug("[ShareTube] decodeJwt failed", e); } catch (_) {} return null; }
+	} catch (e) { try { console.debug("[ShareTube] decodeJwt failed", e); } catch (_) { } return null; }
 }
 
 // Convert a possibly relative URL to an absolute URL based on current location
 export function toAbsoluteUrl(href) {
-	try { return new URL(href, location.href).toString(); } catch (e) { try { console.debug("[ShareTube] toAbsoluteUrl failed", e); } catch (_) {} return null; }
+	try { return new URL(href, location.href).toString(); } catch (e) { try { console.debug("[ShareTube] toAbsoluteUrl failed", e); } catch (_) { } return null; }
 }
 
 // Extract a YouTube video ID from various URL forms or raw text
@@ -28,7 +28,7 @@ export function extractVideoId(u) {
 		}
 		const m = u.match(/[a-zA-Z0-9_-]{11}/);
 		return m ? m[0] : '';
-	} catch (e) { try { console.debug("[ShareTube] extractVideoId failed", e); } catch (_) {} return ''; }
+	} catch (e) { try { console.debug("[ShareTube] extractVideoId failed", e); } catch (_) { } return ''; }
 }
 
 // Construct a high-quality thumbnail URL from a YouTube video ID
@@ -114,7 +114,7 @@ export function findOnPageYouTubeMeta(url) {
 			}
 		}
 		return null;
-	} catch (e) { try { console.debug("[ShareTube] findOnPageYouTubeMeta failed", e); } catch (_) {} return null; }
+	} catch (e) { try { console.debug("[ShareTube] findOnPageYouTubeMeta failed", e); } catch (_) { } return null; }
 }
 
 // Ask the backend to resolve metadata when not present on the page
@@ -125,7 +125,7 @@ export async function fetchMetadataFromBackend(url) {
 		const r = await fetch(`${base}/api/youtube/metadata?url=${encodeURIComponent(url)}`, { method: 'GET' });
 		if (!r.ok) return null;
 		return await r.json();
-	} catch (e) { try { console.debug("[ShareTube] fetchMetadataFromBackend failed", e); } catch (_) {} return null; }
+	} catch (e) { try { console.debug("[ShareTube] fetchMetadataFromBackend failed", e); } catch (_) { } return null; }
 }
 
 // Extract URLs from a drag-and-drop DataTransfer payload
@@ -139,7 +139,7 @@ export function extractUrlsFromDataTransfer(dt) {
 				urls.push(line.trim());
 			});
 		}
-	} catch (e) { try { console.debug("[ShareTube] extractUrlsFromDataTransfer uri-list failed", e); } catch (_) {} }
+	} catch (e) { try { console.debug("[ShareTube] extractUrlsFromDataTransfer uri-list failed", e); } catch (_) { } }
 	try {
 		const text = dt.getData && dt.getData("text/plain");
 		if (text) {
@@ -149,7 +149,7 @@ export function extractUrlsFromDataTransfer(dt) {
 				urls.push(m[0]);
 			}
 		}
-	} catch (e) { try { console.debug("[ShareTube] extractUrlsFromDataTransfer text failed", e); } catch (_) {} }
+	} catch (e) { try { console.debug("[ShareTube] extractUrlsFromDataTransfer text failed", e); } catch (_) { } }
 	const seen = new Set();
 	const out = [];
 	for (const u of urls) {
