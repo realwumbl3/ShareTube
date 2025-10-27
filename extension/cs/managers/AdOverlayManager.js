@@ -1,29 +1,11 @@
 // AdOverlayManager encapsulates all DOM, placement, and state logic for the
 // small overlay that informs users when ads are active or the room is starting.
-//
-// This class is intentionally pure in the sense that it does not own the
-// application state. Instead, the ShareTube app provides a set of getter
-// callbacks that the manager pulls from whenever it needs to render or update.
-//
-// The manager exposes three main methods:
-// - constructor(getters): capture state accessors and light options
-// - start(): create DOM, attach to the page, begin periodic placement updates
-// - notifyStateChanged(): recompute visibility, avatars, and labels immediately
-//
-// All functions use defensive try/catch to avoid breaking the host page.
 
 export default class AdOverlayManager {
-	// Construct with a bag of lazy getters so we never hold stale references.
-	// Expected getters:
-	// - getPillElement(): HTMLElement | null
-	// - getVideoElement(): HTMLVideoElement | null
-	// - getRoomState(): 'idle'|'starting'|'playing'|'playing_ad'
-	// - getAdPlaying(): boolean
-	// - getAdUserIds(): Set<number>
-	// - getPresentUsersById(): Map<number, { name: LiveVar<string>, picture: LiveVar<string> }>
-	constructor(getters) {
-		// Store the getter bag for on-demand reads
-		this.getters = getters || {};
+
+	constructor(app) {
+		// Store the app for direct state access
+		this.app = app;
 		// Overlay root element (created on start)
 		this.el = null;
 		// Internal placement mode flags
@@ -101,11 +83,11 @@ export default class AdOverlayManager {
 	#updatePlacement() {
 		try {
 			if (!this.el) return;
-			const get = this.getters || {};
-			const adPlaying = !!(get.getAdPlaying && get.getAdPlaying());
+			const app = this.app || {};
+			const adPlaying = !!(app.adPlaying && app.adPlaying.get && app.adPlaying.get());
 			// When the local user is currently in an ad, anchor above the ShareTube pill
 			if (adPlaying) {
-				const pill = get.getPillElement ? get.getPillElement() : null;
+				const pill = app.sharetube_pill;
 				if (pill) {
 					if (this.el.parentElement !== document.body) {
 						try { this.el.remove(); } catch {}
@@ -120,7 +102,7 @@ export default class AdOverlayManager {
 				}
 			}
 			// Otherwise prefer a YouTube video container if available
-			const video = get.getVideoElement ? get.getVideoElement() : null;
+			const video = (app.player && app.player.video) || null;
 			let container = null;
 			try {
 				container = (video && video.closest && video.closest('.html5-video-player'))
@@ -161,8 +143,8 @@ export default class AdOverlayManager {
 	#updateFixedBounds() {
 		try {
 			if (!this.el || !this.isFixedMode) return;
-			const get = this.getters || {};
-			const video = get.getVideoElement ? get.getVideoElement() : null;
+			const app = this.app || {};
+			const video = (app.player && app.player.video) || null;
 			if (!video || !video.getBoundingClientRect) return;
 			const r = video.getBoundingClientRect();
 			Object.assign(this.el.style, {
@@ -179,8 +161,7 @@ export default class AdOverlayManager {
 	#updatePillBounds() {
 		try {
 			if (!this.el || !this.isPillMode) return;
-			const get = this.getters || {};
-			const pill = get.getPillElement ? get.getPillElement() : null;
+			const pill = this.app && this.app.sharetube_pill;
 			if (!pill || !pill.getBoundingClientRect) return;
 			const r = pill.getBoundingClientRect();
 			const margin = 8;
@@ -199,11 +180,11 @@ export default class AdOverlayManager {
 	#recomputeVisibility() {
 		try {
 			if (!this.el) return;
-			const get = this.getters || {};
+			const app = this.app || {};
 			const inRoom = true; // The host only instantiates this manager when UI is active in-room
-			const rs = get.getRoomState ? get.getRoomState() : 'idle';
-			const isAdNow = !!(get.getAdPlaying && get.getAdPlaying());
-			const adIds = get.getAdUserIds ? Array.from(get.getAdUserIds() || []) : [];
+			const rs = app.roomState && app.roomState.get ? app.roomState.get() : 'idle';
+			const isAdNow = !!(app.adPlaying && app.adPlaying.get && app.adPlaying.get());
+			const adIds = Array.from((app.adUserIds || new Set()));
 			const anyoneInAds = adIds.length > 0;
 			const waiting = (rs === 'starting' || rs === 'playing_ad');
 			const visible = inRoom && (isAdNow || anyoneInAds || waiting);
@@ -220,11 +201,11 @@ export default class AdOverlayManager {
 			// Clear existing content
 			wrap.innerHTML = '';
 			// Determine which users to show
-			const get = this.getters || {};
-			const rs = get.getRoomState ? get.getRoomState() : 'idle';
-			const adIds = get.getAdUserIds ? Array.from(get.getAdUserIds() || []) : [];
+			const app = this.app || {};
+			const rs = app.roomState && app.roomState.get ? app.roomState.get() : 'idle';
+			const adIds = Array.from((app.adUserIds || new Set()));
 			const showWaiting = (adIds.length === 0) && (rs === 'starting' || rs === 'playing_ad');
-			const presentMap = get.getPresentUsersById ? (get.getPresentUsersById() || new Map()) : new Map();
+			const presentMap = app.presentUsersById || new Map();
 			if (this.isPillMode) {
 				// Compact pill-mode: up to 4 faces and a "+N" counter
 				const ids = showWaiting ? Array.from(presentMap.keys()) : adIds;
@@ -270,11 +251,11 @@ export default class AdOverlayManager {
 			if (!this.el) return;
 			const labelEl = this.el.querySelector('.st_ad_label');
 			if (!labelEl) return;
-			const get = this.getters || {};
-			const rs = get.getRoomState ? get.getRoomState() : 'idle';
-			const adIds = get.getAdUserIds ? Array.from(get.getAdUserIds() || []) : [];
+			const app = this.app || {};
+			const rs = app.roomState && app.roomState.get ? app.roomState.get() : 'idle';
+			const adIds = Array.from((app.adUserIds || new Set()));
 			const showWaiting = (adIds.length === 0) && (rs === 'starting' || rs === 'playing_ad');
-			const presentMap = get.getPresentUsersById ? (get.getPresentUsersById() || new Map()) : new Map();
+			const presentMap = app.presentUsersById || new Map();
 			if (this.isPillMode) {
 				labelEl.textContent = showWaiting ? `Waiting (${presentMap.size})` : `Ads (${adIds.length})`;
 			} else {

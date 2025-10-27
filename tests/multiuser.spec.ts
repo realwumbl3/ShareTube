@@ -60,12 +60,21 @@ test.describe("Multi-user room join", async () => {
             if (roomIdA && roomIdB) {
                 expect(roomIdA).toBe(roomIdB);
             }
+
+
         } finally {
             await contextA.close();
             await contextB.close();
         }
     });
 });
+
+let persistedContexts = {
+    contextA: null as BrowserContext | null,
+    contextB: null as BrowserContext | null,
+    pageA: null as Page | null,
+    pageB: null as Page | null,
+};
 
 
 test("Two users in the same room can start playing", async () => {
@@ -88,6 +97,7 @@ test("Two users in the same room can start playing", async () => {
     if (!contextB) {
         throw new Error("Context B is null");
     }
+
     try {
 
         await pageA.goto(joinedRoomUrl);
@@ -118,11 +128,12 @@ test("Two users in the same room can start playing", async () => {
             try { return (await getShareTubeState(pageB)).roomState; } catch { return ""; }
         }, { timeout: 25000 }).toBe("playing");
 
-
     } finally {
         // await contextA.close();
         console.log("[Closing Player B...]");
         await contextB.close();
+        persistedContexts.contextA = contextA;
+        persistedContexts.pageA = pageA;
     }
 });
 
@@ -132,13 +143,12 @@ test("Users joining late join and see synced state", async () => {
         throw new Error("Room not joined");
     }
 
-    const { contextA, contextB, pageA, pageB } = await launchExtensionContextWithTwoPages({ launchA: false, launchB: true });
-    if (!pageB) {
-        throw new Error("Page B is null");
+    const { contextB, pageB } = await launchExtensionContextWithTwoPages({ launchA: false, launchB: true });
+
+    if (!pageB || !contextB) {
+        throw new Error("Test setup failed");
     }
-    if (!contextB) {
-        throw new Error("Context B is null");
-    }
+
     try {
         console.log("[Player B should navigate to the room...]");
 
@@ -150,12 +160,86 @@ test("Users joining late join and see synced state", async () => {
 
         console.log("[Player B is on the video page...]");
 
-        await expect.poll(async () => {
-            const state = await getShareTubeState(pageB);
-            return state.player.desiredState;
-        }, { timeout: 15000 }).toBe("playing");
+        // await expect.poll(async () => {
+        //     const state = await getShareTubeState(pageB);
+        //     return state.player.desiredState;
+        // }, { timeout: 15000 }).toBe("playing");
     }
     finally {
+        // await contextB.close();
+        persistedContexts.contextB = contextB;
+        persistedContexts.pageB = pageB;
+    }
+});
+
+
+test("Videos should be playing for both users", async () => {
+    if (!joinedRoomUrl) {
+        throw new Error("Room not joined");
+    }
+
+    const { contextA, contextB, pageA, pageB } = persistedContexts;
+    if (!pageA || !pageB || !contextA || !contextB) {
+        throw new Error("Test setup failed");
+    }
+
+    try {
+        // check if the video is playing for Player A
+        await expect(pageA.locator("video.html5-main-video")).toHaveJSProperty("paused", false, { timeout: 15000 });
+
+        console.log("[Video is playing for Player A...]");
+
+        // check if the video is playing for Player B
+        await expect(pageB.locator("video.html5-main-video")).toHaveJSProperty("paused", false, { timeout: 15000 });
+
+        console.log("[Video is playing for Player B...]");
+    }
+    finally {
+        await contextA.close();
         await contextB.close();
     }
+});
+
+test("Users in the same room can pause and resume", async () => {
+    if (!joinedRoomUrl) {
+        throw new Error("Room not joined");
+    }
+
+    const { contextA, contextB, pageA, pageB } = persistedContexts;
+    if (!pageA || !pageB || !contextA || !contextB) {
+        throw new Error("Test setup failed");
+    }
+
+    try {
+        // click the pause button
+        await callShareTube(pageA, "player.requestPause");
+
+        // wait for the video to pause
+        await expect(pageA.locator("video.html5-main-video")).toHaveJSProperty("paused", true, { timeout: 15000 });
+
+        console.log("[Video has paused for Player A...]");
+
+        // check if the video is paused for Player B
+        await expect(pageB.locator("video.html5-main-video")).toHaveJSProperty("paused", true, { timeout: 15000 });
+
+        console.log("[Video has paused for Player B...]");
+
+        // click the play button
+        await callShareTube(pageA, "player.requestPlay");
+
+        // wait for the video to play
+        await expect(pageA.locator("video.html5-main-video")).toHaveJSProperty("paused", false, { timeout: 15000 });
+
+        console.log("[Video has resumed for Player A...]");
+
+        // check if the video is playing for Player B
+        await expect(pageB.locator("video.html5-main-video")).toHaveJSProperty("paused", false, { timeout: 15000 });
+
+        console.log("[Video has resumed for Player B...]");
+    } finally {
+        await contextA.close();
+        await contextB.close();
+    }
+
+
 });

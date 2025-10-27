@@ -1,7 +1,7 @@
-const { html, LiveVar } = zyX;
+import { html, LiveVar } from "../zyx.js";
 
 // Compact avatar component representing a present user in the room
-export class PresentUser {
+export default class PresentUser {
 	constructor(user) {
 		const u = user || {};
 		this.id = u.id;

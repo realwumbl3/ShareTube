@@ -6,6 +6,63 @@ import fs from "fs";
 const PROFILE_A = path.join(process.cwd(), "tests", ".profiles", "A");
 const PROFILE_B = path.join(process.cwd(), "tests", ".profiles", "B");
 
+// Launch a persistent Chromium context with the extension loaded for a given profile directory.
+// Ensures the profile directory exists and grants clipboard permissions for YouTube origins.
+export async function launchExtensionContext(
+    profileDir: string,
+    options?: { headless?: boolean; windowPosition?: { x: number; y: number }; windowSize?: { width: number; height: number } }
+): Promise<BrowserContext> {
+    const headless = options?.headless ?? false;
+    if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
+    const EXT_PATH = path.join(process.cwd(), "extension");
+    const args: string[] = [
+        `--disable-extensions-except=${EXT_PATH}`,
+        `--load-extension=${EXT_PATH}`,
+        "--no-sandbox",
+        "--disable-features=IsolateOrigins,site-per-process",
+        "--autoplay-policy=no-user-gesture-required",
+    ];
+    if (options?.windowPosition) {
+        const { x, y } = options.windowPosition;
+        args.push(`--window-position=${x},${y}`);
+    }
+    if (options?.windowSize) {
+        const { width, height } = options.windowSize;
+        args.push(`--window-size=${width},${height}`);
+    }
+    const viewport = options?.windowSize ? { width: options.windowSize.width, height: options.windowSize.height } : { width: 1280, height: 800 };
+    const context = await chromium.launchPersistentContext(profileDir, {
+        headless,
+        viewport,
+        args,
+    });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://www.youtube.com" });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://youtube.com" });
+    return context;
+}
+
+
+export async function withExtension(run: (page: any, context: any) => Promise<void>) {
+    const profileADir = "/home/wumbl3wsl/ShareTube/tests/.profiles/A";
+
+    const context = await launchExtensionContext(profileADir, {
+        headless: false,
+        windowSize: { width: 1280, height: 800 },
+        windowPosition: { x: 0, y: 0 },
+    });
+    try {
+        const page = await context.newPage();
+        await context.tracing.start({ screenshots: true, snapshots: true });
+        await addConsentCookies(context);
+        await run(page, context);
+    } finally {
+        try {
+            await context.tracing.stop();
+        } catch { }
+        await context.close();
+    }
+}
+
 
 export async function launchExtensionContextWithTwoPages({ launchA, launchB }: { launchA: boolean, launchB: boolean } = { launchA: true, launchB: true }) {
     const out = { contextA: null as BrowserContext | null, contextB: null as BrowserContext | null, pageA: null as Page | null, pageB: null as Page | null };
@@ -89,41 +146,6 @@ export async function callShareTube(page: Page, method: string, ...args: any[]):
         });
     }, { id, method, args });
     return res;
-}
-
-// Launch a persistent Chromium context with the extension loaded for a given profile directory.
-// Ensures the profile directory exists and grants clipboard permissions for YouTube origins.
-export async function launchExtensionContext(
-    profileDir: string,
-    options?: { headless?: boolean; windowPosition?: { x: number; y: number }; windowSize?: { width: number; height: number } }
-): Promise<BrowserContext> {
-    const headless = options?.headless ?? false;
-    if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
-    const EXT_PATH = path.join(process.cwd(), "extension");
-    const args: string[] = [
-        `--disable-extensions-except=${EXT_PATH}`,
-        `--load-extension=${EXT_PATH}`,
-        "--no-sandbox",
-        "--disable-features=IsolateOrigins,site-per-process",
-        "--autoplay-policy=no-user-gesture-required",
-    ];
-    if (options?.windowPosition) {
-        const { x, y } = options.windowPosition;
-        args.push(`--window-position=${x},${y}`);
-    }
-    if (options?.windowSize) {
-        const { width, height } = options.windowSize;
-        args.push(`--window-size=${width},${height}`);
-    }
-    const viewport = options?.windowSize ? { width: options.windowSize.width, height: options.windowSize.height } : { width: 1280, height: 800 };
-    const context = await chromium.launchPersistentContext(profileDir, {
-        headless,
-        viewport,
-        args,
-    });
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://www.youtube.com" });
-    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://youtube.com" });
-    return context;
 }
 
 // Test helper to queue a known video via drag-and-drop on the ShareTube overlay root.

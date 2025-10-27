@@ -32,7 +32,7 @@ console.log("contentScript.js loaded");
                 existing.updateOverlayFixedBounds && existing.updateOverlayFixedBounds();
                 existing.recomputeOverlayVisibility && existing.recomputeOverlayVisibility();
                 existing.updatePlaybackEnforcement("contentscript:rebroadcast");
-                existing.tryJoinFromUrlHash && existing.tryJoinFromUrlHash();
+                existing.roomManager.tryJoinFromUrlHash && existing.roomManager.tryJoinFromUrlHash();
             }
         } catch (e) { ldebug("rebroadcast after SPA nav failed", e); }
         return;
@@ -199,7 +199,7 @@ console.log("contentScript.js loaded");
                         app.updateOverlayFixedBounds && app.updateOverlayFixedBounds();
                         app.recomputeOverlayVisibility && app.recomputeOverlayVisibility();
                         app.updatePlaybackEnforcement && app.updatePlaybackEnforcement("nav");
-                        app.tryJoinFromUrlHash && app.tryJoinFromUrlHash();
+                        app.roomManager.tryJoinFromUrlHash && app.roomManager.tryJoinFromUrlHash();
                     } catch (e) { ldebug("navKick failed", e); }
                 };
                 window.addEventListener('yt-navigate-start', navKick, true);

@@ -1,7 +1,7 @@
-const { html, LiveVar } = zyX;
+import { html, LiveVar } from "../zyx.js";
 
 // UI component representing a queued YouTube item
-export class ShareTubeQueueItem {
+export default class ShareTubeQueueItem {
 	constructor(url, title = "", thumbnail_url = "") {
 		this.url = url;
 		this.title = new LiveVar(title);

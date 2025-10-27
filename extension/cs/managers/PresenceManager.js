@@ -1,11 +1,12 @@
 // Log module load for diagnostics
 console.log("cs/managers/PresenceManager.js loaded");
 
-import { PresentUser } from "../components/UserIcon.js";
 import { logger } from "../logger.js";
 import ShareTubeApp from "../app.js";	
+import RoomPresencePill from "../components/RoomPresencePill.js";
+import PresentUser from "../components/UserIcon.js";
 
-const { LiveList } = zyX;
+import { LiveList } from "../zyx.js";
 
 export default class PresenceManager {
 	/**
@@ -16,6 +17,7 @@ export default class PresenceManager {
 		this.app = app;
 		/** @type {LiveList} */
 		this.presence = new LiveList([]);
+		this.roomPresencePill = new RoomPresencePill(this);
 	}
 
 	get roomCode() { return this.app.roomCode; }
