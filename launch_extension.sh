@@ -4,9 +4,15 @@ set -euo pipefail
 # Launch a Chromium/Chrome window with the ShareTube extension loaded
 # and a persistent profile directory, with sandbox/automation disabled.
 
+VERSION="v1-01"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
-EXT_PATH="$PROJECT_ROOT/extension"
+EXT_PATH="$PROJECT_ROOT/backend/$VERSION/extension/"
+
+WINDOW_POSITION="${3:-0,0}"
+WINDOW_SIZE="${4:-1280,800}"  
+
 
 if [[ ! -d "$EXT_PATH" ]]; then
   echo "Error: Could not find extension directory at $EXT_PATH" >&2
@@ -14,7 +20,7 @@ if [[ ! -d "$EXT_PATH" ]]; then
 fi
 
 # Allow overriding the profile directory and initial URL via args
-PROFILE_DIR="${1:-/home/wumbl3wsl/ShareTube/tests/.profiles/B}"
+PROFILE_DIR="${1:-/home/wumbl3wsl/ShareTube/.browser-profiles/A}"
 START_URL="${2:-https://www.youtube.com/}"
 LOCAL_BROWSERS_DIR="$PROJECT_ROOT/.browsers"
 
@@ -67,6 +73,8 @@ exec "$BROWSER_BIN" \
   "--user-data-dir=$PROFILE_DIR" \
   --no-first-run \
   --no-default-browser-check \
+  "--window-position=$WINDOW_POSITION" \
+  "--window-size=$WINDOW_SIZE" \
   "--disable-extensions-except=$EXT_PATH" \
   "--load-extension=$EXT_PATH" \
   --no-sandbox \

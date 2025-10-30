@@ -95,7 +95,7 @@ What it does:
   - `deploy/nginx/newapp.conf`
   - `deploy/systemd/newapp.service`
   - `backend/gunicorn.conf.py`
-- Replaces placeholders `USERNAME`, `%i`, and the canonical `/home/USERNAME/Dev/NewApp` with your provided path
+- Replaces placeholders `USERNAME`, and the canonical `/home/USERNAME/Dev/NewApp` with your provided path
 - Writes rendered files under `build/`
 - Prints follow-up commands to run on the server, e.g.:
 

@@ -5,13 +5,12 @@ import os
 import getpass
 from pathlib import Path
 
+# parse args to get the version
+parser = argparse.ArgumentParser(
+    description="Generate deployment files from templates."
+)
 
-TEMPLATES = {
-    # source -> destination relative to --output-dir
-    "deploy/nginx/newapp.conf": "deploy/nginx/newapp.conf",
-    "deploy/systemd/newapp.service": "deploy/systemd/newapp.service",
-    "backend/gunicorn.conf.py": "backend/gunicorn.conf.py",
-}
+APP_NAME = "ShareTube"
 
 
 def load_text(path: Path) -> str:
@@ -26,32 +25,34 @@ def save_text(path: Path, content: str) -> None:
         f.write(content)
 
 
-def render_content(raw: str, username: str, project_path: str) -> str:
-    """Apply ordered substitutions for placeholders and canonical paths.
-
-    Order matters: resolve USERNAME/%i first, then replace canonical NewApp path
-    with the provided project_path.
-    """
+def render_content(
+    raw: str, username: str, project_path: str, version: str, port: int
+) -> str:
+    """Apply ordered substitutions for placeholders."""
     rendered = raw
-
     # Normalize project_path to have no trailing slash
     project_path = project_path.rstrip("/")
-
-    # 1) Replace username tokens
-    rendered = rendered.replace("USERNAME", username)
-    rendered = rendered.replace("%i", username)
-
-    # 2) Replace canonical NewApp base path (with the resolved username) with provided project_path
-    canonical_base = f"/home/{username}/Dev/NewApp"
-    rendered = rendered.replace(canonical_base, project_path)
-
+    # Replace placeholders
+    rendered = rendered.replace("$USERNAME", username)
+    rendered = rendered.replace("$VERSION", version)
+    rendered = rendered.replace("$APP_NAME", APP_NAME)
+    rendered = rendered.replace("$PROJECT_ROOT", project_path)
+    rendered = rendered.replace("$PORT", str(port))
     return rendered
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate deployment files from templates.")
-    parser.add_argument("--this", action="store_true", help="Use current user and this script's directory as project root")
-    parser.add_argument("--username", required=False, help="Target Linux username for deployment files")
+    parser = argparse.ArgumentParser(
+        description="Generate deployment files from templates."
+    )
+    parser.add_argument(
+        "--this",
+        action="store_true",
+        help="Use current user and this script's directory as project root",
+    )
+    parser.add_argument(
+        "--username", required=False, help="Target Linux username for deployment files"
+    )
     parser.add_argument(
         "--project-path",
         required=False,
@@ -59,12 +60,32 @@ def main() -> None:
     )
     parser.add_argument(
         "--output-dir",
-        default="build",
+        default="instance",
         help="Directory to write generated files into (default: build)",
+    )
+    parser.add_argument(
+        "--version",
+        default="v1",
+        help="Version to use for the deployment (default: v1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5077,
+        help="Port to use for the deployment (default: 5077)",
     )
 
     args = parser.parse_args()
     repo_root = Path(__file__).parent.resolve()
+
+    BUILD_TEMPLATE_DIR = f"backend/{args.version}/build-template"
+
+    TEMPLATES = {
+        # source -> destination relative to --output-dir
+        f"{BUILD_TEMPLATE_DIR}/nginx.conf": f"{args.version}/deploy/nginx.conf",
+        f"{BUILD_TEMPLATE_DIR}/service.service": f"{args.version}/deploy/service.service",
+        f"{BUILD_TEMPLATE_DIR}/gunicorn.conf.py": f"{args.version}/deploy/gunicorn.conf.py",
+    }
 
     # Derive inputs based on provided flags
     if args.this and (args.username or args.project_path):
@@ -75,7 +96,9 @@ def main() -> None:
         project_path = str(repo_root)
     else:
         if not args.username or not args.project_path:
-            raise SystemExit("Provide both --username and --project-path, or use --this")
+            raise SystemExit(
+                "Provide both --username and --project-path, or use --this"
+            )
         username = args.username
         project_path = args.project_path
 
@@ -85,7 +108,7 @@ def main() -> None:
             raise FileNotFoundError(f"Template not found: {src_path}")
 
         raw = load_text(src_path)
-        rendered = render_content(raw, username, project_path)
+        rendered = render_content(raw, username, project_path, args.version, args.port)
 
         dst_root = repo_root / args.output_dir
         dst_path = dst_root / Path(dst_rel)
@@ -93,19 +116,20 @@ def main() -> None:
         print(f"Wrote {dst_path}")
 
     # Print follow-up commands for Linux servers
-    linux_project_path = project_path if project_path.startswith("/") else f"/home/{username}/Dev/NewApp"
-    service_name = "newapp"
+    linux_project_path = (
+        project_path if project_path.startswith("/") else f"/home/{username}/Dev/NewApp"
+    )
 
     commands = [
         f'export PROJECT_ROOT="{linux_project_path}"',
-        f'sudo systemctl link "$PROJECT_ROOT/build/deploy/systemd/{service_name}.service"',
-        'sudo systemctl daemon-reload',
-        f'sudo systemctl enable --now {service_name}.service',
+        f'sudo ln -sf "$PROJECT_ROOT/instance/{args.version}/deploy/service.service" /etc/systemd/system/{APP_NAME}.{args.version}.service',
+        "sudo systemctl daemon-reload",
+        f"sudo systemctl enable --now {APP_NAME}.{args.version}.service",
         # Ensure correct ownership and permissions on the unix socket so Nginx (www-data) can read/write it
-        f'sudo chown {username}:www-data "$PROJECT_ROOT/instance/{service_name}.sock" || true',
-        f'sudo chmod 770 "$PROJECT_ROOT/instance/{service_name}.sock" || true',
-        f'sudo ln -sf "$PROJECT_ROOT/build/deploy/nginx/{service_name}.conf" /etc/nginx/sites-enabled/{service_name}.conf',
-        'sudo nginx -t && sudo systemctl reload nginx',
+        f'sudo chown {username}:www-data "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
+        f'sudo ln -sf "$PROJECT_ROOT/instance/{args.version}/deploy/nginx.conf" /etc/nginx/sites-enabled/{APP_NAME}.{args.version}.conf',
+        "sudo nginx -t && sudo systemctl reload nginx",
+        f'sudo chmod 770 "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
     ]
     print("--------------------------------")
     print("Run the following commands on the server to deploy the application:")
@@ -115,5 +139,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
