@@ -13,9 +13,6 @@ import ShareTubeApp from "../app.js";
 
 import { LiveList, LiveVar } from "../zyx.js";
 
-//codemeta[4] 
-//codemeta[4] 
-//codemeta[4] 
 export default class QueueManager {
     /**
      * @param {ShareTubeApp} app

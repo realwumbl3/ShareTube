@@ -1,5 +1,5 @@
-console.log("cs/app.js loaded");
-import { html } from "./zyx.js";
+console.log("app/app.js loaded");
+import { html, css } from "./dep/zyx.js";
 
 import { decodeJwt } from "./utils.js";
 
@@ -9,7 +9,11 @@ import SocketManager from "./socket.js";
 
 import state from "./state.js";
 
-import { extractUrlsFromDataTransfer, findOnPageYouTubeMeta, isYouTubeUrl } from "./utils.js";
+import { extractUrlsFromDataTransfer, isYouTubeUrl } from "./utils.js";
+
+css`
+    @import url(${chrome.runtime.getURL("app/styles.css")});
+`;
 
 export default class ShareTubeApp {
     constructor() {

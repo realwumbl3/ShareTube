@@ -27,8 +27,6 @@
         "https://youtube.com/*"
       ],
       "js": [
-        "socket.io.min.js",
-        "zyX-es6.umd.js",
         "contentScript.js"
       ],
       "run_at": "document_end"
@@ -37,8 +35,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "fullapp/*",
-        "cs/*"
+        "app/*"
       ],
       "matches": [
         "https://www.youtube.com/*",

@@ -19,9 +19,7 @@ export default class PresenceManager {
         this.presence = new LiveList([]);
         this.roomPresencePill = new RoomPresencePill(this);
     }
-    //codemeta[4]
-    //codemeta[4]
-    //codemeta[4]
+
     get roomCode() {
         return this.app.roomCode;
     }

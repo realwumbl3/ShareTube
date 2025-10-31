@@ -1,4 +1,4 @@
-import { LiveVar, LiveList } from "./zyx.js";
+import { LiveVar, LiveList } from "./dep/zyx.js";
 
 class ShareTubeState {
     constructor() {

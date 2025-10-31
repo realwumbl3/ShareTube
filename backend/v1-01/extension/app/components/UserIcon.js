@@ -1,4 +1,4 @@
-import { html, LiveVar } from "../zyx.js";
+import { html, LiveVar } from "../dep/zyx.js";
 
 // Compact avatar component representing a present user in the room
 export default class PresentUser {

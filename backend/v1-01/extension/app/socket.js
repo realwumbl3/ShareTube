@@ -1,9 +1,9 @@
 // Log module load for diagnostics in the page console
 console.log("cs/socket.js loaded");
 
-// io is globally available from socket.io.min.js loaded by the extension manifest
-
 import ShareTubeApp from "./app.js";
+
+import { io } from "./dep/socket.io.min.esm.js";
 
 // Ensure a single connected Socket.IO client on the provided app instance
 export default class SocketManager {
@@ -50,4 +50,4 @@ export default class SocketManager {
             this.socket = null;
         }
     }
-}   
+}

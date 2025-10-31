@@ -1,4 +1,4 @@
-import { html, LiveVar } from "../zyx.js";
+import { html, LiveVar } from "../dep/zyx.js";
 import state from "../state.js";
 
 export default class ShareTubeQueue {

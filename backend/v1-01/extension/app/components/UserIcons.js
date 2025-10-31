@@ -1,4 +1,4 @@
-import { html } from "../zyx.js";
+import { html } from "../dep/zyx.js";
 import state from "../state.js";
 
 export default class UserIcons {
