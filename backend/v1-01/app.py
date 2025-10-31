@@ -184,15 +184,6 @@ def register_routes(app: Flask) -> None:
         # If dashboard cannot be imported, continue without it
         pass
 
-    try:
-        # Hello world blueprint
-        from .views.hello_world import hello_world_bp
-
-        app.register_blueprint(hello_world_bp)
-    except Exception:
-        # Log and continue if optional view fails to import
-        logging.exception("hello world blueprint import failed")
-
     # Before each request, capture start time and log basic request info
     @app.before_request
     def _log_request_start():

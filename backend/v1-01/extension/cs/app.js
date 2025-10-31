@@ -1,16 +1,22 @@
 console.log("cs/app.js loaded");
+import { html } from "./zyx.js";
 
-import state from "./state.js";
 import { decodeJwt } from "./utils.js";
 
 import Queue from "./components/Queue.js";
 import UserIcons from "./components/UserIcons.js";
+import SocketManager from "./socket.js";
 
-import { html } from "./zyx.js";
+import state from "./state.js";
+
+import { extractUrlsFromDataTransfer, findOnPageYouTubeMeta, isYouTubeUrl } from "./utils.js";
 
 export default class ShareTubeApp {
     constructor() {
         this.storageListener = null;
+        this.socket = new SocketManager(this);
+        this.socket.ensureSocket();
+
         // Components
         this.queue = new Queue(this);
         this.userIcons = new UserIcons(this);
@@ -25,10 +31,12 @@ export default class ShareTubeApp {
                 </div>
             </div>
         `.bind(this);
+
+        this.setupDragAndDrop();
     }
 
     logSelf() {
-        console.log("ShareTubeApp", {app: this, state: state});
+        console.log("ShareTubeApp", { app: this, state: state });
     }
 
     async applyAvatarFromToken() {
@@ -53,6 +61,42 @@ export default class ShareTubeApp {
         }
     }
 
+    setupDragAndDrop() {
+        const onEnter = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.sharetube_main.classList.add("dragover");
+        };
+        const onOver = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+            this.sharetube_main.classList.add("dragover");
+        };
+        const onLeave = (e) => {
+            e.preventDefault();
+            this.sharetube_main.classList.remove("dragover");
+        };
+        const onDrop = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.sharetube_main.classList.remove("dragover");
+            const urls = extractUrlsFromDataTransfer(e.dataTransfer);
+            const ytUrls = urls.filter(isYouTubeUrl);
+            if (ytUrls.length > 0) {
+                ytUrls.forEach((u) => this.enqueueUrl(u));
+                state.queueVisible.set(true);
+            }
+        };
+        this.sharetube_main.addEventListener("dragenter", onEnter);
+        this.sharetube_main.addEventListener("dragover", onOver);
+        this.sharetube_main.addEventListener("dragleave", onLeave);
+        this.sharetube_main.addEventListener("drop", onDrop);
+    }
+
+    enqueueUrl(url) {
+        console.log("enqueueUrl", url);
+    }
+
     attachBrowserListeners() {
         this.storageListener = (changes, area) => {
             if (area === "local" && changes.newapp_token) {
@@ -72,7 +116,7 @@ export default class ShareTubeApp {
         this.attachBrowserListeners();
         this.applyAvatarFromToken();
     }
-    
+
     navKick() {
         console.log("ShareTube navKick", this);
     }
