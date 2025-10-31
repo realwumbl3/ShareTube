@@ -18,3 +18,5 @@ instance/*
 
 node_modules/
 .node_modules/
+
+.pre-rewrite/
