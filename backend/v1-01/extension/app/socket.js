@@ -2,7 +2,7 @@
 console.log("cs/socket.js loaded");
 
 import ShareTubeApp from "./app.js";
-
+import state from "./state.js";
 import { io } from "./dep/socket.io.min.esm.js";
 
 // Ensure a single connected Socket.IO client on the provided app instance
@@ -12,6 +12,12 @@ export default class SocketManager {
      */
     constructor(app) {
         this.app = app;
+        this.binds = {};
+    }
+
+    async withSocket(callback) {
+        if (!this.socket) await this.ensureSocket();
+        return callback(this.socket);
     }
 
     async ensureSocket() {
@@ -34,7 +40,10 @@ export default class SocketManager {
             // Low-level channel diagnostics/ping
             this.socket.on("hello", (payload) => console.log("socket.io hello", payload));
             this.socket.on("pong", (payload) => console.log("socket.io pong", payload));
-            // app.socket.on("system_stats", (payload) => console.log("socket.io system_stats", payload));
+            
+            for (const [event, callback] of Object.entries(this.binds)) {
+                this.socket.on(event, callback);
+            }
         } catch (e) {
             // If connection fails, reset socket and warn
             console.warn("socket.io connect failed", e);
@@ -44,10 +53,26 @@ export default class SocketManager {
         return this.socket;
     }
 
+    on(event, callback) {
+        if (this.socket) {
+            this.socket.on(event, callback);
+        } else {
+            this.binds[event] = callback;
+        }
+    }
+
     disconnect() {
         if (this.socket) {
             this.socket.disconnect();
             this.socket = null;
         }
+    }
+
+    setupBeforeUnloadHandler() {
+        window.addEventListener("beforeunload", () => {
+            this.withSocket(async (socket) => {
+                await socket.emit("leave_room", { code: state.currentRoomCode.get() });
+            });
+        });
     }
 }

@@ -140,10 +140,9 @@ compute_geometry() {
   WIN_H="${WINDOW_SIZE#*,}"
 
   # Apply enforced margins; if screen height is unknown, fallback to requested H
-  local top_offset=64
-  local bottom_offset=64
+  local buffer=32
   if [[ "$SCREEN_H" =~ ^[0-9]+$ ]]; then
-    EFFECTIVE_H=$(( SCREEN_H - top_offset - bottom_offset ))
+    EFFECTIVE_H=$(( SCREEN_H - (buffer * 3) ))
     if (( EFFECTIVE_H <= 0 )); then EFFECTIVE_H="$WIN_H"; fi
   else
     EFFECTIVE_H="$WIN_H"
@@ -156,7 +155,7 @@ compute_geometry() {
   else
     PRIMARY_X=0
   fi
-  PRIMARY_Y=64
+  PRIMARY_Y="$buffer"
   PRIMARY_POSITION="$PRIMARY_X,$PRIMARY_Y"
 
   # Compute the right-hand window position for double mode

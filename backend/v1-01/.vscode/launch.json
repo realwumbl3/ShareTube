@@ -1,16 +1,22 @@
 {
-  // VS Code launch configuration to run launch_extension.sh with F5
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Run launch_extension.sh",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "bash /home/wumbl3wsl/ShareTube/launch_extension.sh",
-      "cwd": "/home/wumbl3wsl/ShareTube",
-      "env": {}
-    }
-  ]
+    // VS Code launch configuration to run launch_extension.sh with F5
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run launch_extension.sh",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "bash /home/wumbl3wsl/ShareTube/launch_extension.sh",
+            "cwd": "/home/wumbl3wsl/ShareTube",
+            "env": {}
+        },
+        {
+            "name": "Run extension with double users",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "bash /home/wumbl3wsl/ShareTube/launch_extension.sh --double",
+            "cwd": "/home/wumbl3wsl/ShareTube",
+            "env": {}
+        }
+    ]
 }
-
-

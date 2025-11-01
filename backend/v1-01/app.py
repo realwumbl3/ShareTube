@@ -155,6 +155,13 @@ def create_app() -> Flask:
 
     # Register HTTP routes and blueprints
     register_routes(app)
+    # Register Socket.IO event handlers
+    try:
+        from .sockets import register_socket_handlers  # noqa: F401
+
+        register_socket_handlers()
+    except Exception:
+        logging.exception("socket handlers registration failed")
     # Register views
     try:
         # YouTube metadata blueprint
@@ -270,6 +277,14 @@ def register_routes(app: Flask) -> None:
     except Exception:
         # Auth is optional; log and continue without it
         logging.exception("auth blueprint import failed")
+
+    # Rooms/REST API blueprint
+    try:
+        from .views.rooms import rooms_bp
+
+        app.register_blueprint(rooms_bp)
+    except Exception:
+        logging.exception("rooms blueprint import failed")
 
 
 # Instantiate the application at import time for WSGI servers
