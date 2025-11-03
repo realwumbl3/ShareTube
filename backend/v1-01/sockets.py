@@ -9,6 +9,7 @@ from flask_socketio import join_room, leave_room
 
 from .extensions import db, socketio
 from .models import Room, RoomMembership, User
+from .views.queue import emit_queue_update_for_room
 
 
 def _get_user_id_from_socket() -> Optional[int]:
@@ -84,6 +85,10 @@ def register_socket_handlers() -> None:
             # Join the Socket.IO room and emit updated presence
             join_room(f"room:{room.code}")
             _emit_presence(room)
+            try:
+                emit_queue_update_for_room(room)
+            except Exception:
+                current_app.logger.exception("failed to emit queue on join_room")
         except Exception:
             current_app.logger.exception("join_room handler error")
 

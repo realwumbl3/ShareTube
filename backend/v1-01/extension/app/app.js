@@ -11,12 +11,14 @@ import state from "./state.js";
 
 import { extractUrlsFromDataTransfer, isYouTubeUrl } from "./utils.js";
 
-import ShareTubeUser from "./user.js";
+import ShareTubeUser from "./models/user.js";
 import { syncLiveList } from "./sync.js";
 
 css`
     @import url(${chrome.runtime.getURL("app/styles.css")});
 `;
+
+import { ShareTubeQueueItem } from "./components/Queue.js";
 
 export default class ShareTubeApp {
     constructor() {
@@ -36,36 +38,49 @@ export default class ShareTubeApp {
                         >ShareTube ${state.currentRoomCode.interp((v) => (v ? `#${v}` : ""))}</span
                     >
                     ${this.userIcons}
+                    <div id="sharetube_toggle_queue" zyx-click=${() => this.queue.toggleQueueVisibility()}>
+                        ${state.queueVisible.interp((v) => (v ? "Hide" : "Show"))} Queue
+                        ${state.queue.interp((v) => (v.length > 0 ? `(${v.length})` : ""))}
+                    </div>
                 </div>
             </div>
         `.bind(this);
 
         this.setupDragAndDrop();
         this.socket.on("presence_update", this.onSocketPresenceUpdate.bind(this));
+        this.socket.on("queue_update", this.onQueueUpdate.bind(this));
         this.socket.setupBeforeUnloadHandler();
     }
 
-    async post(url, options = {}) {
+    async backEndUrl() {
         // Determine backend base URL and JWT
-        const { newapp_backend } = await chrome.storage.sync.get(["newapp_backend"]);
-        const base = (newapp_backend || "https://sharetube.wumbl3.xyz").replace(/\/+$/, "");
-        const { newapp_token } = await chrome.storage.local.get(["newapp_token"]);
-        if (!newapp_token) {
+        const { backend_url } = await chrome.storage.sync.get(["backend_url"]);
+        const base = (backend_url || "https://sharetube.wumbl3.xyz").replace(/\/+$/, "");
+        return base;
+    }
+
+    async authToken() {
+        const { auth_token } = await chrome.storage.local.get(["auth_token"]);
+        if (!auth_token) {
             console.warn("ShareTube: missing auth token");
             return null;
         }
+        return auth_token;
+    }
 
-        // Create a room via REST
+    async post(url, options = {}) {
+        const base = await this.backEndUrl();
+        const auth_token = await this.authToken();
         const res = await fetch(`${base}${url}`, {
             method: options.method || "POST",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${newapp_token}`,
+                Authorization: `Bearer ${auth_token}`,
             },
             body: options.body ? JSON.stringify(options.body) : undefined,
         });
         if (!res.ok) {
-            console.warn("ShareTube: post failed", res.status);
+            console.warn("ShareTube: post failed", { status: res.status, url, options });
             return null;
         }
         return await res.json();
@@ -82,6 +97,24 @@ export default class ShareTubeApp {
         history.replaceState(null, "", url.toString());
     }
 
+    async createRoom() {
+        try {
+            const res = await this.post("/api/rooms");
+            return res && res.code;
+        } catch (e) {
+            console.warn("ShareTube createRoom failed", e);
+            return null;
+        }
+    }
+
+    async joinRoom(code) {
+        await this.socket.withSocket(async (socket) => {
+            await socket.emit("join_room", { code });
+        });
+        state.currentRoomCode.set(code);
+        this.updateCodeHashInUrl(code);
+    }
+
     async copyCurrentRoomCodeToClipboard() {
         const code = state.currentRoomCode.get();
         if (!code) return;
@@ -92,9 +125,13 @@ export default class ShareTubeApp {
         }
     }
 
+    async tryJoinRoomFromUrl() {
+        if (!this.hashRoomCode) return;
+        await this.joinRoom(this.hashRoomCode);
+    }
+
     onSocketPresenceUpdate(presence) {
         if (!Array.isArray(presence)) return;
-        console.log("onSocketPresenceUpdate", presence);
         syncLiveList({
             localList: state.users,
             remoteItems: presence,
@@ -105,20 +142,30 @@ export default class ShareTubeApp {
         });
     }
 
+    onQueueUpdate(queue) {
+        if (!Array.isArray(queue)) return;
+        syncLiveList({
+            localList: state.queue,
+            remoteItems: queue,
+            extractRemoteId: (v) => v.id,
+            extractLocalId: (u) => u.url,
+            createInstance: (item) => new ShareTubeQueueItem(item),
+        });
+    }
+
     logSelf() {
         console.log("ShareTubeApp", { app: this, state: state });
     }
 
     async applyAvatarFromToken() {
         try {
-            const res = await chrome.storage.local.get(["newapp_token"]);
-            const token = res && res.newapp_token;
-            if (!token) {
+            const auth_token = await this.authToken();
+            if (!auth_token) {
                 state.avatarUrl.set("");
                 state.userId.set(null);
                 return;
             }
-            const claims = decodeJwt(token);
+            const claims = decodeJwt(auth_token);
             const picture = claims && claims.picture;
             state.avatarUrl.set(picture || "");
             try {
@@ -164,14 +211,14 @@ export default class ShareTubeApp {
     }
 
     enqueueUrl(url) {
-        console.log("enqueueUrl", url);
+        this.socket.withSocket(async (socket) => {
+            await socket.emit("enqueue_url", { url });
+        });
     }
 
     attachBrowserListeners() {
         this.storageListener = (changes, area) => {
-            if (area === "local" && changes.newapp_token) {
-                this.applyAvatarFromToken();
-            }
+            if (area === "local" && changes.auth_token) this.applyAvatarFromToken();
         };
         chrome.storage.onChanged.addListener(this.storageListener);
     }
@@ -190,18 +237,5 @@ export default class ShareTubeApp {
 
     navKick() {
         console.log("ShareTube navKick", this);
-    }
-
-    async tryJoinRoomFromUrl() {
-        try {
-            const hasCode = this.hashRoomCode;
-            if (!hasCode) return;
-            await this.socket.withSocket(async (socket) => {
-                state.currentRoomCode.set(hasCode);
-                await socket.emit("join_room", { code: hasCode });
-            });
-        } catch (e) {
-            console.warn("ShareTube tryJoinRoomFromUrl failed", e);
-        }
     }
 }

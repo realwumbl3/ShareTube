@@ -3,11 +3,11 @@ const DEFAULT_BACKEND = "https://sharetube.wumbl3.xyz";
 
 // Initialize popup UI with current settings/token status and log level
 async function load() {
-  const { newapp_backend } = await chrome.storage.sync.get(["newapp_backend"]);
-  document.getElementById("backend-url").value = newapp_backend || DEFAULT_BACKEND;
+  const { backend_url } = await chrome.storage.sync.get(["backend_url"]);
+  document.getElementById("backend-url").value = backend_url || DEFAULT_BACKEND;
 
-  const { newapp_token } = await chrome.storage.local.get(["newapp_token"]);
-  document.getElementById("status").textContent = newapp_token ? "Signed in" : "Signed out";
+  const { auth_token } = await chrome.storage.local.get(["auth_token"]);
+  document.getElementById("status").textContent = auth_token ? "Signed in" : "Signed out";
 
   try {
     const { newapp_log_level } = await chrome.storage.sync.get(["newapp_log_level"]);
@@ -20,7 +20,7 @@ async function load() {
 // Persist backend URL to synced storage
 async function save() {
   const url = document.getElementById("backend-url").value.trim() || DEFAULT_BACKEND;
-  await chrome.storage.sync.set({ newapp_backend: url });
+  await chrome.storage.sync.set({ backend_url: url });
   document.getElementById("status").textContent = "Saved";
 }
 
@@ -43,14 +43,14 @@ function openCentered(url, w, h) {
 
 // Kick off Google OAuth by navigating to backend start URL
 async function login() {
-  const { newapp_backend } = await chrome.storage.sync.get(["newapp_backend"]);
-  const base = newapp_backend || DEFAULT_BACKEND;
+  const { backend_url } = await chrome.storage.sync.get(["backend_url"]);
+  const base = backend_url || DEFAULT_BACKEND;
   openCentered(`${base}/auth/google/start`, 480, 640);
 }
 
 // Clear locally stored JWT to sign out
 async function logout() {
-  await chrome.storage.local.remove("newapp_token");
+  await chrome.storage.local.remove("auth_token");
   document.getElementById("status").textContent = "Signed out";
 }
 
@@ -58,7 +58,7 @@ async function logout() {
 window.addEventListener("message", async (evt) => {
   const data = evt.data || {};
   if (data.type === "newapp_auth" && data.token) {
-    await chrome.storage.local.set({ newapp_token: data.token });
+    await chrome.storage.local.set({ auth_token: data.token });
     document.getElementById("status").textContent = "Signed in";
   }
 });

@@ -1,9 +1,14 @@
 import { html } from "../dep/zyx.js";
 import state from "../state.js";
 
-import ShareTubeUser from "../user.js";
+import ShareTubeUser from "../models/user.js";
+
+import ShareTubeApp from "../app.js";
 
 export default class UserIcons {
+    /**
+     * @param {ShareTubeApp} app
+     */
     constructor(app) {
         this.app = app;
 
@@ -31,20 +36,13 @@ export default class UserIcons {
 
     async onPlusClicked() {
         try {
-            // Create a room via REST
-            const res = await this.app.post("/api/rooms");
-            const code = res && res.code;
+            if (state.currentRoomCode.get()) {
+                await this.app.copyCurrentRoomCodeToClipboard();
+                return;
+            }
+            const code = await this.app.createRoom();
             if (!code) return;
-
-            this.app.updateCodeHashInUrl(code);
-
-            // Join the room directly without navigating/reloading
-            await this.app.socket.withSocket(async (socket) => {
-                await socket.emit("join_room", { code });
-            });
-
-            state.currentRoomCode.set(code);
-
+            await this.app.joinRoom(code);
             await this.app.copyCurrentRoomCodeToClipboard();
         } catch (e) {
             console.warn("ShareTube onPlusClicked failed", e);

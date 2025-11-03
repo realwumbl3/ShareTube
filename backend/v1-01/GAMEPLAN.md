@@ -1,16 +1,16 @@
 ## ShareTube GAMEPLAN — Architecture, Sync Model, and Delivery Roadmap
 
 ### Cleverly Simple, Fresh Approach (Non-conforming to current code)
-- **Server = Thin Relay + Room Clock**: No player telemetry, no per-user ad/state tracking. It only:
-  - Creates ephemeral rooms (in-memory).
-  - Tracks a tiny virtual clock per room derived solely from control events (play/pause/seek/next/replace-queue).
-  - Broadcasts control echoes with `serverNowMs` and occasional full `room.snapshot`.
+- **Server = Stateless Relay + Derived Room Clock**: No player telemetry, no per-user ad/state tracking, and no in-memory room/process state. All authoritative fields are persisted; playback position is derived at read time.
+  - Creates rooms in the DB; runtime is thread- and process-agnostic.
+  - Persists a minimal virtual clock per room updated only by control events; derives current position on demand from `playing_since_ms` or `paused_progress_ms`.
+  - Always includes `serverNowMs` in replies for drift calibration and perfect sync.
 - **Client = Enforcer**: Each extension instance enforces playback locally using the latest control echo and the room clock. Ads are handled purely on the client.
 - **Single Controller (Baton)**: Exactly one `controllerId` can emit control events at a time. Default is room creator. Baton can be requested and granted; lease auto-expires on disconnect/inactivity.
 - **Google Auth (Required)**: Extension performs Google OAuth via backend; backend issues a short-lived JWT. The JWT is mandatory for realtime connect and is stored in `chrome.storage.local`.
-- **Zero Persistence (Phase 1.0)**: No DB required if JWT embeds Google `sub`, `name`, `picture`. (Phase 1.1 may add a tiny `User` table for stable internal ids.)
+- **Minimal Persistence (Phase 1.0)**: A small DB is required to persist rooms, queue, and virtual clock fields (`duration_ms`, `playing_since_ms?`, `paused_progress_ms?`). No caches or in-memory state are used.
 - **Hash-Based Join**: Extension appends `#st:<ROOM_CODE>` to YouTube URLs; on load, auto-join.
-- **Minimal Protocol**: Control events are the only source of truth. Clients re-derive playback from `(progress_ms, playing_since_ms)` and `serverNowMs`.
+- **Minimal Protocol**: Control events are the only source of truth. Clients re-derive playback from `virtual_clock` and `serverNowMs`: if `playing_since_ms` is set, expected progress is `max(0, serverNowMs - playing_since_ms)`; otherwise use `paused_progress_ms`.
 
 ### Roles, Control, Presence, and Chat (Room UX)
 - **Roles**
@@ -52,7 +52,7 @@
 ### Glossary (short)
 - **Room**: Logical space where users synchronize playback.
 - **Entry**: A queued YouTube video (by canonical video id).
-- **Virtual clock**: `(duration_ms, progress_ms, playing_since_ms)` derived from control events; no per-client telemetry.
+- **Virtual clock**: `{ duration_ms, playing_since_ms?, paused_progress_ms? }` derived from control events; no per-client telemetry; computed on read.
 - **Drift**: Difference between client-local current time and the room's virtual clock.
 
 ## System Overview
@@ -69,7 +69,7 @@
   - WebSocket (Socket.IO or native) with namespaced events.
   - Supports background tasks and broadcast to room channels.
 - **Persistence**
-  - Start with SQLite for local/dev. Abstract via ORM for future Postgres.
+  - Start with SQLite for local/dev. Abstract via ORM for future Postgres. Runtime is stateless: no in-memory per-room state or caches; derive current values on read.
 - **Observability**
   - Structured logging; event counters; drift histograms; request tracing ids.
 
@@ -113,8 +113,8 @@ flowchart TD
 
 ### Time and Drift
 - Server includes `serverNowMs` in welcome and periodic `pong` to calibrate RTT/offset.
-- The room's playback is represented by a virtual clock `(playing_since_ms, progress_ms, duration_ms, state)` that the server updates only from control events (play/pause/seek/queue-change).
-- Client computes local expected position from the virtual clock; if |drift| > threshold (e.g., 400ms), snap; else smooth.
+- The room's playback is represented by persisted `virtual_clock` fields (`duration_ms`, `playing_since_ms?`, `paused_progress_ms?`, and `state`). The server updates these fields only on control events (play/pause/seek/queue-change) and derives current progress at response time. No in-memory state is used.
+- Client computes local expected position from the `virtual_clock` and `serverNowMs`; if |drift| > threshold (e.g., 400ms), snap; else smooth.
 
 ## Room and Playback State
 
@@ -125,9 +125,8 @@ flowchart TD
 - `controller_id: string` (current baton holder)
 - `operators: Set<string>` (user ids)
 - `ad_sync_mode: 'off' | 'pause_all' | 'trigger_and_pause'`
-- `ad_active_user_ids: Set<string>` (ephemeral; for overlay; clears automatically)
 - `state: 'idle' | 'starting' | 'playing' | 'paused'`
-- `current_entry_id: nullable` and `virtual_clock: { duration_ms, progress_ms, playing_since_ms }`
+- `current_entry_id: nullable` and `virtual_clock: { duration_ms, playing_since_ms?, paused_progress_ms? }`
 
 ### Membership (dynamic)
 - `user_id | guest_id`
@@ -203,8 +202,24 @@ stateDiagram-v2
 - Detect current video id from URL; keep hash `#sharetube:<CODE>` when navigating.
 
 ### Ad Handling (client-only)
-- Detection is client-only via DOM markers or Player API flags. Clients emit `ad.report { active }` on changes (throttled). Server aggregates into `ad_active_user_ids` and broadcasts `ad.status`.
-- When `ad_sync_mode='pause_all'|'trigger_and_pause'` and `ad_active_user_ids` transitions from empty→non-empty, server emits a control echo to pause room (and freezes virtual clock). When it transitions to empty, server resumes previous state and updates virtual clock accordingly.
+- Detection is client-only via DOM markers or Player API flags. Clients emit `ad.report { active }` on changes (throttled). Server persists the latest report per `(room_id,user_id)` with timestamp and derives the active set on demand; it then broadcasts `ad.status`.
+- When `ad_sync_mode='pause_all'|'trigger_and_pause'` and the derived active set transitions from empty→non-empty, server emits a control echo to pause room (and persists the updated virtual clock). When it transitions to empty, server resumes previous state and persists the virtual clock accordingly. No in-memory sets are maintained.
+
+#### Ad set derivation (TTL/Debounce)
+- **Flapping**: Ad detectors can toggle rapidly. Avoid room pause/resume oscillations.
+- **TTL (time-to-live)**: Consider a user "active in ads" only if their last `ad.report { active:true }` is recent.
+  - Active if `serverNowMs - lastTrueTs ≤ ACTIVE_TTL_MS` (e.g., 6–10s). This auto-clears stale "true" if a "false" was missed.
+- **Debounce (dwell time)**: Require stability before changing an individual user's status.
+  - Active debounce: only mark active if `active:true` has been continuously true for ≥ `MIN_ACTIVE_MS`.
+  - Inactive debounce: only clear if `active:false` has been continuously false for ≥ `MIN_INACTIVE_MS`.
+  - Optional hysteresis: use slightly longer inactive debounce than active to reduce oscillation.
+- **Room-level grace**: Only issue pause/resume when the derived active set crosses empty/non-empty and remains so for ≥ `ROOM_TRANSITION_GRACE_MS`.
+
+Recommended defaults:
+- `ACTIVE_TTL_MS = 8000`
+- `MIN_ACTIVE_MS = 700`
+- `MIN_INACTIVE_MS = 900`
+- `ROOM_TRANSITION_GRACE_MS = 300`
 
 ### Local Enforcement
 - When room state is `playing`, ensure local player is playing at expected position (snap if drift > threshold).
@@ -214,7 +229,10 @@ stateDiagram-v2
 ## Consistency Model and Algorithms
 
 ### Authoritative Virtual Clock (server)
-- Maintain the virtual clock for the current entry purely from control events. On `play`, set `playing_since_ms=serverNowMs`; on `pause`, recompute `progress_ms` and clear `playing_since_ms`. On `seek`, set `progress_ms` and optionally set playing. No per-client inputs are stored.
+- Maintain the virtual clock for the current entry purely from control events; persist only minimal fields. No per-client inputs are stored.
+  - On `play` from paused or start: set `playing_since_ms = serverNowMs - paused_progress_ms` (use 0 if starting from the beginning); clear `paused_progress_ms`.
+  - On `pause`: set `paused_progress_ms = max(0, serverNowMs - playing_since_ms)`; clear `playing_since_ms`.
+  - On `seek { progress_ms, play }`: set `paused_progress_ms = progress_ms`; if `play=true`, then set `playing_since_ms = serverNowMs - progress_ms` and clear `paused_progress_ms`.
 
 ### Client Drift Correction
 ### Ad Sync Flow
@@ -226,7 +244,7 @@ sequenceDiagram
 
   Note over RT: ad_sync_mode = pause_all
   C1->>RT: ad.report {active:true}
-  RT->>RT: ad_active_user_ids add C1; was empty → now non-empty
+  RT->>RT: active set (derived from persisted reports) becomes non-empty
   RT-->>Room: control.echo{ room.state.set paused }
   RT-->>Room: ad.status { activeUserIds:[C1] }
   C2->>RT: ad.report {active:true}
@@ -234,11 +252,11 @@ sequenceDiagram
   C1->>RT: ad.report {active:false}
   RT-->>Room: ad.status { activeUserIds:[C2] }
   C2->>RT: ad.report {active:false}
-  RT->>RT: ad_active_user_ids becomes empty
+  RT->>RT: active set becomes empty
   RT-->>Room: control.echo{ room.state.set playing }
   RT-->>Room: room.playback (updated virtual clock)
 ```
-- Compute expected position: `expected = progress_ms + max(0, now - playing_since_ms)`.
+- Compute expected position: if `playing_since_ms` is set → `expected = max(0, now - playing_since_ms)`; else `expected = paused_progress_ms`.
 - If `abs(local - expected) > DRIFT_SNAP_MS` (e.g., 400ms), snap; else apply small rate adjustments.
 - Recompute on each `room.playback` and on local `timeupdate` with throttling.
 
@@ -266,13 +284,13 @@ sequenceDiagram
 
 - `User { id, google_sub?, email?, name?, picture? }`
 - `Room { id, code, owner_id, created_at, is_private, control_mode, controller_id, state }`  
-  plus transient `virtual_clock { duration_ms, progress_ms, playing_since_ms }` and `operators:Set<id>`.
+  plus persisted `virtual_clock { duration_ms, playing_since_ms?, paused_progress_ms? }` and `operators:Set<id>`.
 - `RoomMembership { id, room_id, user_id?, guest_id?, active }`
 - `Queue { id, room_id, created_by_id?, created_at }`
 - `QueueEntry { id, queue_id, added_by_id?, url, video_id, title, thumbnail_url, position, status }`
 - `RoomAudit { id, room_id, user_id?, event, details, created_at }`
 - `ChatMessage { id, room_id, user_id, text, ts }` (optional, ephemeral or capped persistence)
-- `AdStatus { room_id, active_user_ids:[...], ts }` (ephemeral; in-memory)
+- `AdReport { id, room_id, user_id, active:boolean, ts }` (latest row per user is authoritative; active set is derived on read with TTL)
 
 ## Minimal REST Surface (Initial)
 
@@ -373,7 +391,7 @@ sequenceDiagram
   "state": "playing",
   "controllerId": "client-123",
   "operators": ["user-111", "user-222"],
-  "virtual_clock": { "duration_ms": 220000, "progress_ms": 1534, "playing_since_ms": 1730000000000 },
+  "virtual_clock": { "duration_ms": 220000, "playing_since_ms": 1730000000000 },
   "items": [ { "id": 1, "video_id": "XXXXXXXXXXX", "title": "..." } ]
 }
 ```

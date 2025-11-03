@@ -162,6 +162,11 @@ def create_app() -> Flask:
         register_socket_handlers()
     except Exception:
         logging.exception("socket handlers registration failed")
+    # Import queue handlers (Socket.IO) so their decorators register
+    try:
+        from .views import queue as _queue_handlers  # noqa: F401
+    except Exception:
+        logging.exception("queue handlers import failed")
     # Register views
     try:
         # YouTube metadata blueprint

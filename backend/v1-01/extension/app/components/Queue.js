@@ -18,7 +18,7 @@ export default class ShareTubeQueue {
                 <div
                     class="queue-list"
                     id="sharetube_queue_list"
-                    zyx-live-list=${{ list: state.queue, compose: ShareTubeQueueItem }}
+                    zyx-live-list=${{ list: state.queue, compose: ShareTubeQueueComponent }}
                 ></div>
                 <div class="queue-footer"></div>
             </div>
@@ -30,26 +30,28 @@ export default class ShareTubeQueue {
     }
 }
 
-// UI component representing a queued YouTube item
 export class ShareTubeQueueItem {
-    constructor(url, title = "", thumbnail_url = "") {
-        this.url = url;
-        this.title = new LiveVar(title);
-        this.thumbnail_url = new LiveVar(thumbnail_url);
+    constructor(item) {
+        this.id = item.id;
+        this.url = item.url || "";
+        this.title = item.title || "";
+        this.thumbnail_url = item.thumbnail_url || "";
         this.position = new LiveVar(null);
+    }
+}
+
+// UI component representing a queued YouTube item
+export class ShareTubeQueueComponent {
+    constructor(item) {
+        this.item = item;
         // Render queue item DOM structure and bind LiveVars
         html`
             <div class="queue-item">
-                <div class="pos" zyx-if=${[this.position, (v) => v != null]}>${this.position.interp((v) => v)}</div>
-                <img
-                    class="thumb"
-                    alt=""
-                    src=${this.thumbnail_url.interp((v) => v || "")}
-                    zyx-if=${this.thumbnail_url}
-                />
+                <div class="pos">${this.item.position.interp((v) => v || "")}</div>
+                <img class="thumb" alt="" src=${this.item.thumbnail_url} />
                 <div class="meta">
-                    <div class="title">${this.title.interp((v) => v || url)}</div>
-                    <div class="url">${url}</div>
+                    <div class="title">${this.item.title}</div>
+                    <div class="url">${this.item.url}</div>
                 </div>
                 <button class="x-button">X</button>
             </div>

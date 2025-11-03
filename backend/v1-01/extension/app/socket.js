@@ -24,26 +24,23 @@ export default class SocketManager {
         // Reuse existing socket if already connected/created
         if (this.socket) return this.socket;
         // Read backend base URL from extension synced storage (user-configurable)
-        const { newapp_backend } = await chrome.storage.sync.get(["newapp_backend"]);
+        const { backend_url } = await chrome.storage.sync.get(["backend_url"]);
         // Normalize base by trimming trailing slashes; default to hosted backend
-        const base = (newapp_backend || "https://sharetube.wumbl3.xyz").replace(/\/+$/, "");
+        const base = (backend_url || "https://sharetube.wumbl3.xyz").replace(/\/+$/, "");
         // Retrieve JWT token issued by backend, stored locally (per-device)
-        const { newapp_token } = await chrome.storage.local.get(["newapp_token"]);
+        const { auth_token } = await chrome.storage.local.get(["auth_token"]);
         // Without a token, we cannot authenticate the websocket
-        if (!newapp_token) return null;
+        if (!auth_token) return null;
         try {
             // Create a websocket-only Socket.IO client with auth token in query
-            this.socket = io(base, { transports: ["websocket"], path: "/socket.io", query: { token: newapp_token } });
+            this.socket = io(base, { transports: ["websocket"], path: "/socket.io", query: { token: auth_token } });
             // Basic connection lifecycle logs
             this.socket.on("connect", () => console.log("socket.io connected"));
             this.socket.on("disconnect", () => console.log("socket.io disconnected"));
             // Low-level channel diagnostics/ping
             this.socket.on("hello", (payload) => console.log("socket.io hello", payload));
             this.socket.on("pong", (payload) => console.log("socket.io pong", payload));
-            
-            for (const [event, callback] of Object.entries(this.binds)) {
-                this.socket.on(event, callback);
-            }
+            this.bindHandlers();
         } catch (e) {
             // If connection fails, reset socket and warn
             console.warn("socket.io connect failed", e);
@@ -51,6 +48,18 @@ export default class SocketManager {
         }
         // Return the (possibly null) socket reference
         return this.socket;
+    }
+
+    bindHandlers() {
+        // Bind any additional event handlers
+        for (const [event, callback] of Object.entries(this.binds)) {
+            this.socket.on(event, (...args) => this.logSocketEvent(event, ...args) && callback(...args));
+        }
+    }
+
+    logSocketEvent(...args) {
+        console.log("[ShTb] socket.io", ...args);
+        return true;
     }
 
     on(event, callback) {
@@ -72,7 +81,7 @@ export default class SocketManager {
         window.addEventListener("beforeunload", () => {
             this.withSocket(async (socket) => {
                 await socket.emit("leave_room", { code: state.currentRoomCode.get() });
-            });
+            }); 
         });
     }
 }
