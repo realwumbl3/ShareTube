@@ -1,0 +1,40 @@
+## ShareTube — Development Rules of Engagement
+
+### Status
+- **Active development**: Breaking changes are acceptable. Favor velocity over stability in dev.
+- **Scope**: Backend `v1-01` and the browser extension evolve together.
+
+### Sources of Truth
+- **GAMEPLAN.md is a living document**: Keep it aligned with implemented code. If a request contradicts it, follow the request, then reconcile docs.
+- **Models and contracts must reflect intent**: When changing schemas or events, update `models.py`, realtime contracts, and `GAMEPLAN.md` in the same change when possible.
+
+### Data Model Principles
+- Virtual clock is **per queue entry** (on `QueueEntry`), not on `Room`.
+- `Room` holds control/permissions and the `current_entry_id`.
+- Queue policy and rotation are as described in `GAMEPLAN.md`; adjust pragmatically when needed.
+
+### Workflow for Changes
+- Backward-incompatible changes are fine.
+- Prefer small, atomic edits with clear intent.
+- When a change touches schema + docs + client logic, update all affected areas together.
+- Add a short Decision Record to `GAMEPLAN.md` when making notable choices.
+- Default to implementing without asking for approval unless blocked or ambiguous.
+
+### Quality Bars (Dev)
+- Keep code lint-clean; add types where helpful; avoid dead code.
+- Comments only for non-obvious rationale, invariants, or caveats.
+- Tests are incremental; prioritize state-machine and contract-critical paths first.
+
+### Migrations and DB
+- SQLite in dev is disposable. You may drop and recreate the DB when convenient.
+- Alembic migrations are recommended but optional during rapid iteration.
+
+### Security and Auth
+- Google OAuth + backend-issued JWT are required; keep tokens short-lived.
+- Validation/rate-limits can be stubbed in early phases but should be respected in public deploys.
+
+### Assistant Guidance (for future prompts)
+- If code and docs diverge, prefer the latest explicit user instruction, then reconcile.
+- Keep `QueueEntry` as the single place for playback timing fields (`duration_ms`, `playing_since_ms?`, `paused_progress_ms?`, `progress_ms?`, `paused_at?`).
+- Update both `models.py` and `GAMEPLAN.md` when changing the schema or event shapes.
+- Make reasonable decisions when details are missing; document them briefly in `GAMEPLAN.md` Decision Records.

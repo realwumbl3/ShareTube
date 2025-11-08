@@ -48,7 +48,9 @@ def _get_or_create_room_queue(room: Room, created_by_id: Optional[int]) -> Queue
     q = db.session.query(QueueModel).filter_by(room_id=room.id).first()
     if q:
         return q
-    q = QueueModel(room_id=room.id, created_by_id=created_by_id, created_at=int(time.time()))
+    q = QueueModel(
+        room_id=room.id, created_by_id=created_by_id, created_at=int(time.time())
+    )
     db.session.add(q)
     commit_with_retry(db.session)
     return q
@@ -72,6 +74,7 @@ def emit_queue_update_for_room(room: Room) -> None:
         entries = (
             db.session.query(QueueEntry)
             .filter_by(queue_id=q.id)
+            .filter_by(status="queued")
             .order_by(QueueEntry.position.asc(), QueueEntry.id.asc())
             .all()
         )
@@ -79,7 +82,7 @@ def emit_queue_update_for_room(room: Room) -> None:
     socketio.emit("queue_update", payload, room=f"room:{room.code}")
 
 
-@socketio.on("enqueue_url")
+@socketio.on("queue.add")
 def _on_enqueue_url(data):
     try:
         user_id = _get_user_id_from_socket()
@@ -94,8 +97,22 @@ def _on_enqueue_url(data):
 
         # Normalize URL and fetch lightweight metadata
         vid = extract_video_id(url)
+
+        if not vid:
+            current_app.logger.warning(
+                "queue.add: no video id found in url (url=%s)", url
+            )
+            return
+
         canonical_url = build_watch_url(vid) if vid else url
-        meta = fetch_video_meta(vid) if vid else {"title": "", "thumbnail_url": "", "duration_ms": 0}
+        meta = fetch_video_meta(vid)
+        if not meta:
+            current_app.logger.warning(
+                "queue.add: no metadata found for video (url=%s, video_id=%s)",
+                url,
+                vid,
+            )
+            return
 
         # Ensure queue exists for room
         q = _get_or_create_room_queue(room, created_by_id=user_id)
@@ -124,5 +141,36 @@ def _on_enqueue_url(data):
         # Broadcast updated queue to room participants
         emit_queue_update_for_room(room)
     except Exception:
-        current_app.logger.exception("enqueue_url handler error")
+        current_app.logger.exception("queue.add handler error")
 
+
+@socketio.on("queue.remove")
+def _on_queue_remove(data):
+    try:
+        user_id = _get_user_id_from_socket()
+        if not user_id:
+            return
+        room = _get_active_room_for_user(user_id)
+        if not room:
+            return
+        id = (data or {}).get("id")
+        if not id:
+            return
+        entry = (
+            db.session.query(QueueEntry).filter_by(id=id, added_by_id=user_id).first()
+        )
+        if not entry:
+            current_app.logger.warning(
+                "queue.remove: no entry found for id (id=%s) (user_id=%s)", id, user_id
+            )
+            return
+        entry.status = "deleted"
+        commit_with_retry(db.session)
+        emit_queue_update_for_room(room)
+    except Exception:
+        current_app.logger.exception(
+            "queue.remove handler error (id=%s) (user_id=%s) (room=%s)",
+            id,
+            user_id,
+            room.code,
+        )

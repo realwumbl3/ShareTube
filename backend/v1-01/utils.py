@@ -10,12 +10,12 @@ from flask import current_app
 from sqlalchemy.exc import OperationalError as SAOperationalError
 
 
-
 # Extract a YouTube video id from either a URL or a raw id-like string
 def extract_video_id(value: str) -> str:
     try:
         # Parse the URL to handle various YouTube formats
         from urllib.parse import urlparse, parse_qs
+
         u = urlparse(value)
         # Normalize host for matching
         host = (u.hostname or "").replace("www.", "")
@@ -54,67 +54,87 @@ def fetch_video_meta(video_id: str) -> dict:
     thumb = ""
     duration_ms: int | None = None
     try:
-        # Try lightweight oEmbed for public metadata
-        r = requests.get(
-            "https://www.youtube.com/oembed",
-            params={"url": build_watch_url(video_id), "format": "json"},
-            timeout=6,
-        )
-        if r.status_code == 200:
-            j = r.json()
-            title = j.get("title") or title
-            thumb = j.get("thumbnail_url") or thumb
-    except Exception:
-        # Ignore network/parse errors, keep defaults
-        pass
-    try:
         # Use YouTube Data API for duration and better thumbnails if a key is configured
         api_key = current_app.config.get("YOUTUBE_API_KEY", "")
         if api_key:
             r2 = requests.get(
                 "https://www.googleapis.com/youtube/v3/videos",
-                params={"id": video_id, "part": "snippet,contentDetails", "key": api_key},
+                params={
+                    "id": video_id,
+                    "part": "snippet,contentDetails",
+                    "key": api_key,
+                },
                 timeout=8,
             )
             if r2.status_code == 200:
                 data = r2.json()
+                for key, value in data.items():
+                    print(key, value)
                 items = data.get("items") or []
-                if items:
-                    sn = items[0].get("snippet", {})
-                    thumbs = sn.get("thumbnails", {})
-                    # Prefer higher-resolution thumbnails when available
-                    best = thumbs.get("maxres") or thumbs.get("standard") or thumbs.get("high") or thumbs.get("medium") or thumbs.get("default") or {}
-                    title = sn.get("title") or title
-                    thumb = best.get("url") or thumb
-                    try:
-                        # Parse ISO 8601 duration to milliseconds
-                        cd = items[0].get("contentDetails", {})
-                        iso = cd.get("duration") or ""
-                        m = re.match(r"^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$", iso)
-                        if m:
-                            hours = int(m.group(1) or 0)
-                            minutes = int(m.group(2) or 0)
-                            seconds = float(m.group(3) or 0)
-                            duration_ms = int(((hours * 3600) + (minutes * 60) + seconds) * 1000)
-                    except Exception:
-                        # If duration parsing fails, leave as None
-                        pass
+                if len(items) == 0:
+                    current_app.logger.warning(
+                        "fetch_video_meta: no items found in YouTube Data API response (video_id=%s) (status_code=%s)",
+                        video_id,
+                        r2.status_code,
+                    )
+                    return None
+                sn = items[0].get("snippet", {})
+                thumbs = sn.get("thumbnails", {})
+                # Prefer higher-resolution thumbnails when available
+                best = (
+                    thumbs.get("maxres")
+                    or thumbs.get("standard")
+                    or thumbs.get("high")
+                    or thumbs.get("medium")
+                    or thumbs.get("default")
+                    or {}
+                )
+                title = sn.get("title") or title
+                thumb = best.get("url") or thumb
+                try:
+                    # Parse ISO 8601 duration to milliseconds
+                    cd = items[0].get("contentDetails", {})
+                    iso = cd.get("duration") or ""
+                    m = re.match(
+                        r"^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$", iso
+                    )
+                    if m:
+                        hours = int(m.group(1) or 0)
+                        minutes = int(m.group(2) or 0)
+                        seconds = float(m.group(3) or 0)
+                        return {
+                            "title": title or "",
+                            "thumbnail_url": thumb or "",
+                            "duration_ms": int(
+                                ((hours * 3600) + (minutes * 60) + seconds) * 1000
+                            ),
+                        }
+                except Exception:
+                    current_app.logger.exception(
+                        "fetch_video_meta: error parsing duration (video_id=%s)",
+                        video_id,
+                    )
+                    return None
     except Exception:
-        # If API request fails, return whatever we have
-        pass
-    # Normalize return structure
-    return {"title": title or "", "thumbnail_url": thumb or "", "duration_ms": int(duration_ms or 0)}
+        current_app.logger.exception(
+            "fetch_video_meta: error getting video metadata (video_id=%s) (status_code=%s)",
+            video_id,
+            r2.status_code,
+        )
+        return None
 
 
 # Return current epoch time in milliseconds
 def now_ms() -> int:
     import time
+
     return int(time.time() * 1000)
 
 
-
 # Commit a SQLAlchemy session with retries to mitigate SQLite 'database is locked' errors
-def commit_with_retry(session, retries: int = 5, initial_delay: float = 0.05, backoff: float = 2.0) -> None:
+def commit_with_retry(
+    session, retries: int = 5, initial_delay: float = 0.05, backoff: float = 2.0
+) -> None:
     """Commit the SQLAlchemy session with retries for SQLite 'database is locked'.
 
     Rolls back between attempts and uses exponential backoff.
@@ -153,4 +173,3 @@ def commit_with_retry(session, retries: int = 5, initial_delay: float = 0.05, ba
     # If we exhausted retries, re-raise the last lock error to the caller
     if last_exc:
         raise last_exc
-

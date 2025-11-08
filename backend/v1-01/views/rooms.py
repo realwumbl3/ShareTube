@@ -8,7 +8,7 @@ from typing import Optional
 import jwt
 from flask import Blueprint, current_app, jsonify, request
 
-from ..extensions import db
+from ..extensions import db, socketio
 from ..models import Room, RoomMembership, User
 
 
@@ -35,7 +35,37 @@ def _generate_room_code(length: int = 6) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-@rooms_bp.post("/rooms")
+# codemeta[1]
+def emit_presence(room: Room) -> None:
+    # Query active memberships and include basic profile fields
+    memberships = (
+        db.session.query(RoomMembership).filter_by(room_id=room.id, active=True).all()
+    )
+    user_ids = [m.user_id for m in memberships]
+    users = (
+        db.session.query(User).filter(User.id.in_(user_ids)).all() if user_ids else []
+    )
+    user_by_id = {u.id: u for u in users}
+    payload = [
+        {
+            "id": uid,
+            "name": (user_by_id.get(uid).name if user_by_id.get(uid) else ""),
+            "picture": (user_by_id.get(uid).picture if user_by_id.get(uid) else ""),
+        }
+        for uid in user_ids
+    ]
+    socketio.emit("presence_update", payload, room=f"room:{room.code}")
+
+
+def emit_room_state_update(room: Room) -> None:
+    socketio.emit(
+        "room.state.update",
+        {"state": room.state},
+        room=f"room:{room.code}",
+    )
+
+
+@rooms_bp.post("/create_room")
 def create_room():
     user_id = _get_user_id_from_auth_header()
     if not user_id:

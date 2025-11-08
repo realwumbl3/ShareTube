@@ -36,7 +36,7 @@ export default class UserIcons {
 
     async onPlusClicked() {
         try {
-            if (state.currentRoomCode.get()) {
+            if (state.roomCode.get()) {
                 await this.app.copyCurrentRoomCodeToClipboard();
                 return;
             }
@@ -59,6 +59,7 @@ export class UserIcon {
         this.user = user;
         html`
             <img
+                draggable="false"
                 class="user_icon_avatar"
                 alt="${this.user.name.interp((v) => v || "")}'s avatar"
                 title="${this.user.name.interp((v) => v || "")}'s avatar"

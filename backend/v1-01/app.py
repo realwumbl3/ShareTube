@@ -120,6 +120,14 @@ def create_app() -> Flask:
         ping_timeout=30,
         ping_interval=10,
     )
+    try:
+        app.logger.info(
+            "SocketIO configured: async_mode=%s, message_queue=%s",
+            socketio.async_mode,
+            app.config.get("SOCKETIO_MESSAGE_QUEUE") or "(none)",
+        )
+    except Exception:
+        pass
 
     # Perform database setup and migrations inside app context
     with app.app_context():

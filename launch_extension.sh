@@ -44,9 +44,12 @@ DOUBLE=false                                              # Whether to launch a 
 DEFAULT_PROFILE_A="/home/wumbl3wsl/ShareTube/.browser-profiles/A"  # Default A profile path
 DEFAULT_PROFILE_B="/home/wumbl3wsl/ShareTube/.browser-profiles/B"  # Default B profile path
 PROFILE_DIR="$DEFAULT_PROFILE_A"                         # Primary profile default
-START_URL="https://www.youtube.com/#st:bt94ee"                     # Default start URL
+# START_URL="https://www.youtube.com#st:dj3r2k"                     # Default start URL
+START_URL="https://www.youtube.com/watch?v=zVojuK_CXJM#st:dj3r2k"                     # Default start URL
 WINDOW_POSITION="0,0"                                    # Default requested position (X honored)
 WINDOW_SIZE="1280,1400"                                  # Default requested size (H adjusted later)
+SHOWING_DEVTOOLS=false                                     # Whether to show devtools
+
 
 # Collect positional arguments separately for backward compatibility
 POSITIONAL_ARGS=()
@@ -192,6 +195,7 @@ launch_window() {
       "--load-extension=$EXT_PATH" \
       --disable-features=IsolateOrigins,site-per-process \
       --disable-blink-features=AutomationControlled \
+      --auto-open-devtools-for-tabs \
       "$url"
   else
     "$BROWSER_BIN" \
@@ -207,6 +211,7 @@ launch_window() {
       "--load-extension=$EXT_PATH" \
       --disable-features=IsolateOrigins,site-per-process \
       --disable-blink-features=AutomationControlled \
+      --auto-open-devtools-for-tabs \
       "$url"
   fi
 }

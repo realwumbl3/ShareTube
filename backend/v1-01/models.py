@@ -10,6 +10,7 @@ from typing import Optional
 # Import the SQLAlchemy instance from the shared extensions module
 from .extensions import db
 
+
 # User accounts persisted in the database
 class User(db.Model):
     # Mark fields that are considered sensitive/private for the dashboard view layer
@@ -24,6 +25,7 @@ class User(db.Model):
     name = db.Column(db.String(255))
     # Profile picture URL
     picture = db.Column(db.String(1024))
+
 
 # A room represents a collaborative watch session identified by a short code
 class Room(db.Model):
@@ -46,6 +48,10 @@ class Room(db.Model):
     # Current playback/state machine status for the room
     # idle | starting | playing | paused
     state = db.Column(db.String(16), default="idle")
+    # Current queue entry being played
+    current_entry_id = db.Column(
+        db.Integer, db.ForeignKey("queue_entry.id"), nullable=True, index=True
+    )
 
     # ORM relationship to memberships, cascade deletion when room is removed
     memberships = db.relationship(
@@ -55,6 +61,24 @@ class Room(db.Model):
     queues = db.relationship(
         "Queue", backref="room", lazy=True, cascade="all, delete-orphan"
     )
+    # Relationship to the current entry
+    current_entry = db.relationship(
+        "QueueEntry", foreign_keys=[current_entry_id], uselist=False
+    )
+    # Operators assigned to the room (separate from membership roles)
+    operators = db.relationship(
+        "RoomOperator", backref="room", lazy=True, cascade="all, delete-orphan"
+    )
+
+    def initial_state(self):
+        return {
+            "owner_id": self.owner_id,
+            "created_at": self.created_at,
+            "is_private": self.is_private,
+            "control_mode": self.control_mode,
+            "state": self.state,
+        }
+
 
 # Association between a user and a room, with presence and player state
 class RoomMembership(db.Model):
@@ -81,9 +105,33 @@ class RoomMembership(db.Model):
     # Role within the room: owner | operator | participant
     role = db.Column(db.String(16), default="participant")
 
+    # Ad sync fields persisted on membership for TTL/debounce and active set derivation
+    ad_active = db.Column(db.Boolean, default=False, index=True)
+    ad_last_true_ts = db.Column(db.BigInteger, nullable=True, index=True)
+    ad_last_false_ts = db.Column(db.BigInteger, nullable=True, index=True)
+
     # Ensure a user can have at most one membership per room
     __table_args__ = (
         db.UniqueConstraint("room_id", "user_id", name="uq_room_membership_room_user"),
+    )
+
+
+class RoomOperator(db.Model):
+    # Surrogate primary key id
+    id = db.Column(db.Integer, primary_key=True)
+    # Parent room id; indexed
+    room_id = db.Column(
+        db.Integer, db.ForeignKey("room.id"), nullable=False, index=True
+    )
+    # Operator user id; indexed
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=False, index=True
+    )
+    # Relationship back to user
+    user = db.relationship("User")
+    # Ensure each operator is unique per room
+    __table_args__ = (
+        db.UniqueConstraint("room_id", "user_id", name="uq_room_operator_room_user"),
     )
 
 
@@ -116,6 +164,8 @@ class QueueEntry(db.Model):
     added_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     # Canonical video URL
     url = db.Column(db.String(2048), nullable=False)
+    # YouTube video id (canonical)
+    video_id = db.Column(db.String(64))
     # Title fetched from YouTube APIs or oEmbed
     title = db.Column(db.String(512))
     # Best available thumbnail URL
@@ -124,8 +174,18 @@ class QueueEntry(db.Model):
     position = db.Column(db.Integer, index=True)
     # Time when the entry was added
     added_at = db.Column(db.Integer, default=lambda: int(time.time()))
-    # Lifecycle status: queued | skipped | deleted | watched
+    # Lifecycle status: queued | skipped | deleted (watched is derived from watch_count > 0)
     status = db.Column(db.String(32), default="queued")
+    # Number of times this entry has been completed/rotated
+    watch_count = db.Column(db.Integer, default=0)
+    # Per-entry virtual clock fields (milliseconds)
+    duration_ms = db.Column(db.Integer, default=0)
+    playing_since_ms = db.Column(db.BigInteger, nullable=True)
+    paused_progress_ms = db.Column(db.Integer, nullable=True)
+    # Last known progress in milliseconds when paused (for resume)
+    progress_ms = db.Column(db.Integer, default=0)
+    # Unix timestamp (seconds) when the video was last paused
+    paused_at = db.Column(db.Integer, nullable=True)
 
 
 # Audit log of room-related events for observability and debugging

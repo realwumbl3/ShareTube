@@ -1,5 +1,5 @@
 console.log("app/app.js loaded");
-import { html, css } from "./dep/zyx.js";
+import { html, css, LiveVar } from "./dep/zyx.js";
 
 import { decodeJwt } from "./utils.js";
 
@@ -13,9 +13,55 @@ import { extractUrlsFromDataTransfer, isYouTubeUrl } from "./utils.js";
 
 import ShareTubeUser from "./models/user.js";
 import { syncLiveList } from "./sync.js";
+import YoutubePlayerManager from "./player.js";
+import DebugMenu from "./DebugMenu.js";
+import Controls from "./components/Controls.js";
+import Logo from "./components/Logo.js";
+import SearchBox from "./components/SearchBox.js";
 
 css`
     @import url(${chrome.runtime.getURL("app/styles.css")});
+    @import url(${chrome.runtime.getURL("app/pill.css")});
+    @import url(${chrome.runtime.getURL("app/adOverlay.css")});
+
+    #sharetube_main {
+        position: fixed;
+        bottom: 2em;
+        z-index: 10000000;
+        width: 100%;
+        display: grid;
+        justify-items: center;
+        align-items: center;
+        pointer-events: none;
+        padding: 0px 0px 8px;
+        background: #00000000;
+        gap: 4px;
+    }
+
+    #sharetube_main img {
+        width: 27px;
+        height: 27px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #222;
+    }
+
+    #sharetube_main span {
+        white-space: nowrap;
+        font-weight: 500;
+    }
+
+    #sharetube_main .rounded_btn {
+        appearance: none;
+        border-radius: 10px;
+        padding: 2px 6px;
+        font-size: 12px;
+        cursor: pointer;
+        margin-left: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--yt-spec-text-primary, #fff);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+    }
 `;
 
 import { ShareTubeQueueItem } from "./components/Queue.js";
@@ -24,32 +70,63 @@ export default class ShareTubeApp {
     constructor() {
         this.storageListener = null;
         this.socket = new SocketManager(this);
+        this.player = new YoutubePlayerManager(this);
 
         // Components
         this.queue = new Queue(this);
         this.userIcons = new UserIcons(this);
+        this.debugMenu = new DebugMenu(this);
+        this.controls = new Controls(this);
+        this.logo = new Logo(this);
+
+        this.debugButtonVisible = new LiveVar(false);
 
         html`
             <div id="sharetube_main">
-                ${this.queue}
+                ${this.queue} ${this.debugMenu}
                 <div id="sharetube_pill">
-                    <img alt="Profile" src=${state.avatarUrl.interp((v) => v || "")} />
-                    <span id="ShareTubeLabel" zyx-click=${() => this.logSelf()}
-                        >ShareTube ${state.currentRoomCode.interp((v) => (v ? `#${v}` : ""))}</span
+                    <img draggable="false" alt="Profile" src=${state.avatarUrl.interp((v) => v || "")} />
+                    ${this.logo} ${this.userIcons}
+                    <div
+                        id="sharetube_toggle_queue"
+                        class="rounded_btn"
+                        zyx-click=${() => this.queue.toggleQueueVisibility()}
                     >
-                    ${this.userIcons}
-                    <div id="sharetube_toggle_queue" zyx-click=${() => this.queue.toggleQueueVisibility()}>
                         ${state.queueVisible.interp((v) => (v ? "Hide" : "Show"))} Queue
                         ${state.queue.interp((v) => (v.length > 0 ? `(${v.length})` : ""))}
                     </div>
+                    ${this.controls}
+                    <button
+                        class="rounded_btn"
+                        zyx-if=${this.debugButtonVisible}
+                        zyx-click=${() => this.debugMenu.toggleVisibility()}
+                    >
+                        debug
+                    </button>
                 </div>
             </div>
         `.bind(this);
 
+        this.setupKeypressListeners();
+
         this.setupDragAndDrop();
         this.socket.on("presence_update", this.onSocketPresenceUpdate.bind(this));
         this.socket.on("queue_update", this.onQueueUpdate.bind(this));
+        this.socket.on("room.state.update", this.onRoomStateUpdate.bind(this));
         this.socket.setupBeforeUnloadHandler();
+        this.player.start();
+    }
+
+    setupKeypressListeners() {
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "d" && e.ctrlKey && e.altKey) {
+                this.debugButtonVisible.set(!this.debugButtonVisible.get());
+            }
+        });
+    }
+
+    openSearch(query) {
+        new SearchBox(this, query);
     }
 
     async backEndUrl() {
@@ -99,7 +176,7 @@ export default class ShareTubeApp {
 
     async createRoom() {
         try {
-            const res = await this.post("/api/rooms");
+            const res = await this.post("/api/create_room");
             return res && res.code;
         } catch (e) {
             console.warn("ShareTube createRoom failed", e);
@@ -111,12 +188,12 @@ export default class ShareTubeApp {
         await this.socket.withSocket(async (socket) => {
             await socket.emit("join_room", { code });
         });
-        state.currentRoomCode.set(code);
+        state.roomCode.set(code);
         this.updateCodeHashInUrl(code);
     }
 
     async copyCurrentRoomCodeToClipboard() {
-        const code = state.currentRoomCode.get();
+        const code = state.roomCode.get();
         if (!code) return;
         try {
             await navigator.clipboard.writeText(`${window.location.origin}#st:${code}`);
@@ -136,7 +213,7 @@ export default class ShareTubeApp {
             localList: state.users,
             remoteItems: presence,
             extractRemoteId: (v) => v.id,
-            extractLocalId: (u) => u.userId.get(),
+            extractLocalId: (u) => u.id,
             createInstance: (item) => new ShareTubeUser(item),
             updateInstance: (u, item) => u.updateFromRemote(item),
         });
@@ -149,8 +226,18 @@ export default class ShareTubeApp {
             remoteItems: queue,
             extractRemoteId: (v) => v.id,
             extractLocalId: (u) => u.url,
-            createInstance: (item) => new ShareTubeQueueItem(item),
+            createInstance: (item) => new ShareTubeQueueItem(this, item),
         });
+    }
+
+    onRoomStateUpdate(data) {
+        if (!data.state) return;
+        state.roomState.set(data.state);
+        if (data.state === "playing") {
+            this.player.setDesiredState("playing");
+        } else if (data.state === "paused") {
+            this.player.setDesiredState("paused");
+        }
     }
 
     logSelf() {
@@ -199,10 +286,9 @@ export default class ShareTubeApp {
             this.sharetube_main.classList.remove("dragover");
             const urls = extractUrlsFromDataTransfer(e.dataTransfer);
             const ytUrls = urls.filter(isYouTubeUrl);
-            if (ytUrls.length > 0) {
-                ytUrls.forEach((u) => this.enqueueUrl(u));
-                state.queueVisible.set(true);
-            }
+            if (ytUrls.length === 0) return;
+            ytUrls.forEach((u) => this.enqueueUrl(u));
+            state.queueVisible.set(true);
         };
         this.sharetube_main.addEventListener("dragenter", onEnter);
         this.sharetube_main.addEventListener("dragover", onOver);
@@ -211,9 +297,7 @@ export default class ShareTubeApp {
     }
 
     enqueueUrl(url) {
-        this.socket.withSocket(async (socket) => {
-            await socket.emit("enqueue_url", { url });
-        });
+        this.socket.withSocket(async (socket) => await socket.emit("queue.add", { url }));
     }
 
     attachBrowserListeners() {

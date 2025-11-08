@@ -80,7 +80,7 @@ export default class SocketManager {
     setupBeforeUnloadHandler() {
         window.addEventListener("beforeunload", () => {
             this.withSocket(async (socket) => {
-                await socket.emit("leave_room", { code: state.currentRoomCode.get() });
+                await socket.emit("leave_room", { code: state.roomCode.get() });
             }); 
         });
     }

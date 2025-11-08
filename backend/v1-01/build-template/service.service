@@ -11,14 +11,13 @@ Environment=APP_NAME=$APP_NAME
 Environment=VERSION=$VERSION
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
-Environment=SOCKETIO_MESSAGE_QUEUE=
+Environment=SOCKETIO_MESSAGE_QUEUE=redis://127.0.0.1:6379/0
 # Force gevent async mode for Flask-SocketIO
 Environment=SOCKETIO_ASYNC_MODE=gevent
 UMask=007
 
 ExecStart=$PROJECT_ROOT/.venv/bin/gunicorn \
-  -c $PROJECT_ROOT/instance/$VERSION/deploy/gunicorn.conf.py \
-  backend.$VERSION.app:app
+  -c $PROJECT_ROOT/instance/$VERSION/deploy/gunicorn.conf.py
 
 Restart=always
 RestartSec=2

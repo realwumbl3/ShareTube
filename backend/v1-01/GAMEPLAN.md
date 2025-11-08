@@ -113,7 +113,7 @@ flowchart TD
 
 ### Time and Drift
 - Server includes `serverNowMs` in welcome and periodic `pong` to calibrate RTT/offset.
-- The room's playback is represented by persisted `virtual_clock` fields (`duration_ms`, `playing_since_ms?`, `paused_progress_ms?`, and `state`). The server updates these fields only on control events (play/pause/seek/queue-change) and derives current progress at response time. No in-memory state is used.
+- Playback is represented by per-entry persisted `virtual_clock` fields on the current queue entry (`duration_ms`, `playing_since_ms?`, `paused_progress_ms?`). The server updates these fields only on control events (play/pause/seek/queue-change) and derives current progress at response time. No in-memory state is used.
 - Client computes local expected position from the `virtual_clock` and `serverNowMs`; if |drift| > threshold (e.g., 400ms), snap; else smooth.
 
 ## Room and Playback State
@@ -126,7 +126,7 @@ flowchart TD
 - `operators: Set<string>` (user ids)
 - `ad_sync_mode: 'off' | 'pause_all' | 'trigger_and_pause'`
 - `state: 'idle' | 'starting' | 'playing' | 'paused'`
-- `current_entry_id: nullable` and `virtual_clock: { duration_ms, playing_since_ms?, paused_progress_ms? }`
+- `current_entry_id: nullable`
 
 ### Membership (dynamic)
 - `user_id | guest_id`
@@ -134,8 +134,16 @@ flowchart TD
 - `role: 'owner' | 'operator' | 'participant'`
 
 ### Queue
-- `entries: [ { id, video_id, url, title, thumbnail_url, position, status } ]`
-- Status: `queued | skipped | deleted | watched`.
+- `entries: [ { id, video_id, url, title, thumbnail_url, position, status, watch_count, duration_ms, playing_since_ms?, paused_progress_ms?, progress_ms?, paused_at? } ]`
+- Status: `queued | skipped | deleted`. "Watched" is derived: an entry is considered watched when `watch_count > 0`.
+
+#### Queue Playback Policy (Auto-Rotate)
+- Play order is head-first: always play the entry with the lowest `position` (`entries[0]`).
+- On entry completion, move the just-finished head entry to the tail of the queue instead of removing it (i.e., rotate). Positions are re-numbered to maintain order.
+- On entry completion, increment the entry's `watch_count` before rotation. An entry is treated as watched if `watch_count > 0`.
+- Auto-advance is seamless: when the current entry completes (derived from `virtual_clock.duration_ms`), the server rotates the queue and transitions to play the next entry.
+- The queue never shrinks automatically on completion. Removal only happens via explicit `queue.remove` or `queue.replace`.
+
 
 ### State Transitions
 ```mermaid
@@ -145,7 +153,8 @@ stateDiagram-v2
   starting --> playing: timeout
   playing --> paused: pause
   paused --> playing: resume
-  playing --> idle: queue_end
+  playing --> starting: entry_complete (auto-advance)
+  playing --> idle: queue_empty
 ```
 
 ## Event Taxonomy and Contracts
@@ -202,16 +211,17 @@ stateDiagram-v2
 - Detect current video id from URL; keep hash `#sharetube:<CODE>` when navigating.
 
 ### Ad Handling (client-only)
-- Detection is client-only via DOM markers or Player API flags. Clients emit `ad.report { active }` on changes (throttled). Server persists the latest report per `(room_id,user_id)` with timestamp and derives the active set on demand; it then broadcasts `ad.status`.
+- Detection is client-only via DOM markers or Player API flags. Clients emit `ad.report { active }` on changes (throttled). Server updates ad status fields on `RoomMembership` for the `(room_id, user_id)` and derives the active set on demand; it then broadcasts `ad.status`.
 - When `ad_sync_mode='pause_all'|'trigger_and_pause'` and the derived active set transitions from empty→non-empty, server emits a control echo to pause room (and persists the updated virtual clock). When it transitions to empty, server resumes previous state and persists the virtual clock accordingly. No in-memory sets are maintained.
 
 #### Ad set derivation (TTL/Debounce)
 - **Flapping**: Ad detectors can toggle rapidly. Avoid room pause/resume oscillations.
-- **TTL (time-to-live)**: Consider a user "active in ads" only if their last `ad.report { active:true }` is recent.
-  - Active if `serverNowMs - lastTrueTs ≤ ACTIVE_TTL_MS` (e.g., 6–10s). This auto-clears stale "true" if a "false" was missed.
+- **Persisted membership fields**: For each `(room_id,user_id)`, store `ad_active:boolean`, `ad_last_true_ts:number`, `ad_last_false_ts:number` in `RoomMembership`.
+- **TTL (time-to-live)**: Consider a user "active in ads" only if their last true report is recent.
+  - Active if `serverNowMs - ad_last_true_ts ≤ ACTIVE_TTL_MS` (e.g., 6–10s). This auto-clears stale "true" if a "false" was missed.
 - **Debounce (dwell time)**: Require stability before changing an individual user's status.
-  - Active debounce: only mark active if `active:true` has been continuously true for ≥ `MIN_ACTIVE_MS`.
-  - Inactive debounce: only clear if `active:false` has been continuously false for ≥ `MIN_INACTIVE_MS`.
+  - Active debounce: only set `ad_active=true` if `active:true` has been continuously true for ≥ `MIN_ACTIVE_MS`.
+  - Inactive debounce: only set `ad_active=false` if `active:false` has been continuously false for ≥ `MIN_INACTIVE_MS`.
   - Optional hysteresis: use slightly longer inactive debounce than active to reduce oscillation.
 - **Room-level grace**: Only issue pause/resume when the derived active set crosses empty/non-empty and remains so for ≥ `ROOM_TRANSITION_GRACE_MS`.
 
@@ -286,11 +296,17 @@ sequenceDiagram
 - `Room { id, code, owner_id, created_at, is_private, control_mode, controller_id, state }`  
   plus persisted `virtual_clock { duration_ms, playing_since_ms?, paused_progress_ms? }` and `operators:Set<id>`.
 - `RoomMembership { id, room_id, user_id?, guest_id?, active }`
+  - `ad_active: boolean` (derived with debounce/TTL; last computed state)
+  - `ad_last_true_ts: number` (ms since epoch when `active:true` was last seen)
+  - `ad_last_false_ts: number` (ms since epoch when `active:false` was last seen)
 - `Queue { id, room_id, created_by_id?, created_at }`
 - `QueueEntry { id, queue_id, added_by_id?, url, video_id, title, thumbnail_url, position, status }`
+- `QueueEntry.watch_count: int` (defaults to 0; increment on each completion/auto-advance)
+ - `QueueEntry.progress_ms: int` (last known progress in ms when paused; used for resume)
+ - `QueueEntry.paused_at: ts` (unix seconds when the entry was last paused)
 - `RoomAudit { id, room_id, user_id?, event, details, created_at }`
 - `ChatMessage { id, room_id, user_id, text, ts }` (optional, ephemeral or capped persistence)
-- `AdReport { id, room_id, user_id, active:boolean, ts }` (latest row per user is authoritative; active set is derived on read with TTL)
+  
 
 ## Minimal REST Surface (Initial)
 
@@ -392,7 +408,7 @@ sequenceDiagram
   "controllerId": "client-123",
   "operators": ["user-111", "user-222"],
   "virtual_clock": { "duration_ms": 220000, "playing_since_ms": 1730000000000 },
-  "items": [ { "id": 1, "video_id": "XXXXXXXXXXX", "title": "..." } ]
+  "items": [ { "id": 1, "video_id": "XXXXXXXXXXX", "title": "...", "watch_count": 0 } ]
 }
 ```
 

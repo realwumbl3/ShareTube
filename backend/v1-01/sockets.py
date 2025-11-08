@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import time
-from typing import Optional
+from contextvars import ContextVar
+from typing import Callable, Optional
+from flask import Flask
+
+import logging
 
 import jwt
 from flask import current_app, request
@@ -9,10 +13,11 @@ from flask_socketio import join_room, leave_room
 
 from .extensions import db, socketio
 from .models import Room, RoomMembership, User
+from .views.rooms import emit_presence, emit_room_state_update
 from .views.queue import emit_queue_update_for_room
 
 
-def _get_user_id_from_socket() -> Optional[int]:
+def get_user_id_from_socket() -> Optional[int]:
     token = request.args.get("token")
     if not token:
         return None
@@ -23,31 +28,27 @@ def _get_user_id_from_socket() -> Optional[int]:
         sub = payload.get("sub")
         return int(sub) if sub is not None else None
     except Exception:
-        current_app.logger.exception("socket auth token decode failed")
+        logging.exception("socket auth token decode failed")
         return None
 
 
-def _emit_presence(room: Room) -> None:
-    # Query active memberships and include basic profile fields
-    memberships = (
-        db.session.query(RoomMembership).filter_by(room_id=room.id, active=True).all()
-    )
-    user_ids = [m.user_id for m in memberships]
-    users = (
-        db.session.query(User).filter(User.id.in_(user_ids)).all() if user_ids else []
-    )
-    user_by_id = {u.id: u for u in users}
-    payload = [
-        {
-            "id": uid,
-            "name": (user_by_id.get(uid).name if user_by_id.get(uid) else ""),
-            "picture": (user_by_id.get(uid).picture if user_by_id.get(uid) else ""),
-        }
-        for uid in user_ids
-    ]
-    socketio.emit("presence_update", payload, room=f"room:{room.code}")
+def _emit_function_after_delay(
+    function: Callable[[Room], None],
+    room: Room,
+    delay_seconds: float = 1.0,
+) -> None:
+    def background_task(context: ContextVar[Flask]) -> None:
+        try:
+            with context.app_context():
+                function(room)
+        except Exception:
+            logging.exception("delayed function emission failed")
+        socketio.sleep(delay_seconds)
+
+    socketio.start_background_task(background_task, current_app._get_current_object())
 
 
+# codemeta[1]
 def register_socket_handlers() -> None:
     @socketio.on("join_room")
     def _on_join_room(data):
@@ -55,7 +56,7 @@ def register_socket_handlers() -> None:
             code = (data or {}).get("code")
             if not code:
                 return
-            user_id = _get_user_id_from_socket()
+            user_id = get_user_id_from_socket()
             if not user_id:
                 return
             room = Room.query.filter_by(code=code).first()
@@ -67,7 +68,6 @@ def register_socket_handlers() -> None:
                 room_id=room.id, user_id=user_id
             ).first()
             now = int(time.time())
-            print(f"join_room: {code}, {user_id}, {now}")
             if not membership:
                 membership = RoomMembership(
                     room_id=room.id,
@@ -82,15 +82,14 @@ def register_socket_handlers() -> None:
                 membership.last_seen = now
             db.session.commit()
 
-            # Join the Socket.IO room and emit updated presence
+            # Join the Socket.IO room and schedule a delayed presence update
             join_room(f"room:{room.code}")
-            _emit_presence(room)
-            try:
-                emit_queue_update_for_room(room)
-            except Exception:
-                current_app.logger.exception("failed to emit queue on join_room")
+
+            _emit_function_after_delay(emit_presence, room, 0.1)
+            _emit_function_after_delay(emit_queue_update_for_room, room, 0.1)
+            _emit_function_after_delay(emit_room_state_update, room, 0.1)
         except Exception:
-            current_app.logger.exception("join_room handler error")
+            logging.exception("join_room handler error")
 
     @socketio.on("leave_room")
     def _on_leave_room(data):
@@ -98,7 +97,7 @@ def register_socket_handlers() -> None:
             code = (data or {}).get("code")
             if not code:
                 return
-            user_id = _get_user_id_from_socket()
+            user_id = get_user_id_from_socket()
             if not user_id:
                 return
             print(f"leave_room: {code}, {user_id}")
@@ -114,6 +113,38 @@ def register_socket_handlers() -> None:
             membership.last_seen = int(time.time())
             db.session.commit()
             leave_room(f"room:{room.code}")
-            _emit_presence(room)
+            _emit_function_after_delay(emit_presence, room, 0.1)
         except Exception:
-            current_app.logger.exception("leave_room handler error")
+            logging.exception("leave_room handler error")
+
+    @socketio.on("room.control.pause")
+    def _on_room_control_pause(data):
+        try:
+            code = (data or {}).get("code")
+            if not code:
+                return
+            room = Room.query.filter_by(code=code).first()
+            if not room:
+                return
+            room.state = "paused"
+            db.session.commit()
+            db.session.refresh(room)
+            _emit_function_after_delay(emit_room_state_update, room, 0.4)
+        except Exception:
+            logging.exception("room.control.pause handler error")
+
+    @socketio.on("room.control.play")
+    def _on_room_control_play(data):
+        try:
+            code = (data or {}).get("code")
+            if not code:
+                return
+            room = Room.query.filter_by(code=code).first()
+            if not room:
+                return
+            room.state = "playing"
+            db.session.commit()
+            db.session.refresh(room)
+            _emit_function_after_delay(emit_room_state_update, room, 0.4)
+        except Exception:
+            logging.exception("room.control.play handler error")
