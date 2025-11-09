@@ -3,11 +3,14 @@ from __future__ import annotations
 
 # Standard lib imports for timing and logging, and SQLAlchemy inspector for schema checks
 import time
+from typing import Optional
 from sqlalchemy import inspect
 import logging
 
 # Flask primitives for creating the app and request-scoped utilities
-from flask import Flask, request, g
+from flask import Flask, request, g, current_app
+
+import jwt
 
 # Enable Cross-Origin Resource Sharing for API and Socket.IO
 from flask_cors import CORS
@@ -45,9 +48,6 @@ except Exception:
     pass
 
 
-# db and socketio provided by extensions
-
-
 # SQLite pragmas
 # - This is only used for SQLite, and is not needed for other databases
 # - We need this to ensure that the database is always in a consistent state
@@ -81,6 +81,21 @@ def configure_sqlite_pragmas() -> None:
     except Exception:
         # Swallow all errors since these are best-effort tuning knobs
         pass
+
+
+def get_user_id_from_auth_header() -> Optional[int]:
+    auth = request.headers.get("Authorization", "")
+    if auth.lower().startswith("bearer "):
+        token = auth.split(" ", 1)[1].strip()
+        try:
+            payload = jwt.decode(
+                token, current_app.config["JWT_SECRET"], algorithms=["HS256"]
+            )
+            sub = payload.get("sub")
+            return int(sub) if sub is not None else None
+        except Exception:
+            return None
+    return None
 
 
 # Application factory returning a configured Flask app
@@ -163,18 +178,6 @@ def create_app() -> Flask:
 
     # Register HTTP routes and blueprints
     register_routes(app)
-    # Register Socket.IO event handlers
-    try:
-        from .sockets import register_socket_handlers  # noqa: F401
-
-        register_socket_handlers()
-    except Exception:
-        logging.exception("socket handlers registration failed")
-    # Import queue handlers (Socket.IO) so their decorators register
-    try:
-        from .views import queue as _queue_handlers  # noqa: F401
-    except Exception:
-        logging.exception("queue handlers import failed")
     # Register views
     try:
         # YouTube metadata blueprint
@@ -281,23 +284,37 @@ def register_routes(app: Flask) -> None:
         # Re-raise after logging to let Flask generate the default 500
         raise e
 
-    # Register auth blueprint
     try:
         # Auth endpoints for Google OAuth flow and JWT issuance
         from .views.auth import auth_bp
 
         app.register_blueprint(auth_bp)
     except Exception:
-        # Auth is optional; log and continue without it
         logging.exception("auth blueprint import failed")
+        # Auth is optional; log and continue without it
+        pass
 
-    # Rooms/REST API blueprint
     try:
-        from .views.rooms import rooms_bp
+        from .views.player import register_socket_handlers
+
+        register_socket_handlers()
+    except Exception:
+        logging.exception("player socket handlers registration failed")
+
+    try:
+        from .views.rooms import rooms_bp, register_socket_handlers
 
         app.register_blueprint(rooms_bp)
+        register_socket_handlers()
     except Exception:
         logging.exception("rooms blueprint import failed")
+
+    try:
+        from .views.queue import register_socket_handlers
+
+        register_socket_handlers()
+    except Exception:
+        logging.exception("queue socket handlers registration failed")
 
 
 # Instantiate the application at import time for WSGI servers

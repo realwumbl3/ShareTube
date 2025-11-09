@@ -81,7 +81,14 @@ export default class SocketManager {
         window.addEventListener("beforeunload", () => {
             this.withSocket(async (socket) => {
                 await socket.emit("leave_room", { code: state.roomCode.get() });
-            }); 
+            });
+        });
+    }
+
+    emit(event, data) {
+        this.withSocket(async (socket) => {
+            console.log("[ShTb] socket.io emit", event, data);
+            await socket.emit(event, data);
         });
     }
 }

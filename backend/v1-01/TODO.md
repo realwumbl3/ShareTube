@@ -14,7 +14,7 @@ This list reflects the current repository status versus the design in `GAMEPLAN.
   - REST endpoints:
     - Google OAuth: `/auth/google/start`, `/auth/google/callback` issuing short-lived JWT (`views/auth.py`).
     - YouTube metadata: `GET /api/youtube/metadata` (`views/youtube.py`).
-    - Create room: `POST /api/create_room` (`views/create_room.py`).
+    - Create room: `POST /api/room.create` (`views/room.create.py`).
   - Socket.IO events:
     - `join_room` / `leave_room` with membership tracking and `presence_update` broadcast (`sockets.py`).
     - `queue.add` to build/fetch metadata and append to queue with `queue_update` broadcast (`views/queue.py`).
@@ -24,7 +24,7 @@ This list reflects the current repository status versus the design in `GAMEPLAN.
 - Extension (extension/app)
   - MV3 content script bootstraps the app and hooks YouTube SPA signals (`contentScript.js`).
   - UI: pill with avatar and room code, presence avatars, queue panel, debug menu (`app.js`, `components/*`, `styles.css`).
-  - Room lifecycle: create via `POST /api/create_room`, join via `join_room`, URL `#st:<CODE>` hash handling, copy link to clipboard (`app.js`, `components/UserIcons.js`).
+  - Room lifecycle: create via `POST /api/room.create`, join via `join_room`, URL `#st:<CODE>` hash handling, copy link to clipboard (`app.js`, `components/UserIcons.js`).
   - Socket client with JWT in query; listens for `presence_update` and `queue_update` (`app/socket.js`).
   - Drag-and-drop enqueue of YouTube URLs (`app.js`).
   - Player observer with local play/pause enforcement and ad detection heuristic (`player.js`).

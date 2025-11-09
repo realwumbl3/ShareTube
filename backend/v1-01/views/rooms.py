@@ -1,41 +1,21 @@
 from __future__ import annotations
 
 import time
-import secrets
-import string
-from typing import Optional
+import logging
 
-import jwt
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify
+from flask_socketio import join_room, leave_room
 
+from ..sockets import emit_function_after_delay, get_user_id_from_socket
+
+from ..app import get_user_id_from_auth_header
 from ..extensions import db, socketio
-from ..models import Room, RoomMembership, User
+from ..models import Room, RoomMembership, User, Queue
 
 
 rooms_bp = Blueprint("rooms", __name__, url_prefix="/api")
 
 
-def _get_user_id_from_auth_header() -> Optional[int]:
-    auth = request.headers.get("Authorization", "")
-    if auth.lower().startswith("bearer "):
-        token = auth.split(" ", 1)[1].strip()
-        try:
-            payload = jwt.decode(
-                token, current_app.config["JWT_SECRET"], algorithms=["HS256"]
-            )
-            sub = payload.get("sub")
-            return int(sub) if sub is not None else None
-        except Exception:
-            return None
-    return None
-
-
-def _generate_room_code(length: int = 6) -> str:
-    alphabet = string.ascii_lowercase + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(length))
-
-
-# codemeta[1]
 def emit_presence(room: Room) -> None:
     # Query active memberships and include basic profile fields
     memberships = (
@@ -65,28 +45,24 @@ def emit_room_state_update(room: Room) -> None:
     )
 
 
-@rooms_bp.post("/create_room")
-def create_room():
-    user_id = _get_user_id_from_auth_header()
+@rooms_bp.post("/room.create")
+def room_create():
+    user_id = get_user_id_from_auth_header()
     if not user_id:
         return jsonify({"error": "unauthorized"}), 401
-
     # Ensure user exists
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "user_not_found"}), 404
-
-    # Generate unique code
-    code = _generate_room_code()
-    for _ in range(5):
-        if not Room.query.filter_by(code=code).first():
-            break
-        code = _generate_room_code()
-
-    room = Room(code=code, owner_id=user_id)
+    # Create room
+    room = Room(owner_id=user_id)
     db.session.add(room)
     db.session.flush()  # get room.id
-
+    # Create initial queue for room
+    queue = Queue(room_id=room.id, created_by_id=user_id)
+    room.current_queue = queue
+    db.session.add(room)
+    db.session.add(queue)
     # Add membership for creator
     membership = RoomMembership(
         room_id=room.id,
@@ -100,3 +76,74 @@ def create_room():
     db.session.commit()
 
     return jsonify({"code": room.code})
+
+
+def register_socket_handlers() -> None:
+    @socketio.on("join_room")
+    def _on_join_room(data):
+        try:
+            code = (data or {}).get("code")
+            if not code:
+                return
+            user_id = get_user_id_from_socket()
+            if not user_id:
+                return
+            room = Room.query.filter_by(code=code).first()
+            if not room:
+                return
+
+            # Add/refresh membership
+            membership = RoomMembership.query.filter_by(
+                room_id=room.id, user_id=user_id
+            ).first()
+            now = int(time.time())
+            if not membership:
+                membership = RoomMembership(
+                    room_id=room.id,
+                    user_id=user_id,
+                    joined_at=now,
+                    last_seen=now,
+                    active=True,
+                )
+                db.session.add(membership)
+            else:
+                membership.active = True
+                membership.last_seen = now
+            db.session.commit()
+
+            # Join the Socket.IO room and schedule a delayed presence update
+            join_room(f"room:{room.code}")
+            emit_function_after_delay(emit_presence, room, 0.1)
+            socketio.emit(
+                "user.join.result",
+                {"ok": True, "code": room.code, "snapshot": room.to_dict()},
+                room=f"room:{room.code}",
+            )
+        except Exception:
+            logging.exception("join_room handler error")
+
+    @socketio.on("leave_room")
+    def _on_leave_room(data):
+        try:
+            code = (data or {}).get("code")
+            if not code:
+                return
+            user_id = get_user_id_from_socket()
+            if not user_id:
+                return
+            print(f"leave_room: {code}, {user_id}")
+            room = Room.query.filter_by(code=code).first()
+            if not room:
+                return
+            membership = RoomMembership.query.filter_by(
+                room_id=room.id, user_id=user_id
+            ).first()
+            if not membership:
+                return
+            membership.active = False
+            membership.last_seen = int(time.time())
+            db.session.commit()
+            leave_room(f"room:{room.code}")
+            emit_function_after_delay(emit_presence, room, 0.1)
+        except Exception:
+            logging.exception("leave_room handler error")

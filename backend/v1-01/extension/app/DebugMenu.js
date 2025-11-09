@@ -28,6 +28,30 @@ export default class DebugMenu {
                                 <span class="debug-value">${state.roomState.interp((v) => v)}</span>
                             </div>
                         </div>
+                        <div class="debug-actions">
+                            <button
+                                class="rounded_btn"
+                                zyx-click=${() =>
+                                    this.app.socket.emit("queue.load-debug-list", { code: state.roomCode.get() })}
+                            >
+                                Load debug list
+                            </button>
+                        </div>
+                    </div>
+                    <div class="debug-section">
+                        <div class="debug-section-header">
+                            <span class="debug-section-title">Current Playing</span>
+                        </div>
+                        <div class="debug-section-table">
+                            <div class="debug-row">
+                                <span class="debug-label">Title:</span>
+                                <span class="debug-value">${state.currentPlaying.interp((v) => v?.title)}</span>
+                            </div>
+                            <div class="debug-row">
+                                <span class="debug-label">URL:</span>
+                                <span class="debug-value">${state.currentPlaying.interp((v) => v?.url)}</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="debug-section">
                         <div class="debug-section-header">
@@ -61,6 +85,12 @@ export default class DebugMenu {
                         <div class="debug-section-header">
                             <span class="debug-section-title">Misc</span>
                         </div>
+
+                        <div class="debug-actions">
+                            <div class="debug-actions-header">Logo</div>
+                            <button class="rounded_btn" zyx-click=${() => this.app.logo.expand()}>Expand</button>
+                            <button class="rounded_btn" zyx-click=${() => this.app.logo.collapse()}>Collapse</button>
+                        </div>
                         <div class="debug-actions">
                             <input
                                 this="search_query_input"
@@ -75,15 +105,6 @@ export default class DebugMenu {
                             >
                                 Open search
                             </button>
-                        </div>
-                    </div>
-                    <div class="debug-section">
-                        <div class="debug-section-header">
-                            <span class="debug-section-title">Logo</span>
-                        </div>
-                        <div class="debug-actions">
-                            <button class="rounded_btn" zyx-click=${() => this.app.logo.expand()}>Expand</button>
-                            <button class="rounded_btn" zyx-click=${() => this.app.logo.collapse()}>Collapse</button>
                         </div>
                     </div>
                 </div>
@@ -171,6 +192,10 @@ css`
     #debug-menu .debug-value {
         font-size: 12px;
         opacity: 0.85;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     #debug-menu .debug-actions {

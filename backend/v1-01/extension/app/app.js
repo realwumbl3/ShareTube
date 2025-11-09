@@ -82,7 +82,7 @@ export default class ShareTubeApp {
         this.debugButtonVisible = new LiveVar(false);
 
         html`
-            <div id="sharetube_main">
+            <div id="sharetube_main" zyx-wheel=${(e) => this.nullScroll(e)}>
                 ${this.queue} ${this.debugMenu}
                 <div id="sharetube_pill">
                     <img draggable="false" alt="Profile" src=${state.avatarUrl.interp((v) => v || "")} />
@@ -111,14 +111,22 @@ export default class ShareTubeApp {
 
         this.setupDragAndDrop();
         this.socket.on("presence_update", this.onSocketPresenceUpdate.bind(this));
-        this.socket.on("queue_update", this.onQueueUpdate.bind(this));
+        this.socket.on("queue.update", this.onQueueUpdate.bind(this));
         this.socket.on("room.state.update", this.onRoomStateUpdate.bind(this));
+        this.socket.on("user.join.result", this.onUserJoinResult.bind(this));
         this.socket.setupBeforeUnloadHandler();
         this.player.start();
     }
 
+    nullScroll(e) {
+        console.log("nullScroll", e);
+        e.e.stopPropagation();
+        e.e.stopImmediatePropagation();
+    }
+
     setupKeypressListeners() {
         document.addEventListener("keydown", (e) => {
+            console.log("keydown", e);
             if (e.key === "d" && e.ctrlKey && e.altKey) {
                 this.debugButtonVisible.set(!this.debugButtonVisible.get());
             }
@@ -176,7 +184,7 @@ export default class ShareTubeApp {
 
     async createRoom() {
         try {
-            const res = await this.post("/api/create_room");
+            const res = await this.post("/api/room.create");
             return res && res.code;
         } catch (e) {
             console.warn("ShareTube createRoom failed", e);
@@ -185,11 +193,16 @@ export default class ShareTubeApp {
     }
 
     async joinRoom(code) {
-        await this.socket.withSocket(async (socket) => {
-            await socket.emit("join_room", { code });
-        });
-        state.roomCode.set(code);
-        this.updateCodeHashInUrl(code);
+        await this.socket.withSocket(async (socket) => await socket.emit("join_room", { code }));
+    }
+
+    onUserJoinResult(result) {
+        console.log("onUserJoinResult", result);
+        if (!result.ok) return;
+        state.roomCode.set(result.code);
+        state.currentPlaying.set(result.snapshot.current_queue.current_entry);
+        this.onRoomStateUpdate(result.snapshot);
+        this.updateCodeHashInUrl(result.code);
     }
 
     async copyCurrentRoomCodeToClipboard() {
@@ -220,10 +233,11 @@ export default class ShareTubeApp {
     }
 
     onQueueUpdate(queue) {
-        if (!Array.isArray(queue)) return;
+        if (!queue || !queue.entries) return;
+        state.currentPlaying.set(queue.current_entry);
         syncLiveList({
             localList: state.queue,
-            remoteItems: queue,
+            remoteItems: queue.entries,
             extractRemoteId: (v) => v.id,
             extractLocalId: (u) => u.url,
             createInstance: (item) => new ShareTubeQueueItem(this, item),
@@ -231,13 +245,21 @@ export default class ShareTubeApp {
     }
 
     onRoomStateUpdate(data) {
+        console.log("onRoomStateUpdate", data);
         if (!data.state) return;
+        const priorState = state.roomState.get();
         state.roomState.set(data.state);
-        if (data.state === "playing") {
-            this.player.setDesiredState("playing");
-        } else if (data.state === "paused") {
-            this.player.setDesiredState("paused");
-        }
+        this.playerStateChange(priorState, data.state);
+        this.onQueueUpdate(data.current_queue);
+    }
+
+    playerStateChange(priorState, newState) {
+        console.log(`playerStateChange: ${priorState} -> ${newState}`);
+        if (priorState === "playing" && newState === "paused") return this.player.setDesiredState("paused");
+        if (priorState === "paused" && newState === "playing") return this.player.setDesiredState("playing");
+        if (newState === "playing") return this.player.setDesiredState("playing");
+        console.log(`playerStateChange: no transition implemented. ${priorState} -> ${newState}`);
+        return;
     }
 
     logSelf() {

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 # Import time to record timestamps for model defaults
 import time
+import secrets
 
 # Provide Optional typing for clarity in relationships or lookups
 from typing import Optional
@@ -26,13 +27,22 @@ class User(db.Model):
     # Profile picture URL
     picture = db.Column(db.String(1024))
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "picture": self.picture,
+        }
+
 
 # A room represents a collaborative watch session identified by a short code
 class Room(db.Model):
     # Surrogate primary key id
     id = db.Column(db.Integer, primary_key=True)
     # Unique room code string used by clients to join; indexed for queries
-    code = db.Column(db.String(64), unique=True, index=True, nullable=False)
+    code = db.Column(
+        db.String(64), unique=True, index=True, default=lambda: secrets.token_hex(7)
+    )
     # Owner (room author) user id
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     # Epoch seconds when the room was created
@@ -48,9 +58,9 @@ class Room(db.Model):
     # Current playback/state machine status for the room
     # idle | starting | playing | paused
     state = db.Column(db.String(16), default="idle")
-    # Current queue entry being played
-    current_entry_id = db.Column(
-        db.Integer, db.ForeignKey("queue_entry.id"), nullable=True, index=True
+    # Current queue being played
+    current_queue_id = db.Column(
+        db.Integer, db.ForeignKey("queue.id"), nullable=True, index=True
     )
 
     # ORM relationship to memberships, cascade deletion when room is removed
@@ -59,24 +69,38 @@ class Room(db.Model):
     )
     # ORM relationship to queues (historical); cascade deletion when room is removed
     queues = db.relationship(
-        "Queue", backref="room", lazy=True, cascade="all, delete-orphan"
+        "Queue",
+        lazy=True,
+        cascade="all, delete-orphan",
+        foreign_keys="Queue.room_id",
+        back_populates="room",
     )
-    # Relationship to the current entry
-    current_entry = db.relationship(
-        "QueueEntry", foreign_keys=[current_entry_id], uselist=False
+    # ORM relationship to current queue; cascade deletion when current queue is removed
+    current_queue = db.relationship(
+        "Queue",
+        foreign_keys=[current_queue_id],
+        uselist=False,
     )
     # Operators assigned to the room (separate from membership roles)
     operators = db.relationship(
         "RoomOperator", backref="room", lazy=True, cascade="all, delete-orphan"
     )
 
-    def initial_state(self):
+    def to_dict(self):
         return {
+            "id": self.id,
+            "code": self.code,
             "owner_id": self.owner_id,
             "created_at": self.created_at,
             "is_private": self.is_private,
             "control_mode": self.control_mode,
             "state": self.state,
+            "current_queue_id": self.current_queue_id,
+            "current_queue": (
+                self.current_queue.to_dict() if self.current_queue else None
+            ),
+            "operators": [operator.user_id for operator in self.operators],
+            "memberships": [membership.user_id for membership in self.memberships],
         }
 
 
@@ -146,10 +170,48 @@ class Queue(db.Model):
     # Creation time of this queue
     created_at = db.Column(db.Integer, default=lambda: int(time.time()))
 
+    # Relationship to the room
+    room = db.relationship(
+        "Room", foreign_keys=[room_id], uselist=False, back_populates="queues"
+    )
+    # Relationship to the creator
+    creator = db.relationship("User", foreign_keys=[created_by_id], uselist=False)
+
     # Relationship to queue entries, cascading deletes when the queue is removed
     entries = db.relationship(
-        "QueueEntry", backref="queue", lazy=True, cascade="all, delete-orphan"
+        "QueueEntry",
+        lazy=True,
+        cascade="all, delete-orphan",
+        foreign_keys="QueueEntry.queue_id",
+        back_populates="queue",
     )
+
+    current_entry_id = db.Column(
+        db.Integer, db.ForeignKey("queue_entry.id"), nullable=True, index=True
+    )
+
+    current_entry = db.relationship(
+        "QueueEntry", foreign_keys=[current_entry_id], uselist=False
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "room_id": self.room_id,
+            "created_by_id": self.created_by_id,
+            "creator": self.creator.to_dict() if self.creator else None,
+            "created_at": self.created_at,
+            "entries": [entry.to_dict() for entry in self.entries],
+            "current_entry": (
+                self.current_entry.to_dict() if self.current_entry else None
+            ),
+        }
+
+    def load_next_entry(self):
+        if len(self.entries) == 0:
+            return None, "No entries in queue"
+        self.current_entry = self.entries[0]
+        return self.current_entry, None
 
 
 # An item within a queue representing a single YouTube video
@@ -160,6 +222,8 @@ class QueueEntry(db.Model):
     queue_id = db.Column(
         db.Integer, db.ForeignKey("queue.id"), nullable=False, index=True
     )
+    # Relationship back to owning queue
+    queue = db.relationship("Queue", foreign_keys=[queue_id], back_populates="entries")
     # User that added the entry (optional for system adds)
     added_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     # Canonical video URL
@@ -186,6 +250,24 @@ class QueueEntry(db.Model):
     progress_ms = db.Column(db.Integer, default=0)
     # Unix timestamp (seconds) when the video was last paused
     paused_at = db.Column(db.Integer, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "queue_id": self.queue_id,
+            "added_by_id": self.added_by_id,
+            "url": self.url,
+            "video_id": self.video_id,
+            "title": self.title,
+            "thumbnail_url": self.thumbnail_url,
+            "position": self.position,
+            "status": self.status,
+            "watch_count": self.watch_count,
+            "duration_ms": self.duration_ms,
+            "playing_since_ms": self.playing_since_ms,
+            "paused_progress_ms": self.paused_progress_ms,
+            "paused_at": self.paused_at,
+        }
 
 
 # Audit log of room-related events for observability and debugging
