@@ -24,11 +24,9 @@ export default class SocketManager {
         // Reuse existing socket if already connected/created
         if (this.socket) return this.socket;
         // Read backend base URL from extension synced storage (user-configurable)
-        const { backend_url } = await chrome.storage.sync.get(["backend_url"]);
         // Normalize base by trimming trailing slashes; default to hosted backend
-        const base = (backend_url || "https://sharetube.wumbl3.xyz").replace(/\/+$/, "");
-        // Retrieve JWT token issued by backend, stored locally (per-device)
-        const { auth_token } = await chrome.storage.local.get(["auth_token"]);
+        const base = await this.app.backEndUrl();
+        const auth_token = await this.app.authToken();
         // Without a token, we cannot authenticate the websocket
         if (!auth_token) return null;
         try {
@@ -80,7 +78,7 @@ export default class SocketManager {
     setupBeforeUnloadHandler() {
         window.addEventListener("beforeunload", () => {
             this.withSocket(async (socket) => {
-                await socket.emit("leave_room", { code: state.roomCode.get() });
+                await socket.emit("room.leave", { code: state.roomCode.get() });
             });
         });
     }

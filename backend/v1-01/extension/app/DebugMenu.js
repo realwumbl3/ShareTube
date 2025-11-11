@@ -1,6 +1,11 @@
 import { html, css, LiveVar } from "./dep/zyx.js";
 import state from "./state.js";
 
+function epochToTimeString(epoch) {
+    const ms = epoch < 1e12 ? epoch * 1000 : epoch; // if seconds, convert to ms
+    return new Date(ms).toISOString();
+}
+
 export default class DebugMenu {
     constructor(app) {
         this.app = app;
@@ -14,6 +19,31 @@ export default class DebugMenu {
                     <button class="rounded_btn" title="Hide" zyx-click=${() => this.toggleVisibility()}>Hide</button>
                 </div>
                 <div class="debug-content">
+                    <div class="debug-section">
+                        <div class="debug-section-header">
+                            <span class="debug-section-title">Server</span>
+                        </div>
+                        <div class="debug-section-table">
+                            <div class="debug-row">
+                                <span class="debug-label">Server time:</span>
+                                <span class="debug-value"
+                                    >${state.serverNowMs.interp((v) => epochToTimeString(v))}</span
+                                >
+                            </div>
+                            <div class="debug-row">
+                                <span class="debug-label">Server offset:</span>
+                                <span class="debug-value"
+                                    >${state.serverMsOffset.interp((v) => {
+                                        const hours = (v / 1000 / 60 / 60).toFixed(2);
+                                        return v > 0 ? `+${hours}h` : `${hours}h`;
+                                    })}</span
+                                >
+                            </div>
+                        </div>
+                        <div class="debug-actions">
+                            <button class="rounded_btn" zyx-click=${() => app.logSelf()}>console state/app</button>
+                        </div>
+                    </div>
                     <div class="debug-section">
                         <div class="debug-section-header">
                             <span class="debug-section-title">Room</span>
@@ -40,27 +70,15 @@ export default class DebugMenu {
                     </div>
                     <div class="debug-section">
                         <div class="debug-section-header">
-                            <span class="debug-section-title">Current Playing</span>
-                        </div>
-                        <div class="debug-section-table">
-                            <div class="debug-row">
-                                <span class="debug-label">Title:</span>
-                                <span class="debug-value">${state.currentPlaying.interp((v) => v?.title)}</span>
-                            </div>
-                            <div class="debug-row">
-                                <span class="debug-label">URL:</span>
-                                <span class="debug-value">${state.currentPlaying.interp((v) => v?.url)}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="debug-section">
-                        <div class="debug-section-header">
                             <span class="debug-section-title">Player Controls</span>
                             <span class="debug-status"
                                 >Desired state: ${this.app.player.desired_state.interp((v) => v)}</span
                             >
                             <span class="debug-status"
                                 >Enforcing: ${this.app.player.is_enforcing.interp((v) => (v ? "Yes" : "No"))}</span
+                            >
+                            <span class="debug-status"
+                                >Ad playing: ${this.app.player.ad_playing.interp((v) => (v ? "Yes" : "No"))}</span
                             >
                         </div>
 
@@ -71,16 +89,21 @@ export default class DebugMenu {
                             <button class="rounded_btn" zyx-click=${() => this.app.player.setDesiredState("paused")}>
                                 Set desired state to paused
                             </button>
-                        </div>
-                    </div>
-                    <div class="debug-section">
-                        <div class="debug-section-header">
-                            <span class="debug-section-title">Ad Playing</span>
-                            <span class="debug-status"
-                                >Ad playing: ${this.app.player.ad_playing.interp((v) => (v ? "Yes" : "No"))}</span
+                            <button class="rounded_btn" zyx-click=${() => this.app.restartVideo()}>
+                                Restart video
+                            </button>
+                            <button
+                                class="rounded_btn"
+                                zyx-click=${() =>
+                                    this.app.player.setDesiredProgressMs(
+                                        Math.random() * this.app.player.video.duration * 1000
+                                    )}
                             >
+                                Set desired progress to random position
+                            </button>
                         </div>
                     </div>
+
                     <div class="debug-section">
                         <div class="debug-section-header">
                             <span class="debug-section-title">Misc</span>

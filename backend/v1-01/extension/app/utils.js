@@ -79,3 +79,7 @@ export function isYouTubeUrl(u) {
         return false;
     }
 }
+
+export function msDurationTimeStamp(ms) {
+    return ms ? new Date(ms).toISOString().substr(11, 8) : "";
+}

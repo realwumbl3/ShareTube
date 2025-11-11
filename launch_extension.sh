@@ -18,11 +18,40 @@ VERSION="v1-01"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # Absolute path to this script's directory
 PROJECT_ROOT="$SCRIPT_DIR"                                   # Define project root relative to script
 EXT_PATH="$PROJECT_ROOT/backend/$VERSION/extension/"        # Path to the Chrome extension directory
+EXTENSIONS_DIR="$PROJECT_ROOT/.browsers/extensions"         # Root for auto-discovered unpacked extensions
 
 # Validate the extension directory exists; exit early if missing
 if [[ ! -d "$EXT_PATH" ]]; then
   echo "Error: Could not find extension directory at $EXT_PATH" >&2
   exit 1
+fi
+
+# Build the full list of unpacked extensions to load:
+#  - Always include the primary extension at EXT_PATH
+#  - Auto-discover any additional extensions under EXTENSIONS_DIR (any dir with manifest.json)
+#  - Join into a comma-separated list for Chrome flags
+EXT_PATHS=()                                                # Array to accumulate extension directories
+EXT_PATHS+=("$EXT_PATH")                                    # Ensure primary extension is first
+
+# Discover additional extension directories if the container directory exists
+if [[ -d "$EXTENSIONS_DIR" ]]; then
+  # Iterate over immediate subdirectories of EXTENSIONS_DIR
+  # Use -print0/-d '' to safely handle any special chars (spaces, etc.)
+  while IFS= read -r -d '' candidate_dir; do
+    # Only include directories that look like valid unpacked extensions (must contain manifest.json)
+    if [[ -f "$candidate_dir/manifest.json" ]]; then
+      EXT_PATHS+=("$candidate_dir")
+    fi
+  done < <(find "$EXTENSIONS_DIR" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+fi
+
+# Join the array into a comma-separated string EXTENSION_FLAG_LIST (order preserved)
+if ((${#EXT_PATHS[@]} > 0)); then
+  EXTENSION_FLAG_LIST="$(printf "%s," "${EXT_PATHS[@]}")"
+  EXTENSION_FLAG_LIST="${EXTENSION_FLAG_LIST%,}"
+else
+  # Safety fallback; should not happen because EXT_PATH is guaranteed above
+  EXTENSION_FLAG_LIST="$EXT_PATH"
 fi
 
 # Print usage text and exit. Designed to be concise but complete.
@@ -48,6 +77,26 @@ START_URL="https://www.youtube.com/#st:9a3d163398ed9b"                     # Def
 WINDOW_POSITION="0,0"                                    # Default requested position (X honored)
 WINDOW_SIZE="1280,1400"                                  # Default requested size (H adjusted later)
 SHOWING_DEVTOOLS=false                                     # Whether to show devtools
+BROWSER_BIN="/home/wumbl3wsl/ShareTube/.browsers/chromium-123/chrome"
+
+# Determine if we are in a WSL-like environment for compatibility adjustments
+detect_wsl() {
+  if [[ -f /proc/version ]] && grep -qi "microsoft" /proc/version; then
+    return 0
+  fi
+  return 1
+}
+
+# Extra Chrome arguments applied in environments where sandbox/crashpad can fail (e.g., WSL)
+EXTRA_CHROME_ARGS=()
+if detect_wsl; then
+  # Disable setuid sandbox and zygote to prevent posix_spawn and userns issues on WSL
+  EXTRA_CHROME_ARGS+=(--no-sandbox)
+  EXTRA_CHROME_ARGS+=(--disable-setuid-sandbox)
+  EXTRA_CHROME_ARGS+=(--no-zygote)
+  # Disable crash reporter (crashpad/breakpad) to avoid spawning its handler
+  EXTRA_CHROME_ARGS+=(--disable-breakpad)
+fi
 
 
 # Collect positional arguments separately for backward compatibility
@@ -190,10 +239,11 @@ launch_window() {
       --noerrdialogs \
       "--window-position=$position" \
       "--window-size=$width,$height" \
-      "--disable-extensions-except=$EXT_PATH" \
-      "--load-extension=$EXT_PATH" \
+      "--disable-extensions-except=$EXTENSION_FLAG_LIST" \
+      "--load-extension=$EXTENSION_FLAG_LIST" \
       --disable-features=IsolateOrigins,site-per-process \
       --disable-blink-features=AutomationControlled \
+      "${EXTRA_CHROME_ARGS[@]}" \
       --auto-open-devtools-for-tabs \
       "$url"
   else
@@ -206,39 +256,48 @@ launch_window() {
       --noerrdialogs \
       "--window-position=$position" \
       "--window-size=$width,$height" \
-      "--disable-extensions-except=$EXT_PATH" \
-      "--load-extension=$EXT_PATH" \
+      "--disable-extensions-except=$EXTENSION_FLAG_LIST" \
+      "--load-extension=$EXTENSION_FLAG_LIST" \
       --disable-features=IsolateOrigins,site-per-process \
       --disable-blink-features=AutomationControlled \
+      "${EXTRA_CHROME_ARGS[@]}" \
       --auto-open-devtools-for-tabs \
       "$url"
   fi
 }
 
-if [[ -n "${CHROME_BIN:-}" ]] && command -v "$CHROME_BIN" >/dev/null 2>&1; then
-  BROWSER_BIN="$CHROME_BIN"
-elif [[ -d "$LOCAL_BROWSERS_DIR" ]] && LOCAL_CHROME="$(find "$LOCAL_BROWSERS_DIR" -type f \( -name chrome -o -name chromium \) -perm -u+x -print -quit)" && [[ -n "$LOCAL_CHROME" ]]; then
-  BROWSER_BIN="$LOCAL_CHROME"
-elif ! BROWSER_BIN="$(find_browser)"; then
-  echo "No system Chrome/Chromium found. Attempting local install via scripts/install_chromium.sh..." >&2
-  if [[ -f "$PROJECT_ROOT/scripts/install_chromium.sh" ]]; then
-    PLAYWRIGHT_BROWSERS_PATH="$LOCAL_BROWSERS_DIR" bash "$PROJECT_ROOT/scripts/install_chromium.sh" || true
-    if LOCAL_CHROME="$(find "$LOCAL_BROWSERS_DIR" -type f \( -name chrome -o -name chromium \) -perm -u+x -print -quit)" && [[ -n "$LOCAL_CHROME" ]]; then
-      BROWSER_BIN="$LOCAL_CHROME"
-    else
-      echo "Error: Local Chromium install did not produce an executable under $LOCAL_BROWSERS_DIR" >&2
-      exit 1
-    fi
+# If the hard-coded browser path is missing or not executable, attempt discovery/fallbacks
+if [[ ! -x "$BROWSER_BIN" ]]; then
+  if [[ -n "${CHROME_BIN:-}" ]] && command -v "$CHROME_BIN" >/dev/null 2>&1; then
+    BROWSER_BIN="$CHROME_BIN"
+  elif [[ -d "$LOCAL_BROWSERS_DIR" ]] && LOCAL_CHROME="$(find "$LOCAL_BROWSERS_DIR" -type f \( -name chrome -o -name chromium \) -perm -u+x -print -quit)" && [[ -n "$LOCAL_CHROME" ]]; then
+    BROWSER_BIN="$LOCAL_CHROME"
+  elif BROWSER_BIN_FOUND="$(find_browser)"; then
+    BROWSER_BIN="$BROWSER_BIN_FOUND"
   else
-    echo "Error: Could not find a Linux Chromium/Chrome binary and no installer script present." >&2
-    echo "Install Chromium (e.g., 'sudo apt install chromium-browser') or run npm run browsers:install." >&2
+    echo "Error: Could not find an executable Chromium/Chrome binary." >&2
+    echo "Install Chromium (e.g., 'sudo apt install chromium-browser') or provide CHROME_BIN." >&2
     exit 1
   fi
 fi
 
+# Preflight: make crashpad handler executable if present to prevent posix_spawn permission errors
+BIN_DIR="$(dirname "$BROWSER_BIN")"
+for handler in "crashpad_handler" "chrome_crashpad_handler"; do
+  if [[ -f "$BIN_DIR/$handler" && ! -x "$BIN_DIR/$handler" ]]; then
+    chmod u+x "$BIN_DIR/$handler" || true
+  fi
+done
+
 echo "Using browser: $BROWSER_BIN"
 echo "Profile dir:   $PROFILE_DIR"
-echo "Extension:     $EXT_PATH"
+echo "Extensions:    $EXTENSION_FLAG_LIST"
+if ((${#EXT_PATHS[@]} > 1)); then
+  echo "Additional unpacked extensions discovered under $EXTENSIONS_DIR:"
+  for extra_ext in "${EXT_PATHS[@]:1}"; do
+    echo "  - $extra_ext"
+  done
+fi
 
 # Provide dummy Google API keys to silence Chromium's missing-keys infobar
 export GOOGLE_API_KEY="${GOOGLE_API_KEY:-dummy}"

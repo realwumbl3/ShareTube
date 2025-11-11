@@ -103,7 +103,7 @@ def emit_list_update(
 
     Parameters:
         socketio: Flask-SocketIO instance
-        event: Event name (e.g., 'presence_update')
+        event: Event name (e.g., 'presence.update')
         payload: JSON-serializable data to send
         room: Optional room to target emission
         namespace: Optional namespace (defaults to '/')

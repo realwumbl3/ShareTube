@@ -20,9 +20,10 @@ import Logo from "./components/Logo.js";
 import SearchBox from "./components/SearchBox.js";
 
 css`
-    @import url(${chrome.runtime.getURL("app/styles.css")});
-    @import url(${chrome.runtime.getURL("app/pill.css")});
-    @import url(${chrome.runtime.getURL("app/adOverlay.css")});
+    @import url(${chrome.runtime.getURL("app/styles/styles.css")});
+    @import url(${chrome.runtime.getURL("app/styles/pill.css")});
+    @import url(${chrome.runtime.getURL("app/styles/adOverlay.css")});
+    @import url(${chrome.runtime.getURL("app/styles/queue.css")});
 
     #sharetube_main {
         position: fixed;
@@ -38,19 +39,6 @@ css`
         gap: 4px;
     }
 
-    #sharetube_main img {
-        width: 27px;
-        height: 27px;
-        border-radius: 50%;
-        object-fit: cover;
-        background: #222;
-    }
-
-    #sharetube_main span {
-        white-space: nowrap;
-        font-weight: 500;
-    }
-
     #sharetube_main .rounded_btn {
         appearance: none;
         border-radius: 10px;
@@ -64,10 +52,11 @@ css`
     }
 `;
 
-import { ShareTubeQueueItem } from "./components/Queue.js";
+import ShareTubeQueueItem from "./models/queueItem.js";
 
 export default class ShareTubeApp {
     constructor() {
+        this.fakeTimeOffset = new LiveVar(1000 * 60 * 60 * 0); // 0 hours
         this.storageListener = null;
         this.socket = new SocketManager(this);
         this.player = new YoutubePlayerManager(this);
@@ -79,7 +68,7 @@ export default class ShareTubeApp {
         this.controls = new Controls(this);
         this.logo = new Logo(this);
 
-        this.debugButtonVisible = new LiveVar(false);
+        this.debugButtonVisible = new LiveVar(true);
 
         html`
             <div id="sharetube_main" zyx-wheel=${(e) => this.nullScroll(e)}>
@@ -110,26 +99,26 @@ export default class ShareTubeApp {
         this.setupKeypressListeners();
 
         this.setupDragAndDrop();
-        this.socket.on("presence_update", this.onSocketPresenceUpdate.bind(this));
+        this.socket.on("presence.update", this.onSocketPresenceUpdate.bind(this));
         this.socket.on("queue.update", this.onQueueUpdate.bind(this));
         this.socket.on("room.state.update", this.onRoomStateUpdate.bind(this));
-        this.socket.on("user.join.result", this.onUserJoinResult.bind(this));
+        this.socket.on("user.join.result", this.onRoomJoinResult.bind(this));
+        this.socket.on("room.playback", this.onRoomPlayback.bind(this));
         this.socket.setupBeforeUnloadHandler();
+
+        this.player.on("onSeek", this.onPlayerSeek.bind(this));
+
         this.player.start();
     }
 
     nullScroll(e) {
-        console.log("nullScroll", e);
         e.e.stopPropagation();
         e.e.stopImmediatePropagation();
     }
 
     setupKeypressListeners() {
         document.addEventListener("keydown", (e) => {
-            console.log("keydown", e);
-            if (e.key === "d" && e.ctrlKey && e.altKey) {
-                this.debugButtonVisible.set(!this.debugButtonVisible.get());
-            }
+            if (e.key === "d" && e.ctrlKey && e.altKey) this.debugButtonVisible.set(!this.debugButtonVisible.get());
         });
     }
 
@@ -176,9 +165,13 @@ export default class ShareTubeApp {
         return url.hash.replace("#st:", "").trim();
     }
 
+    stHash(code) {
+        return `#st:${code}`;
+    }
+
     updateCodeHashInUrl(code) {
         const url = new URL(window.location.href);
-        url.hash = `#st:${code}`;
+        url.hash = this.stHash(code);
         history.replaceState(null, "", url.toString());
     }
 
@@ -193,16 +186,22 @@ export default class ShareTubeApp {
     }
 
     async joinRoom(code) {
-        await this.socket.withSocket(async (socket) => await socket.emit("join_room", { code }));
+        await this.socket.withSocket(async (socket) => await socket.emit("room.join", { code }));
     }
 
-    onUserJoinResult(result) {
-        console.log("onUserJoinResult", result);
+    onRoomJoinResult(result) {
         if (!result.ok) return;
+        const now = Date.now() + this.fakeTimeOffset.get();
+        const serverMs = result.serverNowMs;
+        state.serverNowMs.set(serverMs);
+        const offset = now - serverMs;
+        state.serverMsOffset.set(offset);
         state.roomCode.set(result.code);
-        state.currentPlaying.set(result.snapshot.current_queue.current_entry);
+        state.currentPlaying.item.set(result.snapshot.current_queue.current_entry);
         this.onRoomStateUpdate(result.snapshot);
         this.updateCodeHashInUrl(result.code);
+        this.gotoVideoIfNotOnVideoPage(result.snapshot);
+        this.applyTimestamp(result.snapshot.current_queue.current_entry);
     }
 
     async copyCurrentRoomCodeToClipboard() {
@@ -234,7 +233,7 @@ export default class ShareTubeApp {
 
     onQueueUpdate(queue) {
         if (!queue || !queue.entries) return;
-        state.currentPlaying.set(queue.current_entry);
+        state.currentPlaying.item.set(queue.current_entry);
         syncLiveList({
             localList: state.queue,
             remoteItems: queue.entries,
@@ -245,12 +244,35 @@ export default class ShareTubeApp {
     }
 
     onRoomStateUpdate(data) {
-        console.log("onRoomStateUpdate", data);
         if (!data.state) return;
         const priorState = state.roomState.get();
         state.roomState.set(data.state);
         this.playerStateChange(priorState, data.state);
         this.onQueueUpdate(data.current_queue);
+    }
+
+    onRoomPlayback(data) {
+        // console.log("onRoomPlayback", data);
+        if (!data.code) return;
+        if (data.code !== state.roomCode.get()) return;
+
+        state.currentPlaying.playing_since_ms.set(data.playing_since_ms);
+        state.currentPlaying.progress_ms.set(data.progress_ms);
+
+        if (data.state) {
+            const priorState = state.roomState.get();
+            state.roomState.set(data.state);
+            this.playerStateChange(priorState, data.state);
+        }
+
+        this.applyTimestamp(data);
+    }
+
+    applyTimestamp(data) {
+        if (data.progress_ms !== null) {
+            console.log("onRoomPlayback: positionMs", data);
+            setTimeout(() => this.player.setDesiredProgressMs(data.progress_ms), 100);
+        }
     }
 
     playerStateChange(priorState, newState) {
@@ -260,6 +282,32 @@ export default class ShareTubeApp {
         if (newState === "playing") return this.player.setDesiredState("playing");
         console.log(`playerStateChange: no transition implemented. ${priorState} -> ${newState}`);
         return;
+    }
+
+    onPlayerSeek(progressMs) {
+        console.log("[USER INPUT] onPlayerSeek", progressMs);
+        this.socket.withSocket(
+            async (socket) =>
+                await socket.emit("room.control.seek", {
+                    code: state.roomCode.get(),
+                    progress_ms: progressMs,
+                    play: state.roomState.get() === "playing",
+                })
+        );
+    }
+
+    restartVideo() {
+        this.socket.withSocket(
+            async (socket) => await socket.emit("room.control.restartvideo", { code: state.roomCode.get() })
+        );
+    }
+
+    gotoVideoIfNotOnVideoPage(data) {
+        const videoId = data?.current_queue?.current_entry?.video_id;
+        if (!videoId) return;
+        if (window.location.href.includes(videoId))
+            return console.log("gotoVideoIfNotOnVideoPage: already on video page", videoId);
+        window.location.href = `https://www.youtube.com/watch?v=${videoId}${this.stHash(state.roomCode.get())}`;
     }
 
     logSelf() {

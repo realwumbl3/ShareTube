@@ -17,32 +17,16 @@ rooms_bp = Blueprint("rooms", __name__, url_prefix="/api")
 
 
 def emit_presence(room: Room) -> None:
-    # Query active memberships and include basic profile fields
-    memberships = (
-        db.session.query(RoomMembership).filter_by(room_id=room.id, active=True).all()
-    )
-    user_ids = [m.user_id for m in memberships]
-    users = (
-        db.session.query(User).filter(User.id.in_(user_ids)).all() if user_ids else []
-    )
-    user_by_id = {u.id: u for u in users}
     payload = [
-        {
-            "id": uid,
-            "name": (user_by_id.get(uid).name if user_by_id.get(uid) else ""),
-            "picture": (user_by_id.get(uid).picture if user_by_id.get(uid) else ""),
-        }
-        for uid in user_ids
+        u.to_dict()
+        for u in (
+            db.session.query(User)
+            .join(RoomMembership, RoomMembership.user_id == User.id)
+            .filter(RoomMembership.room_id == room.id, RoomMembership.active.is_(True))
+            .all()
+        )
     ]
-    socketio.emit("presence_update", payload, room=f"room:{room.code}")
-
-
-def emit_room_state_update(room: Room) -> None:
-    socketio.emit(
-        "room.state.update",
-        {"state": room.state},
-        room=f"room:{room.code}",
-    )
+    socketio.emit("presence.update", payload, room=f"room:{room.code}")
 
 
 @rooms_bp.post("/room.create")
@@ -79,7 +63,7 @@ def room_create():
 
 
 def register_socket_handlers() -> None:
-    @socketio.on("join_room")
+    @socketio.on("room.join")
     def _on_join_room(data):
         try:
             code = (data or {}).get("code")
@@ -96,7 +80,7 @@ def register_socket_handlers() -> None:
             membership = RoomMembership.query.filter_by(
                 room_id=room.id, user_id=user_id
             ).first()
-            now = int(time.time())
+            now = int(time.time() * 1000)
             if not membership:
                 membership = RoomMembership(
                     room_id=room.id,
@@ -116,13 +100,18 @@ def register_socket_handlers() -> None:
             emit_function_after_delay(emit_presence, room, 0.1)
             socketio.emit(
                 "user.join.result",
-                {"ok": True, "code": room.code, "snapshot": room.to_dict()},
+                {
+                    "ok": True,
+                    "code": room.code,
+                    "snapshot": room.to_dict(),
+                    "serverNowMs": now,
+                },
                 room=f"room:{room.code}",
             )
         except Exception:
-            logging.exception("join_room handler error")
+            logging.exception("room.join handler error")
 
-    @socketio.on("leave_room")
+    @socketio.on("room.leave")
     def _on_leave_room(data):
         try:
             code = (data or {}).get("code")
@@ -131,7 +120,7 @@ def register_socket_handlers() -> None:
             user_id = get_user_id_from_socket()
             if not user_id:
                 return
-            print(f"leave_room: {code}, {user_id}")
+            print(f"room.leave: {code}, {user_id}")
             room = Room.query.filter_by(code=code).first()
             if not room:
                 return
@@ -146,4 +135,4 @@ def register_socket_handlers() -> None:
             leave_room(f"room:{room.code}")
             emit_function_after_delay(emit_presence, room, 0.1)
         except Exception:
-            logging.exception("leave_room handler error")
+            logging.exception("room.leave handler error")

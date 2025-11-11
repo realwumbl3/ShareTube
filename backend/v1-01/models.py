@@ -191,7 +191,7 @@ class Queue(db.Model):
     )
 
     current_entry = db.relationship(
-        "QueueEntry", foreign_keys=[current_entry_id], uselist=False
+        "QueueEntry", foreign_keys=[current_entry_id], uselist=False, post_update=True
     )
 
     def to_dict(self):
@@ -210,8 +210,10 @@ class Queue(db.Model):
     def load_next_entry(self):
         if len(self.entries) == 0:
             return None, "No entries in queue"
-        self.current_entry = self.entries[0]
-        return self.current_entry, None
+        entry = self.entries[0]
+        # Set FK directly to avoid relationship circular dependency during flush
+        self.current_entry_id = entry.id
+        return entry, None
 
 
 # An item within a queue representing a single YouTube video
@@ -244,8 +246,8 @@ class QueueEntry(db.Model):
     watch_count = db.Column(db.Integer, default=0)
     # Per-entry virtual clock fields (milliseconds)
     duration_ms = db.Column(db.Integer, default=0)
+    # Unix timestamp (milliseconds) when the video started playing
     playing_since_ms = db.Column(db.BigInteger, nullable=True)
-    paused_progress_ms = db.Column(db.Integer, nullable=True)
     # Last known progress in milliseconds when paused (for resume)
     progress_ms = db.Column(db.Integer, default=0)
     # Unix timestamp (seconds) when the video was last paused
@@ -265,7 +267,7 @@ class QueueEntry(db.Model):
             "watch_count": self.watch_count,
             "duration_ms": self.duration_ms,
             "playing_since_ms": self.playing_since_ms,
-            "paused_progress_ms": self.paused_progress_ms,
+            "progress_ms": self.progress_ms,
             "paused_at": self.paused_at,
         }
 

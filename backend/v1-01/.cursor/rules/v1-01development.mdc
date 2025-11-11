@@ -35,9 +35,3 @@ alwaysApply: false
 ### Security and Auth
 - Google OAuth + backend-issued JWT are required; keep tokens short-lived.
 - Validation/rate-limits can be stubbed in early phases but should be respected in public deploys.
-
-### Assistant Guidance (for future prompts)
-- If code and docs diverge, prefer the latest explicit user instruction, then reconcile.
-- Keep `QueueEntry` as the single place for playback timing fields (`duration_ms`, `playing_since_ms?`, `paused_progress_ms?`, `progress_ms?`, `paused_at?`).
-- Update both `models.py` and `GAMEPLAN.md` when changing the schema or event shapes.
-- Make reasonable decisions when details are missing; document them briefly in `GAMEPLAN.md` Decision Records.

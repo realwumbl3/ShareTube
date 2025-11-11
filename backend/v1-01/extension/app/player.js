@@ -2,15 +2,37 @@
 console.log("cs/player.js loaded");
 
 import { LiveVar, html, css } from "./dep/zyx.js";
+import state from "./state.js";
 
 css`
     .observer_badge {
         position: absolute;
-        top: 0;
-        left: 0;
-        background-color: #000;
+        top: 4px;
+        left: 4px;
+        backdrop-filter: blur(10px) brightness(0.5) contrast(1.1);
         color: #fff;
         z-index: 1000000000;
+        padding: 2px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        align-items: center;
+        justify-content: center;
+    }
+    .debug-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        align-items: center;
+        justify-content: center;
+        & > span {
+            font-size: 8px;
+            font-family: sans-serif;
+            color: #fff;
+        }
     }
 `;
 
@@ -23,12 +45,33 @@ export default class YoutubePlayerManager {
         this.desired_state = new LiveVar("paused");
         this.ad_playing = new LiveVar(false);
         this.is_enforcing = new LiveVar(false);
+        this.is_programmatic_seek = new LiveVar(false);
+        this.last_user_gesture_ms = 0;
+        this.last_programmatic_media_ms = 0;
         this.lastAdState = false;
         this.pendingPauseAfterAd = false;
 
+        this.binds = {
+            onSeek: new Set(),
+            onSeeked: new Set(),
+            onSeeking: new Set(),
+            onPause: new Set(),
+            onPlay: new Set(),
+        };
+
         this.badge = html`<div class="observer_badge">
-            Video Observed, state: ${this.desired_state.interp()}
+            Video Observed.
+            <div class="debug-list">
+                <span>desired_state: ${this.desired_state.interp()}</span>
+                <span>ad_playing: ${this.ad_playing.interp()}</span>
+                <span>is_enforcing: ${this.is_enforcing.interp()}</span>
+                <span>is_programmatic_seek: ${this.is_programmatic_seek.interp()}</span>
+            </div>
         </div>`.const();
+    }
+
+    on(event, callback) {
+        this.binds[event].add(callback);
     }
 
     // Begin scanning for an active video element and bind to it
@@ -37,6 +80,13 @@ export default class YoutubePlayerManager {
         this.scanTimer = setInterval(() => this.ensureBoundToActiveVideo(), 500);
         // Attempt immediate bind
         this.ensureBoundToActiveVideo();
+        // Track recent user gestures to classify media events
+        try {
+            document.addEventListener("pointerdown", this.onUserGesture, true);
+            document.addEventListener("keydown", this.onUserGesture, true);
+            document.addEventListener("keydown", this.onControlKeydown, true);
+            document.addEventListener("click", this.onBodyClickCapture, true);
+        } catch {}
     }
 
     // Stop scanning and unbind from any current video element
@@ -45,6 +95,12 @@ export default class YoutubePlayerManager {
             clearInterval(this.scanTimer);
             this.scanTimer = null;
         }
+        try {
+            document.removeEventListener("pointerdown", this.onUserGesture, true);
+            document.removeEventListener("keydown", this.onUserGesture, true);
+            document.removeEventListener("keydown", this.onControlKeydown, true);
+            document.removeEventListener("click", this.onBodyClickCapture, true);
+        } catch {}
         this.unbindFromVideo();
     }
 
@@ -117,6 +173,8 @@ export default class YoutubePlayerManager {
 
     onPlay = (e) => {
         console.log("onPlay");
+        if (!this.isUserInitiatedMediaEvent(e)) return console.log("onPlay return: programmatic");
+        this.binds.onPlay.forEach((callback) => callback(e));
         this.enforceDesiredState("onPlay");
     };
 
@@ -127,6 +185,8 @@ export default class YoutubePlayerManager {
 
     onPause = (e) => {
         console.log("onPause");
+        if (!this.isUserInitiatedMediaEvent(e)) return console.log("onPause return: programmatic");
+        this.binds.onPause.forEach((callback) => callback(e));
         this.enforceDesiredState("onPause");
     };
 
@@ -141,11 +201,15 @@ export default class YoutubePlayerManager {
 
     onSeeking = (e) => {
         console.log("onSeeking");
+        if (this.is_programmatic_seek.get()) return console.log("onSeeking return: programmatic seek");
+        this.binds.onSeeking.forEach((callback) => callback(e));
         this.enforceDesiredState("onSeeking");
     };
 
     onSeeked = (e) => {
         console.log("onSeeked");
+        if (this.is_programmatic_seek.get()) return console.log("onSeeked return: programmatic seek");
+        this.binds.onSeeked.forEach((callback) => callback(e));
         this.enforceDesiredState("onSeeked");
     };
 
@@ -172,6 +236,10 @@ export default class YoutubePlayerManager {
         this.ad_playing.set(false);
     }
 
+    getDesiredState() {
+        return this.desired_state.get ? this.desired_state.get() : this.desired_state;
+    }
+
     // External API for desired state
     setDesiredState(state) {
         console.log("setDesiredState", state);
@@ -182,14 +250,29 @@ export default class YoutubePlayerManager {
         this.enforceDesiredState("setDesiredState");
     }
 
-    getDesiredState() {
-        return this.desired_state.get ? this.desired_state.get() : this.desired_state;
+    setDesiredProgressMs(progressMs) {
+        const seconds = progressMs / 1000;
+        console.log("setDesiredProgressMs", seconds, "on video", this.video);
+        if (!this.video) return;
+        // Suppress our seeking/seeked handlers during programmatic seek
+        this.is_programmatic_seek.set(true);
+        this.video.addEventListener(
+            "seeked",
+            () => {
+                this.is_programmatic_seek.set(false);
+            },
+            { once: true }
+        );
+        try {
+            this.video.currentTime = seconds;
+        } catch {}
+        this.enforceDesiredState("setDesiredProgressMs");
     }
 
     safePlay(reason) {
         if (!this.video) return;
         if (!this.video.paused) return;
-        console.log("safePlay", reason);
+        this.last_programmatic_media_ms = Date.now();
         this.is_enforcing.set(true);
         const p = this.video.play();
         if (p && typeof p.catch === "function") {
@@ -203,7 +286,7 @@ export default class YoutubePlayerManager {
     safePause(reason) {
         if (!this.video) return;
         if (this.video.paused) return;
-        console.log("safePause", reason);
+        this.last_programmatic_media_ms = Date.now();
         this.is_enforcing.set(true);
         try {
             this.video.pause();
@@ -275,5 +358,116 @@ export default class YoutubePlayerManager {
         )
             return true;
         return false;
+    }
+
+    // Override native YouTube controls with room controls
+    onControlKeydown = (e) => {
+        // Ignore when typing in inputs or inside ShareTube UI
+        const path = (e.composedPath && e.composedPath()) || [];
+        if (path.some((el) => el && el.id === "sharetube_main")) return;
+        const t = e.target;
+        const tag = (t && t.tagName && t.tagName.toLowerCase()) || "";
+        const isEditable =
+            (t && (t.isContentEditable || tag === "input" || tag === "textarea" || tag === "select")) || false;
+        if (isEditable) return;
+        if (e.code === "Space" || e.code === "KeyK") {
+            e.preventDefault();
+            e.stopPropagation();
+            this.emitToggleRoomPlayPause();
+        } else if (e.code === "ArrowLeft") {
+            e.preventDefault();
+            e.stopPropagation();
+            this.emitSeekRelative(-5000);
+        } else if (e.code === "ArrowRight") {
+            e.preventDefault();
+            e.stopPropagation();
+            this.emitSeekRelative(5000);
+        }
+    };
+
+    onBodyClickCapture = (e) => {
+        // Ignore clicks initiated within ShareTube UI
+        const path = (e.composedPath && e.composedPath()) || [];
+        if (path.some((el) => el && el.id === "sharetube_main")) return;
+        // Find YouTube player container
+        const playerEl = document.querySelector("#ytp-player") || document.querySelector(".html5-video-player");
+        if (!playerEl) return;
+        const target = /** @type {Element} */ (e.target);
+        if (!target || !playerEl.contains(target)) return;
+        this.onPlayerClick(e, path);
+    };
+
+    onPlayerClick(e, path) {
+        console.log("onPlayerClick", e);
+        if (path.some((el) => el && el.classList?.contains("ytp-progress-bar"))) {
+            e.preventDefault();
+            e.stopPropagation();
+            const progressBar = path.find((el) => el && el.classList?.contains("ytp-progress-bar"));
+            const bounds = progressBar.getBoundingClientRect();
+            const x = e.clientX - bounds.left;
+            const progress = Math.max(0, Math.min(1, x / bounds.width));
+            const progressMs = Math.floor(progress * this.video.duration * 1000);
+            console.log("onPlayerClick: progress bar clicked", { progress, progressMs });
+            this.binds.onSeek.forEach((callback) => callback(progressMs));
+            return;
+        } else if (path.some((el) => el && el.classList?.contains("ytp-chrome-controls"))) {
+            console.log("onPlayerClick: chrome controls clicked");
+            if (path.some((el) => el && el.classList?.contains("ytp-play-button"))) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.emitToggleRoomPlayPause();
+            }
+            return;
+        } else if (e.target === this.video) {
+            console.log("onPlayerClick: video clicked");
+            e.preventDefault();
+            e.stopPropagation();
+            this.emitToggleRoomPlayPause();
+        } else {
+            console.log("onPlayerClick: other clicked", e);
+        }
+    }
+
+    emitToggleRoomPlayPause() {
+        const roomCode = state.roomCode.get();
+        if (!roomCode) return;
+        const roomState = state.roomState.get();
+        if (roomState === "playing") {
+            this.app.socket.withSocket(async (socket) => {
+                await socket.emit("room.control.pause", { code: roomCode });
+            });
+        } else {
+            this.app.socket.withSocket(async (socket) => {
+                await socket.emit("room.control.play", { code: roomCode });
+            });
+        }
+    }
+
+    emitSeekRelative(deltaMs) {
+        const roomCode = state.roomCode.get();
+        if (!roomCode) return;
+        const durMs = this.video ? Math.max(0, Number(this.video.duration || 0) * 1000) : 0;
+        const curMs = this.video ? Math.max(0, Number(this.video.currentTime || 0) * 1000) : 0;
+        let target = curMs + deltaMs;
+        if (durMs > 0) target = Math.min(Math.max(0, target), durMs);
+        const play = state.roomState.get() === "playing";
+        this.app.socket.withSocket(async (socket) => {
+            await socket.emit("room.control.seek", { code: roomCode, progress_ms: Math.floor(target), play });
+        });
+    }
+    onUserGesture = (e) => {
+        if (e.composedPath().some((el) => el.id === "sharetube_main"))
+            return console.log("onUserGesture return: sharetube_main found in path");
+        this.last_user_gesture_ms = Date.now();
+    };
+
+    isUserInitiatedMediaEvent(e) {
+        const now = Date.now();
+        const USER_WINDOW_MS = 1200;
+        const PROGRAMMATIC_WINDOW_MS = 1200;
+        if (now - this.last_user_gesture_ms < USER_WINDOW_MS) return true;
+        if (now - this.last_programmatic_media_ms < PROGRAMMATIC_WINDOW_MS) return false;
+        if (e && e.isTrusted === false) return false;
+        return true;
     }
 }
