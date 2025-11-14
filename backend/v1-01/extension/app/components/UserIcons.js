@@ -42,7 +42,7 @@ export default class UserIcons {
             }
             const code = await this.app.createRoom();
             if (!code) return;
-            await this.app.joinRoom(code);
+            await this.app.socket.joinRoom(code);
             await this.app.copyCurrentRoomCodeToClipboard();
         } catch (e) {
             console.warn("ShareTube onPlusClicked failed", e);

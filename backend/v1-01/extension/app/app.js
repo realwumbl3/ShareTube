@@ -24,6 +24,7 @@ css`
     @import url(${chrome.runtime.getURL("app/styles/pill.css")});
     @import url(${chrome.runtime.getURL("app/styles/adOverlay.css")});
     @import url(${chrome.runtime.getURL("app/styles/queue.css")});
+    @import url(${chrome.runtime.getURL("app/styles/firstParty.css")});
 
     #sharetube_main {
         position: fixed;
@@ -55,6 +56,34 @@ css`
 import ShareTubeQueueItem from "./models/queueItem.js";
 
 export default class ShareTubeApp {
+    async backEndUrl() {
+        const { backend_url } = await chrome.storage.sync.get(["backend_url"]);
+        return (backend_url || "https://sharetube.wumbl3.xyz").replace(/\/+$/, "");
+    }
+
+    async authToken() {
+        const { auth_token } = await chrome.storage.local.get(["auth_token"]);
+        if (!auth_token) {
+            console.warn("ShareTube: missing auth token");
+            return null;
+        }
+        return auth_token;
+    }
+
+    get hashRoomCode() {
+        return (new URL(window.location.href).hash || "").replace("#st:", "").trim();
+    }
+
+    stHash(code) {
+        return `#st:${code}`;
+    }
+
+    updateCodeHashInUrl(code) {
+        const url = new URL(window.location.href);
+        url.hash = this.stHash(code);
+        history.replaceState(null, "", url.toString());
+    }
+
     constructor() {
         this.fakeTimeOffset = new LiveVar(1000 * 60 * 60 * 0); // 0 hours
         this.storageListener = null;
@@ -71,7 +100,7 @@ export default class ShareTubeApp {
         this.debugButtonVisible = new LiveVar(true);
 
         html`
-            <div id="sharetube_main" zyx-wheel=${(e) => this.nullScroll(e)}>
+            <div id="sharetube_main">
                 ${this.queue} ${this.debugMenu}
                 <div id="sharetube_pill">
                     <img draggable="false" alt="Profile" src=${state.avatarUrl.interp((v) => v || "")} />
@@ -111,11 +140,6 @@ export default class ShareTubeApp {
         this.player.start();
     }
 
-    nullScroll(e) {
-        e.e.stopPropagation();
-        e.e.stopImmediatePropagation();
-    }
-
     setupKeypressListeners() {
         document.addEventListener("keydown", (e) => {
             if (e.key === "d" && e.ctrlKey && e.altKey) this.debugButtonVisible.set(!this.debugButtonVisible.get());
@@ -124,22 +148,6 @@ export default class ShareTubeApp {
 
     openSearch(query) {
         new SearchBox(this, query);
-    }
-
-    async backEndUrl() {
-        // Determine backend base URL and JWT
-        const { backend_url } = await chrome.storage.sync.get(["backend_url"]);
-        const base = (backend_url || "https://sharetube.wumbl3.xyz").replace(/\/+$/, "");
-        return base;
-    }
-
-    async authToken() {
-        const { auth_token } = await chrome.storage.local.get(["auth_token"]);
-        if (!auth_token) {
-            console.warn("ShareTube: missing auth token");
-            return null;
-        }
-        return auth_token;
     }
 
     async post(url, options = {}) {
@@ -160,21 +168,6 @@ export default class ShareTubeApp {
         return await res.json();
     }
 
-    get hashRoomCode() {
-        const url = new URL(window.location.href);
-        return url.hash.replace("#st:", "").trim();
-    }
-
-    stHash(code) {
-        return `#st:${code}`;
-    }
-
-    updateCodeHashInUrl(code) {
-        const url = new URL(window.location.href);
-        url.hash = this.stHash(code);
-        history.replaceState(null, "", url.toString());
-    }
-
     async createRoom() {
         try {
             const res = await this.post("/api/room.create");
@@ -183,10 +176,6 @@ export default class ShareTubeApp {
             console.warn("ShareTube createRoom failed", e);
             return null;
         }
-    }
-
-    async joinRoom(code) {
-        await this.socket.withSocket(async (socket) => await socket.emit("room.join", { code }));
     }
 
     onRoomJoinResult(result) {
@@ -200,7 +189,7 @@ export default class ShareTubeApp {
         state.currentPlaying.item.set(result.snapshot.current_queue.current_entry);
         this.onRoomStateUpdate(result.snapshot);
         this.updateCodeHashInUrl(result.code);
-        this.gotoVideoIfNotOnVideoPage(result.snapshot);
+        this.gotoVideoIfNotOnVideoPage(result.snapshot.current_queue?.current_entry);
         this.applyTimestamp(result.snapshot.current_queue.current_entry);
     }
 
@@ -216,7 +205,7 @@ export default class ShareTubeApp {
 
     async tryJoinRoomFromUrl() {
         if (!this.hashRoomCode) return;
-        await this.joinRoom(this.hashRoomCode);
+        await this.socket.joinRoom(this.hashRoomCode);
     }
 
     onSocketPresenceUpdate(presence) {
@@ -251,10 +240,24 @@ export default class ShareTubeApp {
         this.onQueueUpdate(data.current_queue);
     }
 
+    getUserByUserId(userId) {
+        return state.users.find((u) => u && u.id === userId) || null;
+    }
+
     onRoomPlayback(data) {
         // console.log("onRoomPlayback", data);
         if (!data.code) return;
         if (data.code !== state.roomCode.get()) return;
+
+        // Show actor avatar if present
+        if (data.actor_user_id) {
+            this.player.playPauseSplash.call(data, this.getUserByUserId(data.actor_user_id));
+        }
+
+        if (data.current_entry) {
+            state.currentPlaying.item.set(data.current_entry);
+            this.gotoVideoIfNotOnVideoPage(data.current_entry);
+        }
 
         state.currentPlaying.playing_since_ms.set(data.playing_since_ms);
         state.currentPlaying.progress_ms.set(data.progress_ms);
@@ -284,26 +287,19 @@ export default class ShareTubeApp {
         return;
     }
 
-    onPlayerSeek(progressMs) {
-        console.log("[USER INPUT] onPlayerSeek", progressMs);
-        this.socket.withSocket(
-            async (socket) =>
-                await socket.emit("room.control.seek", {
-                    code: state.roomCode.get(),
-                    progress_ms: progressMs,
-                    play: state.roomState.get() === "playing",
-                })
-        );
+    async onPlayerSeek(progressMs) {
+        return this.socket.emit("room.control.seek", {
+            progress_ms: progressMs,
+            play: state.roomState.get() === "playing",
+        });
     }
 
-    restartVideo() {
-        this.socket.withSocket(
-            async (socket) => await socket.emit("room.control.restartvideo", { code: state.roomCode.get() })
-        );
+    async restartVideo() {
+        return await this.socket.emit("room.control.restartvideo");
     }
 
-    gotoVideoIfNotOnVideoPage(data) {
-        const videoId = data?.current_queue?.current_entry?.video_id;
+    gotoVideoIfNotOnVideoPage(current_entry) {
+        const videoId = current_entry?.video_id;
         if (!videoId) return;
         if (window.location.href.includes(videoId))
             return console.log("gotoVideoIfNotOnVideoPage: already on video page", videoId);
@@ -366,8 +362,8 @@ export default class ShareTubeApp {
         this.sharetube_main.addEventListener("drop", onDrop);
     }
 
-    enqueueUrl(url) {
-        this.socket.withSocket(async (socket) => await socket.emit("queue.add", { url }));
+    async enqueueUrl(url) {
+        return await this.socket.emit("queue.add", { url });
     }
 
     attachBrowserListeners() {

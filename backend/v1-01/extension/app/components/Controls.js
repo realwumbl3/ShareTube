@@ -28,21 +28,10 @@ export default class Controls {
         }
     }
 
-    onMainButtonClick() {
-        console.log("onMainButtonClick");
-        switch (state.roomState.get()) {
-            case "playing":
-                this.app.socket.withSocket(async (socket) => {
-                    await socket.emit("room.control.pause", { code: state.roomCode.get() });
-                });
-                break;
-            case "paused":
-            case "idle":
-                this.app.socket.withSocket(async (socket) => {
-                    await socket.emit("room.control.play", { code: state.roomCode.get() });
-                });
-                break;
-        }
+    async onMainButtonClick() {
+        return await this.app.socket.emit(
+            state.roomState.get() === "playing" ? "room.control.pause" : "room.control.play"
+        );
     }
 }
 

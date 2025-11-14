@@ -65,8 +65,8 @@ This list reflects the current repository status versus the design in `GAMEPLAN.
 -   ❌ Rooms & Virtual Clock State Machine
 
     -   Control handlers (authoritative virtual clock)
-        -   ❌ `room.state.set { state:'playing'|'paused'|'starting' }` updates virtual clock
-        -   ❌ `room.seek { progress_ms, play }` sets `paused_progress_ms` / `playing_since_ms`
+        -   ✅ `room.control.state.set { state:'playing'|'paused'|'starting' }` updates virtual clock
+        -   ✅ `room.control.seek { progress_ms, play }` sets `paused_progress_ms` / `playing_since_ms`
         -   ✅ Basic `room.control.play` / `room.control.pause` update `room.state` and load first entry
     -   State/entry management
         -   ❌ Track transitions: `idle ↔ starting ↔ playing ↔ paused` per spec
@@ -111,7 +111,7 @@ This list reflects the current repository status versus the design in `GAMEPLAN.
 -   ❌ Playback Sync & Drift Correction
 
     -   ✅ Server: include `serverNowMs` in snapshots/control echoes
-    -   ❌ Client: compute expected vs local, snap/smooth drift; handle seeks on join
+    -   ✅ Client: compute expected vs local, snap/smooth drift; handle seeks on join
     -   ✅ On join, redirect to canonical watch URL for current entry before syncing
 
 -   ❌ REST Surface & Health

@@ -17,7 +17,11 @@ export default class SocketManager {
 
     async withSocket(callback) {
         if (!this.socket) await this.ensureSocket();
-        return callback(this.socket);
+        return await callback(this.socket);
+    }
+
+    async joinRoom(code) {
+        return await this.emit("room.join", { code });
     }
 
     async ensureSocket() {
@@ -77,16 +81,16 @@ export default class SocketManager {
 
     setupBeforeUnloadHandler() {
         window.addEventListener("beforeunload", () => {
-            this.withSocket(async (socket) => {
-                await socket.emit("room.leave", { code: state.roomCode.get() });
-            });
+            this.emit("room.leave");
         });
     }
 
-    emit(event, data) {
-        this.withSocket(async (socket) => {
-            console.log("[ShTb] socket.io emit", event, data);
-            await socket.emit(event, data);
+    async emit(event, data) {
+        return await this.withSocket(async (socket) => {
+            return await socket.emit(event, {
+                code: state.roomCode.get(),
+                ...data,
+            });
         });
     }
 }

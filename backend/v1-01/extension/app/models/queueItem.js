@@ -11,7 +11,7 @@ export default class ShareTubeQueueItem {
         this.duration_ms = new LiveVar(item.duration_ms || 0);
     }
 
-    remove() {
-        this.app.socket.withSocket(async (socket) => await socket.emit("queue.remove", { id: this.id }));
+    async remove() {
+        return await this.app.socket.emit("queue.remove", { id: this.id });
     }
 }
