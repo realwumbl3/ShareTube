@@ -3,9 +3,9 @@ console.log("cs/player.js loaded");
 
 import { LiveVar, html, css, throttle } from "./dep/zyx.js";
 import state from "./state.js";
-import PlayPauseSplash from "./components/PlayPauseSplash.js";
+import Splash from "./components/Splash.js";
 import Intermission from "./components/Intermission.js";
-import { currentPlayingProgressMsPercentageToMs } from "./getters.js";
+import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } from "./getters.js";
 
 css`
     .observer_badge {
@@ -46,7 +46,7 @@ css`
 export default class YoutubePlayerManager {
     constructor(app) {
         this.app = app;
-        this.verbose = true;
+        this.verbose = false;
         this.video = null;
         this.scanTimer = null;
         this.nearEndProbeSent = false;
@@ -61,6 +61,15 @@ export default class YoutubePlayerManager {
 
         this.seek_throttle_accumulator = -1;
 
+        // Frame rate detection for frame-by-frame navigation
+        this.detectedFrameRate = null;
+        this.frameTimeSamples = [];
+        this.frameRateDetectionStartTime = null;
+        this.frameRateDetectionRafId = null;
+
+        // Frame step throttling - store latest pending direction
+        this.pendingFrameStepDirection = null;
+
         this.binds = {
             onSeek: new Set(),
             onSeeked: new Set(),
@@ -69,7 +78,7 @@ export default class YoutubePlayerManager {
             onPlay: new Set(),
         };
 
-        this.playPauseSplash = new PlayPauseSplash(this.video);
+        this.splash = new Splash(this.video);
         this.intermission = new Intermission();
 
         this.badge = html`<div class="observer_badge">
@@ -160,7 +169,7 @@ export default class YoutubePlayerManager {
         this.video = video;
         this.nearEndProbeSent = false;
         this.video.before(this.badge.main);
-        this.video.parentElement.after(this.playPauseSplash.main);
+        this.video.parentElement.after(this.splash.main);
         this.video.parentElement.after(this.intermission.main);
         this.video.addEventListener("play", this.onPlay);
         this.video.addEventListener("playing", this.onPlaying);
@@ -170,6 +179,7 @@ export default class YoutubePlayerManager {
         this.video.addEventListener("seeking", this.onSeeking);
         this.video.addEventListener("seeked", this.onSeeked);
         this.video.addEventListener("ended", this.onEnded);
+        this.startFrameRateDetection();
         this.enforceDesiredState("bind");
     }
 
@@ -184,6 +194,7 @@ export default class YoutubePlayerManager {
         this.video.removeEventListener("seeking", this.onSeeking);
         this.video.removeEventListener("seeked", this.onSeeked);
         this.video.removeEventListener("ended", this.onEnded);
+        this.stopFrameRateDetection();
         this.video = null;
         this.lastAdState = false;
         this.pendingPauseAfterAd = false;
@@ -242,12 +253,7 @@ export default class YoutubePlayerManager {
 
     checkIfVideoFinished() {
         if (!this.video) return;
-        if (this.video.currentTime < this.video.duration - 1)
-            return console.log("Video not finished", {
-                currentTime: this.video.currentTime,
-                duration: this.video.duration,
-            });
-        console.log("Video onEnded");
+        if (this.video.currentTime < this.video.duration - 1) return;
         this.app.socket.emit("queue.probe");
     }
 
@@ -354,6 +360,12 @@ export default class YoutubePlayerManager {
             this.onAdEndCb();
         }
 
+        // Don't enforce state if not in a room
+        if (!state.roomCode.get()) {
+            this.verbose && console.log("enforceDesiredState: not enforcing - not in a room", reason);
+            return;
+        }
+
         if (!this.video || this.is_enforcing.get()) {
             this.verbose && console.log("enforceDesiredState: not enforcing", reason, this);
             return;
@@ -452,6 +464,14 @@ export default class YoutubePlayerManager {
             e.preventDefault();
             e.stopPropagation();
             this.emitSeekRelative(5000);
+        } else if (e.code === "Comma") {
+            e.preventDefault();
+            e.stopPropagation();
+            this.emitFrameStep(-1);
+        } else if (e.code === "Period") {
+            e.preventDefault();
+            e.stopPropagation();
+            this.emitFrameStep(1);
         }
     };
 
@@ -524,7 +544,6 @@ export default class YoutubePlayerManager {
             this,
             "emitToggleRoomPlayPause",
             () => {
-                console.log("emitToggleRoomPlayPause");
                 this.app.socket.emit(roomState === "playing" ? "room.control.pause" : "room.control.play");
             },
             1000
@@ -555,6 +574,157 @@ export default class YoutubePlayerManager {
                 });
             },
             delay
+        );
+    }
+
+    startFrameRateDetection() {
+        this.stopFrameRateDetection();
+        this.frameTimeSamples = [];
+        this.frameRateDetectionStartTime = null;
+        this.detectedFrameRate = null;
+
+        const detectFrame = () => {
+            if (!this.video) {
+                this.stopFrameRateDetection();
+                return;
+            }
+
+            // Only detect when video is playing
+            if (!this.video.paused && !this.video.ended) {
+                const now = performance.now();
+                const currentTime = this.video.currentTime;
+
+                if (this.frameRateDetectionStartTime === null) {
+                    this.frameRateDetectionStartTime = now;
+                    this.frameTimeSamples = [{ time: now, videoTime: currentTime }];
+                } else {
+                    // Sample frame timing
+                    this.frameTimeSamples.push({ time: now, videoTime: currentTime });
+
+                    // Keep only recent samples (last 2 seconds)
+                    const sampleWindow = 2000;
+                    const cutoff = now - sampleWindow;
+                    this.frameTimeSamples = this.frameTimeSamples.filter((s) => s.time >= cutoff);
+
+                    // Need at least 30 samples for accurate detection
+                    if (this.frameTimeSamples.length >= 30) {
+                        // Calculate time deltas between consecutive samples
+                        const timeDeltas = [];
+                        for (let i = 1; i < this.frameTimeSamples.length; i++) {
+                            const delta = this.frameTimeSamples[i].videoTime - this.frameTimeSamples[i - 1].videoTime;
+                            if (delta > 0 && delta < 0.1) {
+                                // Filter out large jumps (seeks)
+                                timeDeltas.push(delta);
+                            }
+                        }
+
+                        if (timeDeltas.length >= 20) {
+                            // Calculate median delta to avoid outliers
+                            timeDeltas.sort((a, b) => a - b);
+                            const medianDelta = timeDeltas[Math.floor(timeDeltas.length / 2)];
+
+                            if (medianDelta > 0) {
+                                const estimatedFps = 1 / medianDelta;
+
+                                // Round to common frame rates: 23.976, 24, 25, 29.97, 30, 50, 50.24, 60, 120
+                                const commonRates = [23.976, 24, 25, 29.97, 30, 50, 50.24, 60, 120];
+                                let closestRate = commonRates[0];
+                                let minDiff = Math.abs(estimatedFps - closestRate);
+
+                                for (const rate of commonRates) {
+                                    const diff = Math.abs(estimatedFps - rate);
+                                    if (diff < minDiff) {
+                                        minDiff = diff;
+                                        closestRate = rate;
+                                    }
+                                }
+
+                                // Only update if we're reasonably confident (within 15% of a common rate)
+                                if (minDiff / closestRate < 0.15) {
+                                    this.detectedFrameRate = closestRate;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            this.frameRateDetectionRafId = requestAnimationFrame(detectFrame);
+        };
+
+        this.frameRateDetectionRafId = requestAnimationFrame(detectFrame);
+    }
+
+    stopFrameRateDetection() {
+        if (this.frameRateDetectionRafId !== null) {
+            cancelAnimationFrame(this.frameRateDetectionRafId);
+            this.frameRateDetectionRafId = null;
+        }
+        this.frameTimeSamples = [];
+        this.frameRateDetectionStartTime = null;
+    }
+
+    getFrameDurationMs() {
+        // Use detected frame rate if available, otherwise use a small increment for high frame rates
+        if (this.detectedFrameRate) {
+            return 1000 / this.detectedFrameRate;
+        }
+        // Default to 1/120 second (8.33ms) which works for up to 120fps
+        // For lower frame rates, this just means more precise navigation
+        return 1000 / 120;
+    }
+
+    emitFrameStep(direction) {
+        // Don't do frame-by-frame if not in a room
+        if (!state.roomCode.get()) {
+            this.verbose && console.log("emitFrameStep: not in a room");
+            return;
+        }
+
+        // Store the latest direction (will be used when throttle executes)
+        this.pendingFrameStepDirection = direction;
+
+        // Throttle frame step emits, but always send the latest one
+        throttle(
+            this,
+            "emitFrameStep",
+            () => {
+                // Use the latest pending direction
+                const latestDirection = this.pendingFrameStepDirection;
+                this.pendingFrameStepDirection = null;
+
+                // Get current progress (may have changed since the request)
+                const { progress_ms, duration_ms } = getCurrentPlayingProgressMs();
+                if (progress_ms === null || duration_ms === null) {
+                    this.verbose && console.log("emitFrameStep: no current playing item");
+                    return;
+                }
+
+                // Get frame duration based on detected frame rate
+                const FRAME_DURATION_MS = this.getFrameDurationMs();
+
+                // Calculate target position based on current progress and latest direction
+                let targetMs = progress_ms + latestDirection * FRAME_DURATION_MS;
+
+                // Clamp to video bounds
+                targetMs = Math.max(0, Math.min(targetMs, duration_ms));
+
+                // Seek to the exact frame position with play=false (frame-by-frame always pauses)
+                this.verbose &&
+                    console.log("emitFrameStep", {
+                        direction: latestDirection,
+                        progress_ms,
+                        targetMs,
+                        frameDurationMs: FRAME_DURATION_MS,
+                        detectedFps: this.detectedFrameRate,
+                    });
+                this.app.socket.emit("room.control.seek", {
+                    progress_ms: Math.floor(targetMs),
+                    play: false, // Always pause for frame-by-frame navigation
+                    frame_step: latestDirection, // Indicate this is a frame step navigation
+                });
+            },
+            100 // Throttle delay: 100ms between frame step emits
         );
     }
 

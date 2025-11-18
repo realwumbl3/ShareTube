@@ -49,7 +49,7 @@ export default class VirtualPlayer {
 
         // Show actor avatar if present
         if (data.actor_user_id) {
-            this.app.player.playPauseSplash.call(data, state.getUserById(data.actor_user_id));
+            this.app.player.splash.call(data, state.getUserById(data.actor_user_id));
         }
 
         if (data.current_entry) {
@@ -79,12 +79,11 @@ export default class VirtualPlayer {
     }
 
     playerStateChange(priorState, newState) {
-        console.log(`playerStateChange: ${priorState} -> ${newState}`);
         if (priorState === "playing" && newState === "paused") return this.app.player.setDesiredState("paused");
         if (priorState === "paused" && newState === "playing") return this.app.player.setDesiredState("playing");
         if (newState === "playing") return this.app.player.setDesiredState("playing");
-        if (newState === "starting") return this.app.player.setDesiredState("paused");
-        console.log(`playerStateChange: no transition implemented. ${priorState} -> ${newState}`);
+        if (newState === "starting" || newState === "paused") return this.app.player.setDesiredState("paused");
+        console.warn(`playerStateChange: no transition implemented. ${priorState} -> ${newState}`);
         return;
     }
 
@@ -120,14 +119,13 @@ export default class VirtualPlayer {
     applyTimestamp() {
         const { progress_ms } = getCurrentPlayingProgressMs();
         if (progress_ms === null) return;
-        setTimeout(() => this.app.player.setDesiredProgressMs(progress_ms), 100);
+        setTimeout(() => this.app.player.setDesiredProgressMs(progress_ms), 1);
     }
 
     gotoVideoIfNotOnVideoPage(current_entry) {
         const videoId = current_entry?.video_id;
         if (!videoId) return;
-        if (window.location.href.includes(videoId))
-            return console.log("gotoVideoIfNotOnVideoPage: already on video page", videoId);
+        if (window.location.href.includes(videoId)) return;
         window.location.href = `https://www.youtube.com/watch?v=${videoId}${this.app.stHash(state.roomCode.get())}`;
     }
 

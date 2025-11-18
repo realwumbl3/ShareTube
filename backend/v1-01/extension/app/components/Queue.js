@@ -132,7 +132,6 @@ export default class ShareTubeQueue {
         const percent = progress_ms / duration_ms;
         state.currentPlaying.timestamp.set(progress_ms);
         this.current_playing_progress.style.setProperty("--progress-int", percent);
-        console.log("updateTimeSeek", { progress_ms, duration_ms, percent });
     }
 
     toggleQueueVisibility() {

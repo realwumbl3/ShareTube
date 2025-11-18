@@ -178,15 +178,6 @@ def create_app() -> Flask:
 
     # Register HTTP routes and blueprints
     register_routes(app)
-    # Register views
-    try:
-        # YouTube metadata blueprint
-        from .views.youtube import youtube_bp
-
-        app.register_blueprint(youtube_bp)
-    except Exception:
-        # Log and continue if optional view fails to import
-        logging.exception("youtube blueprint import failed")
 
     # Return the fully configured application
     return app
@@ -194,19 +185,6 @@ def create_app() -> Flask:
 
 # Helper to bind routes, request hooks, and error handlers
 def register_routes(app: Flask) -> None:
-    # Register dashboard blueprint (HTML + SSE + JSON endpoints)
-    try:
-        # Deferred import to avoid circular dependencies
-        from .dashboard import dashboard_bp
-
-        app.register_blueprint(dashboard_bp)
-    except Exception as e:
-        # Log dashboard import failure and continue without it
-        logging.exception("dashboard blueprint import failed")
-        logger.exception(e)
-        # If dashboard cannot be imported, continue without it
-        pass
-
     # Before each request, capture start time and log basic request info
     @app.before_request
     def _log_request_start():

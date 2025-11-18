@@ -55,13 +55,8 @@ export default class SocketManager {
     bindHandlers() {
         // Bind any additional event handlers
         for (const [event, callback] of Object.entries(this.binds)) {
-            this.socket.on(event, (...args) => this.logSocketEvent(event, ...args) && callback(...args));
+            this.socket.on(event, (...args) => callback(...args));
         }
-    }
-
-    logSocketEvent(...args) {
-        console.log("[ShTb] socket.io", ...args);
-        return true;
     }
 
     on(event, callback) {

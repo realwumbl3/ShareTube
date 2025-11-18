@@ -22,6 +22,5 @@ export function calculateRealProgressMs(progress_ms, playing_since_ms) {
 export function currentPlayingProgressMsPercentageToMs(percentage) {
     const duration_ms = getCurrentPlayingLengthMs();
     if (!duration_ms) return;
-    console.log("currentPlayingProgressMsPercentageToMs", { percentage, duration_ms });
     return Math.floor(percentage * duration_ms);
 }

@@ -12,13 +12,13 @@ export default defineConfig({
   testDir: __dirname,
   // Write all Playwright output to a repo-local directory to avoid defaulting to C:\Windows\test-results
   // when a Windows shim accidentally launches. This path works on Linux/WSL and Windows.
-  outputDir: path.join(__dirname, "tests", "test-results"),
+  outputDir: path.join(__dirname, ".tests", "test-results"),
   timeout: 120_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
   // Use a deterministic HTML report path rooted in the tests directory.
-  reporter: [['list'], ['html', { outputFolder: path.join(__dirname, 'tests', 'report') }]],
+  reporter: [['list'], ['html', { outputFolder: path.join(__dirname, '.tests', 'report') }]],
   use: {
     headless: process.env.HEADLESS === '1' || process.env.CI === 'true',
     viewport: { width: 1280, height: 800 },

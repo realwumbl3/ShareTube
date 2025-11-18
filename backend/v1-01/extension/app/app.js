@@ -26,6 +26,7 @@ css`
     @import url(${chrome.runtime.getURL("app/styles/adOverlay.css")});
     @import url(${chrome.runtime.getURL("app/styles/queue.css")});
     @import url(${chrome.runtime.getURL("app/styles/firstParty.css")});
+    @import url(${chrome.runtime.getURL("app/styles/splash.css")});
 `;
 
 export default class ShareTubeApp {

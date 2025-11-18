@@ -109,6 +109,7 @@ def register_socket_handlers():
             progress_ms = (data or {}).get("progress_ms")
             delta_ms = (data or {}).get("delta_ms")
             play = (data or {}).get("play")
+            frame_step = (data or {}).get("frame_step")
             now_ms = int(time.time() * 1000)
             room.seek_video(progress_ms, now_ms, play)
             db.session.commit()
@@ -125,6 +126,7 @@ def register_socket_handlers():
                     "state": room.state,
                     "delta_ms": delta_ms,
                     "progress_ms": progress_ms,
+                    "frame_step": frame_step,
                     "playing_since_ms": (
                         current_entry.playing_since_ms if current_entry else None
                     ),

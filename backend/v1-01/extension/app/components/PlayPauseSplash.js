@@ -2,17 +2,23 @@ import { html, css } from "../dep/zyx.js";
 
 import { msDurationTimeStamp } from "../utils.js";
 
-export default class PlayPauseSplash {
+export default class Splash {
     constructor(video) {
         this.video = video;
-        html`<div class="play_pause_overlay"></div>`.bind(this);
+        html`<div class="splash_overlay"></div>`.bind(this);
     }
 
     call(playbackData, actor) {
+        // Check if this is a frame step navigation
+        if (playbackData.frame_step !== undefined && playbackData.frame_step !== null) {
+            this.animate(FrameStepBadge, playbackData, actor);
+            return;
+        }
+        
         const trigger = playbackData.trigger;
         const badgeClass = TRIGGERMAP[trigger];
         if (!badgeClass) {
-            console.warn("PlayPauseSplash: unknown trigger", trigger);
+            console.warn("Splash: unknown trigger", trigger);
             return;
         }
         this.animate(badgeClass, playbackData, actor);
@@ -49,7 +55,7 @@ class BadgeBase {
 }
 
 css`
-    .play_pause_overlay {
+    .splash_overlay {
         position: absolute;
         top: 0;
         left: 0;
@@ -176,6 +182,17 @@ class SeekBadge extends BadgeBase {
         } else {
             this.label.textContent = msDurationTimeStamp(playbackData.progress_ms);
         }
+    }
+}
+
+class FrameStepBadge extends BadgeBase {
+    constructor(playbackData, actor) {
+        super(actor);
+        html`<div this="label" class="label"></div>`.join(this).appendTo(this.badge);
+        const direction = playbackData.frame_step > 0 ? "forward" : "backward";
+        const frameIcon = direction === "forward" ? "▶▶" : "◀◀";
+        this.label.textContent = `${frameIcon} Frame`;
+        this.label.style.fontSize = "1.2em";
     }
 }
 
