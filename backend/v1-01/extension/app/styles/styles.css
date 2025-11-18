@@ -35,3 +35,39 @@ h1 {
     font-size: 16px;
     margin: 0 0 8px;
 }
+
+.rounded_btn {
+    appearance: none;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 12px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--yt-spec-text-primary, #fff);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.st_reset * {
+    box-sizing: border-box;
+}
+
+
+#sharetube_main {
+    position: fixed;
+    bottom: 1em;
+    z-index: 10000000;
+    width: 100%;
+    display: grid;
+    justify-items: center;
+    align-items: center;
+    pointer-events: none;
+    background: #00000000;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 200ms ease;
+
+
+    &.visible {
+        opacity: 1;
+    }
+}

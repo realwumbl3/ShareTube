@@ -1,0 +1,125 @@
+from __future__ import annotations
+
+from typing import Callable, Optional, Any
+from functools import wraps
+
+from ..extensions import db
+from ..models import Room, RoomMembership, Queue
+from ..sockets import get_user_id_from_socket
+
+
+def require_room_by_code(handler: Callable) -> Callable:
+    """
+    Decorator for socket handlers that require a room identified by code from data.
+    
+    Extracts code from data, validates it, queries the room, and passes
+    (room, user_id, data) to the handler. Returns early if code is missing or room not found.
+    
+    Usage:
+        @socketio.on("room.control.pause")
+        @require_room_by_code
+        def _on_room_control_pause(room, user_id, data):
+            # room and user_id are guaranteed to be valid here
+            ...
+    """
+    @wraps(handler)
+    def wrapper(data: Optional[dict]) -> None:
+        user_id = get_user_id_from_socket()
+        code = (data or {}).get("code")
+        if not code:
+            return
+        room = Room.query.filter_by(code=code).first()
+        if not room:
+            return
+        return handler(room, user_id, data)
+    return wrapper
+
+
+def require_room(handler: Callable) -> Callable:
+    """
+    Decorator for socket handlers that require the user's active room membership.
+    
+    Gets user_id from socket, validates it, gets active room for user via RoomMembership,
+    and passes (room, user_id, data) to the handler. Returns early if user_id is missing
+    or user has no active room.
+    
+    Usage:
+        @socketio.on("queue.add")
+        @require_user_room
+        def _on_enqueue_url(room, user_id, data):
+            # room and user_id are guaranteed to be valid here
+            ...
+    """
+    @wraps(handler)
+    def wrapper(data: Optional[dict]) -> None:
+        user_id = get_user_id_from_socket()
+        if not user_id:
+            return
+        room = RoomMembership.get_active_room_for_user(user_id)
+        if not room:
+            return
+        return handler(room, user_id, data)
+    return wrapper
+
+
+def require_queue_entry(handler: Callable) -> Callable:
+    """
+    Decorator for socket handlers that require a room's current queue and current entry.
+    
+    Validates that room.current_queue exists and has a current_entry, then passes
+    (room, user_id, queue, current_entry, data) to the handler. Returns early if
+    queue or current_entry is missing.
+    
+    This decorator should be used after require_user_room or require_room_by_code.
+    
+    Usage:
+        @socketio.on("queue.probe")
+        @require_user_room
+        @require_queue_entry
+        def _on_queue_probe(room, user_id, queue, current_entry, data):
+            # room, queue, and current_entry are guaranteed to be valid here
+            ...
+    """
+    @wraps(handler)
+    def wrapper(room: Room, user_id: int, data: Optional[dict]) -> None:
+        if not room.current_queue:
+            return
+        queue = room.current_queue
+        current_entry = queue.current_entry
+        if not current_entry:
+            return
+        return handler(room, user_id, queue, current_entry, data)
+    return wrapper
+
+
+def ensure_queue(handler: Callable) -> Callable:
+    """
+    Decorator for socket handlers that require a room's current queue, creating it if missing.
+    
+    Validates that room.current_queue exists, creating a new Queue if it doesn't, then passes
+    (room, user_id, queue, data) to the handler. The queue is created with room_id=room.id
+    and created_by_id=user_id.
+    
+    This decorator should be used after require_room or require_room_by_code.
+    
+    Usage:
+        @socketio.on("queue.add")
+        @require_room
+        @ensure_queue
+        def _on_enqueue_url(room, user_id, queue, data):
+            # room and queue are guaranteed to be valid here (queue created if needed)
+            ...
+    """
+    @wraps(handler)
+    def wrapper(room: Room, user_id: int, data: Optional[dict]) -> None:
+        if not room.current_queue:
+            # Create a new queue for the room
+            queue = Queue(room_id=room.id, created_by_id=user_id)
+            room.current_queue = queue
+            db.session.add(queue)
+            db.session.flush()  # Ensure queue gets an ID
+        else:
+            queue = room.current_queue
+        return handler(room, user_id, queue, data)
+    return wrapper
+

@@ -89,7 +89,10 @@ export default class DebugMenu {
                             <button class="rounded_btn" zyx-click=${() => this.app.player.setDesiredState("paused")}>
                                 Set desired state to paused
                             </button>
-                            <button class="rounded_btn" zyx-click=${() => this.app.restartVideo()}>
+                            <button
+                                class="rounded_btn"
+                                zyx-click=${() => this.app.virtualPlayer && this.app.virtualPlayer.emitRestartVideo()}
+                            >
                                 Restart video
                             </button>
                             <button

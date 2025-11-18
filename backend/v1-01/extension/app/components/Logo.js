@@ -30,6 +30,7 @@ css`
         height: max-content;
         overflow: hidden;
         transition: gap 200ms ease;
+        line-height: 1;
     }
 
     /* Default (expanded) typography */

@@ -1,33 +1,63 @@
 #sharetube_queue {
     min-width: 320px;
     max-width: 520px;
+    max-height: 480px;
     overflow: hidden;
     color: var(--yt-spec-text-primary, #fff);
-    background: rgba(18, 18, 18, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(1em);
-    border-radius: 12px;
+    background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
+    border-radius: 14px;
     pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
 }
 
 #sharetube_queue .queue-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     gap: 8px;
     position: sticky;
     top: 0;
     z-index: 1;
-    background: rgba(18, 18, 18, 0.95);
+    background: linear-gradient(to bottom, rgba(18, 18, 18, 0.98), rgba(18, 18, 18, 0.9));
+    backdrop-filter: blur(1em);
 }
 
 #sharetube_queue .queue-title {
     font-weight: 600;
     font-size: 13px;
-    opacity: 0.9;
+    opacity: 0.95;
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+#sharetube_queue .queue-header .rounded_btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(54, 54, 54, 0.9));
+    color: var(--yt-spec-text-primary, #fff);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 140ms ease, border-color 140ms ease, transform 80ms ease;
+}
+
+#sharetube_queue .queue-header .rounded_btn:hover {
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.18), rgba(68, 68, 68, 0.95));
+    border-color: rgba(255, 255, 255, 0.32);
+}
+
+#sharetube_queue .queue-header .rounded_btn:active {
+    transform: translateY(1px);
 }
 
 #sharetube_queue .current_playing_header_title {
@@ -44,12 +74,15 @@
 }
 
 #sharetube_queue .current_playing {
-    padding: 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 10px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     flex-direction: column;
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.06),
+            rgba(0, 0, 0, 0.4));
 }
 
 #sharetube_queue .current_playing .current_playing_title {
@@ -63,13 +96,14 @@
 #sharetube_queue .current_playing .current_playing_url {
     font-size: 11px;
     opacity: 0.7;
+    word-break: break-all;
 }
 
 #sharetube_queue .current_playing_container {
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     width: 100%;
 }
 
@@ -80,11 +114,12 @@
     position: relative;
 
     &>img {
-        width: 64px;
-        height: 36px;
+        width: 96px;
+        height: 54px;
         object-fit: cover;
-        border-radius: 6px;
+        border-radius: 8px;
         background: #111;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
     }
 }
 
@@ -93,7 +128,11 @@
     bottom: 0;
     right: 0;
     font-size: 10px;
-    opacity: 0.7;
+    opacity: 0.9;
+    padding: 2px 4px;
+    margin: 3px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
 }
 
 #sharetube_queue .current_playing_meta {
@@ -106,14 +145,29 @@
 
 #sharetube_queue .playing_status {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    flex-wrap: wrap;
+    gap: 4px 12px;
     width: 100%;
+    font-size: 11px;
+}
 
-    &>span {
-        font-size: 11px;
-        opacity: 0.7;
-    }
+#sharetube_queue .playing_status>div {
+    opacity: 0.78;
+}
+
+#sharetube_queue .playing_status_progress::before,
+#sharetube_queue .playing_status_playing_since::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: rgba(0, 200, 120, 0.9);
+}
+
+#sharetube_queue .playing_status_playing_since::before {
+    background: rgba(140, 160, 255, 0.9);
 }
 
 #sharetube_queue .queue-list {
@@ -122,7 +176,7 @@
     gap: 2px;
     max-height: 240px;
     overflow: auto;
-    padding: 6px;
+    padding: 6px 8px 8px;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
@@ -149,16 +203,22 @@
     gap: 8px;
     padding: 6px 8px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.03),
+            rgba(0, 0, 0, 0.65));
     border: 1px solid rgba(255, 255, 255, 0.06);
     font-size: 12px;
     word-break: break-word;
-    transition: background 120ms ease, border-color 120ms ease;
+    transition: background 120ms ease, border-color 120ms ease, transform 80ms ease, box-shadow 120ms ease;
 }
 
 #sharetube_queue .queue-item:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.06),
+            rgba(0, 0, 0, 0.7));
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
 }
 
 #sharetube_queue .queue-item .meta {
@@ -186,10 +246,10 @@
 }
 
 #sharetube_queue .queue-item img.thumb {
-    width: 64px;
-    height: 36px;
+    width: 80px;
+    height: 45px;
     object-fit: cover;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #111;
     flex: 0 0 auto;
     grid-area: thumb;
@@ -199,12 +259,13 @@
     position: absolute;
     bottom: 0;
     right: 0;
-    font-size: 10px;
-    opacity: 0.7;
+    margin: 3px;
+    font-size: 9px;
+    opacity: 0.9;
     text-align: right;
-    padding: 2px;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 4px;
+    padding: 2px 4px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
 }
 
 #sharetube_queue .queue-item-thumbnail {
@@ -229,11 +290,15 @@
     padding: 0px;
     display: grid;
     place-items: center;
+    transition: background 120ms ease, border-color 120ms ease, transform 80ms ease, box-shadow 120ms ease;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
 #sharetube_queue .queue-item .x-button:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.28);
+    transform: translateY(-0.5px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
 #sharetube_queue .queue-item .x-button:focus-visible {
@@ -255,7 +320,7 @@
     /* padding: 6px; */
 }
 
-#sharetube_queue .current_playing_placeholder {
+#sharetube_queue .no_video_playing_label {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -270,4 +335,44 @@
     font-size: 12px;
     opacity: 0.8;
     text-align: center;
+}
+
+#sharetube_queue .current_playing_progress {
+    --padding: 3px;
+    font-size: 9px;
+    opacity: 0.9;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    position: relative;
+}
+
+#sharetube_queue .current_playing_progress .progress_bar {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
+    display: grid;
+    align-items: stretch;
+    padding: var(--padding);
+}
+
+#sharetube_queue .current_playing_progress .bar_inner {
+    position: relative;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px;
+    width: calc(var(--progress-int) * 100%);
+    transition: width 100ms ease;
+}
+
+#sharetube_queue .current_playing_progress_stamps {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 9px;
+    opacity: 0.9;
+    padding: calc(var(--padding) * 2);
 }

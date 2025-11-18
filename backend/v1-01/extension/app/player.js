@@ -4,6 +4,8 @@ console.log("cs/player.js loaded");
 import { LiveVar, html, css, throttle } from "./dep/zyx.js";
 import state from "./state.js";
 import PlayPauseSplash from "./components/PlayPauseSplash.js";
+import Intermission from "./components/Intermission.js";
+import { currentPlayingProgressMsPercentageToMs } from "./getters.js";
 
 css`
     .observer_badge {
@@ -68,6 +70,7 @@ export default class YoutubePlayerManager {
         };
 
         this.playPauseSplash = new PlayPauseSplash(this.video);
+        this.intermission = new Intermission();
 
         this.badge = html`<div class="observer_badge">
             Video Observed.
@@ -158,6 +161,7 @@ export default class YoutubePlayerManager {
         this.nearEndProbeSent = false;
         this.video.before(this.badge.main);
         this.video.parentElement.after(this.playPauseSplash.main);
+        this.video.parentElement.after(this.intermission.main);
         this.video.addEventListener("play", this.onPlay);
         this.video.addEventListener("playing", this.onPlaying);
         this.video.addEventListener("pause", this.onPause);
@@ -263,7 +267,7 @@ export default class YoutubePlayerManager {
             const dur = Number(this.video.duration || 0);
             const cur = Number(this.video.currentTime || 0);
             if (!isFinite(dur) || !isFinite(cur)) return false;
-            return dur > 5 && cur > 0 && (dur - cur) <= thresholdSeconds;
+            return dur > 5 && cur > 0 && dur - cur <= thresholdSeconds;
         } catch {
             return false;
         }
@@ -422,8 +426,7 @@ export default class YoutubePlayerManager {
         return false;
     }
 
-    onControlKeyup = (e) => {
-        console.log("onControlKeyup", e);
+    onControlKeyup = () => {
         this.seek_throttle_accumulator = -1;
     };
 
@@ -500,8 +503,16 @@ export default class YoutubePlayerManager {
                 const x = e.clientX - bounds.left;
                 const progress = Math.max(0, Math.min(1, x / bounds.width));
                 const progressMs = Math.floor(progress * this.video.duration * 1000);
-                this.verbose && console.log("onPlayerClick: progress bar clicked", { progress, progressMs });
-                this.binds.onSeek.forEach((callback) => callback(progressMs));
+
+                const currentPlayingProgressMs = currentPlayingProgressMsPercentageToMs(progress);
+                this.verbose &&
+                    console.log("onPlayerClick: progress bar clicked", {
+                        progress,
+                        progressMs,
+                        currentPlayingProgressMs,
+                        videoDuration: this.video.duration,
+                    });
+                this.binds.onSeek.forEach((callback) => callback(currentPlayingProgressMs));
             },
             1000
         );

@@ -11,4 +11,5 @@ Flask-SocketIO==5.3.6
 gevent==24.2.1
 gevent-websocket==0.10.1
 psutil==6.0.0
+redis==5.0.1
 

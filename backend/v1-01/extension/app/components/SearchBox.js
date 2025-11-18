@@ -41,14 +41,23 @@ export default class SearchBox {
     constructor(app, query) {
         this.app = app;
         html`
-            <div id="sharetube_search_iframe_container">
+            <div this="sharetube_search_iframe_container" id="sharetube_search_iframe_container">
                 <div id="sharetube_search_iframe_header">
                     <button id="add_to_queue_button" zyx-click=${this.addToQueue.bind(this)}>Add to queue</button>
                     <button id="sharetube_search_iframe_close" zyx-click=${this.close.bind(this)}>Close</button>
                 </div>
-                <iframe id="sharetube_search_iframe" src="https://www.youtube.com/results?search_query= " />
+                <iframe
+                    this="sharetube_search_iframe"
+                    id="sharetube_search_iframe"
+                    src="https://www.youtube.com/results?search_query= "
+                />
             </div>
         `.bind(this);
+        /** zyx-sense @type {HTMLDivElement} */
+        this.sharetube_search_iframe_container;
+        /** zyx-sense @type {HTMLElement} */
+        this.sharetube_search_iframe;
+
         this.sharetube_search_iframe_container.setAttribute(
             "allow",
             "autoplay; encrypted-media; picture-in-picture; fullscreen; clipboard-write"

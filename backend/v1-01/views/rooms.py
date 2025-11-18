@@ -38,25 +38,8 @@ def room_create():
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "user_not_found"}), 404
-    # Create room
-    room = Room(owner_id=user_id)
-    db.session.add(room)
-    db.session.flush()  # get room.id
-    # Create initial queue for room
-    queue = Queue(room_id=room.id, created_by_id=user_id)
-    room.current_queue = queue
-    db.session.add(room)
-    db.session.add(queue)
-    # Add membership for creator
-    membership = RoomMembership(
-        room_id=room.id,
-        user_id=user_id,
-        joined_at=int(time.time()),
-        last_seen=int(time.time()),
-        active=True,
-        role="owner",
-    )
-    db.session.add(membership)
+    # Create room using model method
+    room = Room.create(owner_id=user_id)
     db.session.commit()
 
     return jsonify({"code": room.code})
@@ -76,26 +59,12 @@ def register_socket_handlers() -> None:
             if not room:
                 return
 
-            # Add/refresh membership
-            membership = RoomMembership.query.filter_by(
-                room_id=room.id, user_id=user_id
-            ).first()
-            now = int(time.time() * 1000)
-            if not membership:
-                membership = RoomMembership(
-                    room_id=room.id,
-                    user_id=user_id,
-                    joined_at=now,
-                    last_seen=now,
-                    active=True,
-                )
-                db.session.add(membership)
-            else:
-                membership.active = True
-                membership.last_seen = now
+            # Join room using model method
+            RoomMembership.join_room(room, user_id)
             db.session.commit()
 
             # Join the Socket.IO room and schedule a delayed presence update
+            now_ms = int(time.time() * 1000)
             join_room(f"room:{room.code}")
             emit_function_after_delay(emit_presence, room, 0.1)
             socketio.emit(
@@ -104,7 +73,7 @@ def register_socket_handlers() -> None:
                     "ok": True,
                     "code": room.code,
                     "snapshot": room.to_dict(),
-                    "serverNowMs": now,
+                    "serverNowMs": now_ms,
                 },
                 room=f"room:{room.code}",
             )
@@ -129,8 +98,7 @@ def register_socket_handlers() -> None:
             ).first()
             if not membership:
                 return
-            membership.active = False
-            membership.last_seen = int(time.time())
+            membership.leave()
             db.session.commit()
             leave_room(f"room:{room.code}")
             emit_function_after_delay(emit_presence, room, 0.1)

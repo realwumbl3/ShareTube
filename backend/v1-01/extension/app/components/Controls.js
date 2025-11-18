@@ -11,6 +11,7 @@ export default class Controls {
                 <button class="main_btn" zyx-click=${(e) => this.onMainButtonClick(e)}>
                     ${state.roomState.interp((v) => this.stateToButtonLabel(v))}
                 </button>
+                <button class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>Skip</button>
             </div>
         `.bind(this);
     }
@@ -33,6 +34,10 @@ export default class Controls {
             state.roomState.get() === "playing" ? "room.control.pause" : "room.control.play"
         );
     }
+
+    async onSkipButtonClick() {
+        return await this.app.socket.emit("room.control.skip");
+    }
 }
 
 css`
@@ -54,5 +59,6 @@ css`
         color: var(--yt-spec-text-primary, #fff);
         border: 1px solid rgba(255, 255, 255, 0.12);
         cursor: pointer;
+        line-height: 1;
     }
 `;
