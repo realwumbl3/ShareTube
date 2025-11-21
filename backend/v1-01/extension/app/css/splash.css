@@ -10,6 +10,7 @@
     z-index: 1000000001;
     pointer-events: none;
     overflow: hidden;
+    contain: strict;
 
     &>.badge_zone {
         position: absolute;
@@ -24,41 +25,6 @@
             display: grid;
             place-items: center;
             gap: 10px;
-
-            &>.actor {
-                position: absolute;
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                align-items: center;
-                justify-content: center;
-                bottom: 25%;
-                padding: 12px 16px;
-                background: rgba(0, 0, 0, 0.6);
-                backdrop-filter: blur(12px) saturate(180%);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-                transition: transform 0.2s ease, opacity 0.2s ease;
-
-                &>img {
-                    width: 48px;
-                    height: 48px;
-                    object-fit: cover;
-                    border-radius: 50%;
-                    border: 2px solid rgba(255, 255, 255, 0.3);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-                }
-
-                &>span {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #fff;
-                    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-                    letter-spacing: 0.3px;
-                    white-space: nowrap;
-                }
-            }
 
             &>.badge {
                 position: absolute;
@@ -94,6 +60,28 @@
                     color: #fff;
                     letter-spacing: 1px;
                     text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 255, 255, 0.3);
+
+                    &.frame_step_label {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+
+                        &>.frame_step_icon {
+                            font-size: 1.2em;
+                            font-weight: 700;
+                            color: #fff;
+                            letter-spacing: 1px;
+                            text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 255, 255, 0.3);
+
+                            .frame_step_label.forward & {
+                                transform: rotate(0deg);
+                            }
+
+                            .frame_step_label.backward & {
+                                transform: rotate(180deg);
+                            }
+                        }
+                    }
                 }
 
             }
@@ -199,11 +187,11 @@
 }
 
 .actor_entry.action-seek-forward {
-    --bg-color: rgba(33, 150, 243, 0.4);
+    --bg-color: rgba(255, 152, 0, 0.4);
 }
 
 .actor_entry.action-seek-backward {
-    --bg-color: rgba(255, 152, 0, 0.4);
+    --bg-color: rgba(33, 150, 243, 0.4);
 }
 
 .actor_entry.action-restart {
@@ -211,11 +199,11 @@
 }
 
 .actor_entry.action-frame-forward {
-    --bg-color: rgba(0, 188, 212, 0.4);
+    --bg-color: rgba(205, 220, 57, 0.4);
 }
 
 .actor_entry.action-frame-backward {
-    --bg-color: rgba(205, 220, 57, 0.4);
+    --bg-color: rgba(0, 188, 212, 0.4);
 }
 
 .actor_entry.action-unknown {

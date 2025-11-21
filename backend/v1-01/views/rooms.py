@@ -6,12 +6,14 @@ import logging
 from flask import Blueprint, jsonify
 from flask_socketio import join_room, leave_room
 
+from ..utils import now_ms
 from ..sockets import emit_function_after_delay, get_user_id_from_socket
 
 from ..app import get_user_id_from_auth_header
 from ..extensions import db, socketio
 from ..models import Room, RoomMembership, User, Queue
 
+from .decorators import require_room_by_code
 
 rooms_bp = Blueprint("rooms", __name__, url_prefix="/api")
 
@@ -47,24 +49,14 @@ def room_create():
 
 def register_socket_handlers() -> None:
     @socketio.on("room.join")
-    def _on_join_room(data):
+    @require_room_by_code
+    def _on_join_room(room: Room, user_id: int, data: dict):
         try:
-            code = (data or {}).get("code")
-            if not code:
-                return
-            user_id = get_user_id_from_socket()
-            if not user_id:
-                return
-            room = Room.query.filter_by(code=code).first()
-            if not room:
-                return
-
             # Join room using model method
             RoomMembership.join_room(room, user_id)
             db.session.commit()
 
             # Join the Socket.IO room and schedule a delayed presence update
-            now_ms = int(time.time() * 1000)
             join_room(f"room:{room.code}")
             emit_function_after_delay(emit_presence, room, 0.1)
             socketio.emit(
@@ -73,7 +65,7 @@ def register_socket_handlers() -> None:
                     "ok": True,
                     "code": room.code,
                     "snapshot": room.to_dict(),
-                    "serverNowMs": now_ms,
+                    "serverNowMs": now_ms(),
                 },
                 room=f"room:{room.code}",
             )
@@ -81,18 +73,10 @@ def register_socket_handlers() -> None:
             logging.exception("room.join handler error")
 
     @socketio.on("room.leave")
-    def _on_leave_room(data):
+    @require_room_by_code
+    def _on_leave_room(room: Room, user_id: int, data: dict):
         try:
-            code = (data or {}).get("code")
-            if not code:
-                return
-            user_id = get_user_id_from_socket()
-            if not user_id:
-                return
-            print(f"room.leave: {code}, {user_id}")
-            room = Room.query.filter_by(code=code).first()
-            if not room:
-                return
+            print(f"room.leave: {room.code}, {user_id}")
             membership = RoomMembership.query.filter_by(
                 room_id=room.id, user_id=user_id
             ).first()

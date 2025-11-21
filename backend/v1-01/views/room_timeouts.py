@@ -13,6 +13,7 @@ from flask import Flask, current_app
 
 from ..extensions import db, socketio
 from ..models import Room
+from ..utils import now_ms
 
 
 def _get_redis_client():
@@ -148,16 +149,16 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
                         f"room_timeout: room {room_code} state is '{room.state}', not 'starting', skipping transition"
                     )
                     return
-                
+
                 # Transition to playing
-                now_ms = int(time.time() * 1000)
+                _now_ms = now_ms()
                 room.state = "playing"
                 
                 # Set playing_since_ms on current entry
                 current_entry = None
                 if room.current_queue and room.current_queue.current_entry:
                     current_entry = room.current_queue.current_entry
-                    current_entry.playing_since_ms = now_ms
+                    current_entry.playing_since_ms = _now_ms
                     current_entry.paused_at = None
                 
                 db.session.commit()
@@ -172,7 +173,7 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
                         "trigger": "starting_timeout",
                         "code": room_code,
                         "state": "playing",
-                        "playing_since_ms": now_ms,
+                        "playing_since_ms": _now_ms,
                         "progress_ms": current_entry.progress_ms if current_entry else 0,
                         "actor_user_id": None,
                     },

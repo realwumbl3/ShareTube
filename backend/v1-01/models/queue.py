@@ -1,36 +1,59 @@
-# Enable postponed annotations to avoid runtime import issues and allow future-style typing
+"""Queue and QueueEntry models for ShareTube.
+
+This module defines a logical queue of YouTube videos with per-entry
+virtual clock state used to coordinate playback across clients.
+"""
+
 from __future__ import annotations
 
-# Import time to record timestamps for model defaults
 import time
-import logging
-from typing import Optional, List, Tuple
+from typing import List, Optional, TYPE_CHECKING
 
-# Import the SQLAlchemy instance from the shared extensions module
+from sqlalchemy.orm import Mapped, Query
+
 from ..extensions import db
 from ..utils import commit_with_retry
 
+if TYPE_CHECKING:
+    # Imported only for type checking to avoid runtime circular imports
+    from .room import Room
+    from .user import User
 
-# A logical queue of videos either for a room or a personal queue (if room_id is null)
+
 class Queue(db.Model):
+    """A logical queue of videos either for a room or a personal queue.
+
+    If ``room_id`` is null, this queue is a personal/user queue.
+    """
+
     # Surrogate primary key id
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = db.Column(db.Integer, primary_key=True)
+
     # Optional owning room; null indicates a personal/user queue context
-    room_id = db.Column(db.Integer, db.ForeignKey("room.id"), nullable=True, index=True)
+    room_id: Mapped[Optional[int]] = db.Column(
+        db.Integer, db.ForeignKey("room.id"), nullable=True, index=True
+    )
+
     # Optional creator id for personal queues or attribution
-    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_by_id: Mapped[Optional[int]] = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=True
+    )
+
     # Creation time of this queue
-    created_at = db.Column(db.Integer, default=lambda: int(time.time()))
+    created_at: Mapped[int] = db.Column(db.Integer, default=lambda: int(time.time()))
 
     # Relationship to the room
-    room = db.relationship(
+    room: Mapped[Optional["Room"]] = db.relationship(
         "Room", foreign_keys=[room_id], uselist=False, back_populates="queues"
     )
+
     # Relationship to the creator
-    creator = db.relationship("User", foreign_keys=[created_by_id], uselist=False)
+    creator: Mapped[Optional["User"]] = db.relationship(
+        "User", foreign_keys=[created_by_id], uselist=False
+    )
 
     # Relationship to queue entries, cascading deletes when the queue is removed
-    entries = db.relationship(
+    entries: Mapped[list["QueueEntry"]] = db.relationship(
         "QueueEntry",
         lazy=True,
         cascade="all, delete-orphan",
@@ -38,35 +61,32 @@ class Queue(db.Model):
         back_populates="queue",
     )
 
-    current_entry_id = db.Column(
+    current_entry_id: Mapped[Optional[int]] = db.Column(
         db.Integer, db.ForeignKey("queue_entry.id"), nullable=True, index=True
     )
 
-    current_entry = db.relationship(
+    current_entry: Mapped[Optional["QueueEntry"]] = db.relationship(
         "QueueEntry", foreign_keys=[current_entry_id], uselist=False, post_update=True
     )
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """Serialize queue to a dict suitable for clients.
+
+        Entries are always ordered by position so that the frontend can rely on
+        stable ordering regardless of how SQLAlchemy returns relationship rows.
+        """
+        ordered_entries = self.get_all_entries_ordered()
         return {
             "id": self.id,
             "room_id": self.room_id,
             "created_by_id": self.created_by_id,
             "creator": self.creator.to_dict() if self.creator else None,
             "created_at": self.created_at,
-            "entries": [entry.to_dict() for entry in self.entries],
+            "entries": [entry.to_dict() for entry in ordered_entries],
             "current_entry": (
                 self.current_entry.to_dict() if self.current_entry else None
             ),
         }
-
-    def load_next_entry(self):
-        """Load the next entry in the queue (first entry by position)."""
-        if len(self.entries) == 0:
-            return None, "No entries in queue"
-        entry = self.entries[0]
-        # Set FK directly to avoid relationship circular dependency during flush
-        self.current_entry_id = entry.id
-        return entry, None
 
     def get_next_position(self) -> int:
         """Calculate the next position for a new entry in this queue."""
@@ -106,7 +126,7 @@ class Queue(db.Model):
         commit_with_retry(db.session)
         return entry
 
-    def get_entries_ordered(self) -> List["QueueEntry"]:
+    def get_all_entries_ordered(self) -> List["QueueEntry"]:
         """Get all entries ordered by position."""
         return (
             db.session.query(QueueEntry)
@@ -115,111 +135,168 @@ class Queue(db.Model):
             .all()
         )
 
-    def advance_to_next(self) -> Optional["QueueEntry"]:
-        """Advance to the next entry in the queue, wrapping around."""
-        entries = self.get_entries_ordered()
-        if not entries:
-            return None
-        
-        current_entry = self.current_entry
-        if not current_entry:
-            return None
-        
-        cur_idx = next(
-            (i for i, e in enumerate[QueueEntry](entries) if e.id == current_entry.id),
-            -1,
+    def query_entries_by_status(self, status: str) -> Query["QueueEntry"]:
+        """Get a query for all entries by status, ordered by position."""
+        return (
+            db.session.query(QueueEntry)
+            .filter_by(queue_id=self.id)
+            .filter_by(status=status)
+            .order_by(QueueEntry.position.asc())
         )
-        if cur_idx < 0:
-            return None
-        
-        next_idx = (cur_idx + 1) % len(entries)
-        return entries[next_idx]
 
-    def complete_and_advance(self) -> Optional["QueueEntry"]:
-        """Complete current entry (mark as watched and rotate) and advance to next entry."""
+    def load_next_entry(self):
+        """Load the next queued entry in the queue (first entry by position)."""
+        entry = self.query_entries_by_status("queued").first()
+        if not entry:
+            return None, "queue.load_next_entry: no entries in queue"
+
+        # Keep model state in sync with the selected entry
+        self.current_entry_id = entry.id
+        commit_with_retry(db.session)
+        return entry, None
+
+    def advance_to_next(self) -> tuple[Optional["QueueEntry"], Optional[str]]:
+        """Advance to the next queued entry in the queue, wrapping around.
+
+        Returns (next_entry, error_message).
+        """
         current_entry = self.current_entry
         if not current_entry:
-            return None
-        
-        # Find next entry BEFORE rotating (position changes after rotate)
-        next_entry = self.advance_to_next()
+            return None, "queue.advance_to_next: no current entry"
+
+        # Find the next queued entry strictly after the current entry's position.
+        next_entry = (
+            db.session.query(QueueEntry)
+            .filter_by(queue_id=self.id, status="queued")
+            .filter(QueueEntry.position > (current_entry.position or 0))
+            .order_by(QueueEntry.position.asc())
+            .first()
+        )
+
+        # If there is no queued entry after the current one, signal exhaustion
+        # without treating it as a hard error so callers can decide how to
+        # handle end-of-queue semantics.
         if not next_entry:
-            return None
-        
+            return None, None
+
+        return next_entry, None
+
+    def complete_and_advance(self) -> tuple[Optional["QueueEntry"], Optional[str]]:
+        """Complete current entry (mark as watched and rotate) and advance to next.
+
+        Returns (next_entry, error_message).
+        """
+        current_entry = self.current_entry
+        if not current_entry:
+            return None, "queue.complete_and_advance: no current entry"
+
+        # Find next entry BEFORE rotating (position changes after rotate)
+        next_entry, error = self.advance_to_next()
+        if error:
+            return None, f"queue.complete_and_advance: {error}"
+
         # Mark current as watched and move to tail
         current_entry.complete_and_rotate()
-        
-        # Advance to next entry
-        self.current_entry_id = next_entry.id
-        next_entry.progress_ms = 0
-        next_entry.playing_since_ms = None  # Don't set playing_since_ms until transitioning to playing
-        next_entry.paused_at = None
-        
-        return next_entry
 
-    def skip_to_next(self) -> Optional["QueueEntry"]:
+        # Advance to next entry if one exists, otherwise clear current entry to
+        # indicate that the queue has been exhausted.
+        if next_entry:
+            self.current_entry_id = next_entry.id
+            next_entry.reset()
+        else:
+            self.current_entry_id = None
+
+        commit_with_retry(db.session)
+
+        return next_entry, None
+
+    def skip_to_next(self) -> tuple[Optional["QueueEntry"], Optional[str]]:
         """Skip current entry and advance to next, marking current as skipped."""
         current_entry = self.current_entry
         if not current_entry:
-            return None
-        
-        next_entry = self.advance_to_next()
+            return None, "queue.skip_to_next: no current entry"
+
+        next_entry, error = self.advance_to_next()
+        if error:
+            return None, f"queue.skip_to_next: {error}"
         if not next_entry:
-            return None
-        
+            # No next entry available – mark the current one as skipped and
+            # clear the queue's current entry so that the room can end up
+            # with no active video.
+            current_entry.skip()
+            self.current_entry_id = None
+            commit_with_retry(db.session)
+            return None, "queue.skip_to_next: no next entry"
+
         # Mark current as skipped
-        current_entry.status = "skipped"
-        current_entry.progress_ms = 0
-        current_entry.playing_since_ms = None
-        current_entry.paused_at = None
-        
+        current_entry.skip()
+
         # Advance to next entry
         self.current_entry_id = next_entry.id
-        next_entry.progress_ms = 0
-        next_entry.playing_since_ms = None
-        next_entry.paused_at = None
-        
-        return next_entry
+        next_entry.reset()
+        commit_with_retry(db.session)
+
+        return next_entry, None
 
 
-# An item within a queue representing a single YouTube video
 class QueueEntry(db.Model):
+    """An item within a queue representing a single YouTube video."""
+
     # Surrogate primary key id
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = db.Column(db.Integer, primary_key=True)
+
     # Owning queue id; indexed to support ordered listing by queue
-    queue_id = db.Column(
+    queue_id: Mapped[int] = db.Column(
         db.Integer, db.ForeignKey("queue.id"), nullable=False, index=True
     )
-    # Relationship back to owning queue
-    queue = db.relationship("Queue", foreign_keys=[queue_id], back_populates="entries")
-    # User that added the entry (optional for system adds)
-    added_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
-    # Canonical video URL
-    url = db.Column(db.String(2048), nullable=False)
-    # YouTube video id (canonical)
-    video_id = db.Column(db.String(64))
-    # Title fetched from YouTube APIs or oEmbed
-    title = db.Column(db.String(512))
-    # Best available thumbnail URL
-    thumbnail_url = db.Column(db.String(1024))
-    # 1-based position within the queue; also indexed for efficiency
-    position = db.Column(db.Integer, index=True)
-    # Time when the entry was added
-    added_at = db.Column(db.Integer, default=lambda: int(time.time()))
-    # Lifecycle status: queued | skipped | deleted (watched is derived from watch_count > 0)
-    status = db.Column(db.String(32), default="queued")
-    # Number of times this entry has been completed/rotated
-    watch_count = db.Column(db.Integer, default=0)
-    # Per-entry virtual clock fields (milliseconds)
-    duration_ms = db.Column(db.Integer, default=0)
-    # Unix timestamp (milliseconds) when the video started playing
-    playing_since_ms = db.Column(db.BigInteger, nullable=True)
-    # Last known progress in milliseconds when paused (for resume)
-    progress_ms = db.Column(db.Integer, default=0)
-    # Unix timestamp (seconds) when the video was last paused
-    paused_at = db.Column(db.Integer, nullable=True)
 
-    def to_dict(self):
+    # Relationship back to owning queue
+    queue: Mapped[Optional["Queue"]] = db.relationship(
+        "Queue", foreign_keys=[queue_id], back_populates="entries"
+    )
+
+    # User that added the entry (optional for system adds)
+    added_by_id: Mapped[Optional[int]] = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=True
+    )
+
+    # Canonical video URL
+    url: Mapped[str] = db.Column(db.String(2048), nullable=False)
+
+    # YouTube video id (canonical)
+    video_id: Mapped[Optional[str]] = db.Column(db.String(64))
+
+    # Title fetched from YouTube APIs or oEmbed
+    title: Mapped[Optional[str]] = db.Column(db.String(512))
+
+    # Best available thumbnail URL
+    thumbnail_url: Mapped[Optional[str]] = db.Column(db.String(1024))
+
+    # 1-based position within the queue; also indexed for efficiency
+    position: Mapped[Optional[int]] = db.Column(db.Integer, index=True)
+
+    # Time when the entry was added
+    added_at: Mapped[int] = db.Column(db.Integer, default=lambda: int(time.time()))
+
+    # Lifecycle status: queued | skipped | deleted | watched
+    status: Mapped[str] = db.Column(db.String(32), default="queued")
+
+    # Number of times this entry has been completed/rotated
+    watch_count: Mapped[int] = db.Column(db.Integer, default=0)
+
+    # Per-entry virtual clock fields (milliseconds)
+    duration_ms: Mapped[int] = db.Column(db.Integer, default=0)
+
+    # Unix timestamp (milliseconds) when the video started playing
+    playing_since_ms: Mapped[Optional[int]] = db.Column(db.BigInteger, nullable=True)
+
+    # Last known progress in milliseconds when paused (for resume)
+    progress_ms: Mapped[int] = db.Column(db.Integer, default=0)
+
+    # Unix timestamp (seconds) when the video was last paused
+    paused_at: Mapped[Optional[int]] = db.Column(db.Integer, nullable=True)
+
+    def to_dict(self) -> dict:
         return {
             "id": self.id,
             "queue_id": self.queue_id,
@@ -237,9 +314,35 @@ class QueueEntry(db.Model):
             "paused_at": self.paused_at,
         }
 
+    def reset(self) -> None:
+        """Reset the entry to its initial state."""
+        self.progress_ms = 0
+        self.playing_since_ms = None
+        self.paused_at = None
+        self.status = "queued"
+        commit_with_retry(db.session)
+
+    def skip(self) -> None:
+        """Mark this entry as skipped."""
+        self.playing_since_ms = None
+        self.status = "skipped"
+        commit_with_retry(db.session)
+
     def remove(self) -> None:
         """Mark this entry as deleted."""
         self.status = "deleted"
+        commit_with_retry(db.session)
+
+    def start(self, now_ms: int) -> None:
+        """Mark this entry as actively playing from its current progress.
+
+        This is used when playback first transitions into the playing state (or
+        when resuming) so that the entry's lifecycle status reflects that it is
+        currently being watched.
+        """
+        self.status = "playing"
+        self.playing_since_ms = now_ms
+        self.paused_at = None
         commit_with_retry(db.session)
 
     def pause(self, now_ms: int) -> int:
@@ -251,18 +354,21 @@ class QueueEntry(db.Model):
         self.playing_since_ms = None
         self.progress_ms = paused_progress_ms
         self.paused_at = now_ms
+        commit_with_retry(db.session)
         return paused_progress_ms
 
     def play(self, now_ms: int) -> None:
         """Start or resume playback."""
         self.playing_since_ms = now_ms
         self.paused_at = None
+        commit_with_retry(db.session)
 
     def restart(self, now_ms: int) -> None:
         """Restart playback from the beginning."""
         self.progress_ms = 0
         self.playing_since_ms = now_ms
         self.paused_at = None
+        commit_with_retry(db.session)
 
     def seek(self, progress_ms: int, now_ms: int, play: bool) -> None:
         """Seek to a specific progress position."""
@@ -271,14 +377,13 @@ class QueueEntry(db.Model):
             self.playing_since_ms = now_ms
         else:
             self.playing_since_ms = None
+        commit_with_retry(db.session)
 
     def check_completion(self, now_ms: int) -> bool:
         """Check if this entry has reached completion (within 2 seconds of end)."""
         base_progress_ms = self.progress_ms or 0
         elapsed_ms = (
-            max(0, now_ms - int(self.playing_since_ms))
-            if self.playing_since_ms
-            else 0
+            max(0, now_ms - int(self.playing_since_ms)) if self.playing_since_ms else 0
         )
         effective_progress_ms = base_progress_ms + elapsed_ms
         duration_ms = max(0, int(self.duration_ms or 0))
@@ -295,9 +400,10 @@ class QueueEntry(db.Model):
         self.progress_ms = 0
         self.playing_since_ms = None
         self.paused_at = None
-        
+        self.status = "played"
+        commit_with_retry(db.session)
+
         # Move to tail by setting position to max + 1
-        entries = self.queue.get_entries_ordered()
+        entries = self.queue.query_entries_by_status("queued").all()
         max_pos = max(e.position or 0 for e in entries) if entries else 0
         self.position = max_pos + 1
-

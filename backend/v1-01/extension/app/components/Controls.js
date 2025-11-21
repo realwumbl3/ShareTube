@@ -1,4 +1,4 @@
-import { html, css, LiveVar } from "../dep/zyx.js";
+import { html, css, LiveVar, throttle } from "../dep/zyx.js";
 
 import state from "../state.js";
 
@@ -30,13 +30,27 @@ export default class Controls {
     }
 
     async onMainButtonClick() {
-        return await this.app.socket.emit(
-            state.roomState.get() === "playing" ? "room.control.pause" : "room.control.play"
+        throttle(
+            this,
+            "onMainButtonClick",
+            async () => {
+                return await this.app.socket.emit(
+                    state.roomState.get() === "playing" ? "room.control.pause" : "room.control.play"
+                );
+            },
+            1000
         );
     }
 
     async onSkipButtonClick() {
-        return await this.app.socket.emit("room.control.skip");
+        throttle(
+            this,
+            "onSkipButtonClick",
+            async () => {
+                return await this.app.socket.emit("room.control.skip");
+            },
+            10000
+        );
     }
 }
 

@@ -1,128 +1,107 @@
 import logging
+import time
+
 from ..extensions import db, socketio
 from .room_timeouts import schedule_starting_to_playing_timeout, cancel_starting_timeout
 from .decorators import require_room_by_code
-import time
+from ..utils import now_ms
+
+from ..models import Room
 
 
 def register_socket_handlers():
     @socketio.on("room.control.pause")
     @require_room_by_code
-    def _on_room_control_pause(room, user_id, data):
+    def _on_room_control_pause(room: Room, user_id: int, data: dict):
+        res, rej = Room.emit(room.code, trigger="room.control.pause")
         try:
-            now_ms = int(time.time() * 1000)
-            # Cancel any pending starting timeout if transitioning from starting
+            _now_ms = now_ms()
+            paused_progress_ms, error = room.pause_playback(_now_ms)
+            if error:
+                rej(error)
+                return
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
-            paused_progress_ms = room.pause_playback(now_ms)
-            if paused_progress_ms is None:
-                return
-            db.session.commit()
-            db.session.refresh(room)
-            socketio.emit(
+            res(
                 "room.playback",
                 {
-                    "trigger": "room.control.pause",
-                    "server_now_ms": now_ms,
-                    "code": room.code,
                     "state": "paused",
                     "playing_since_ms": None,
                     "progress_ms": paused_progress_ms,
                     "actor_user_id": user_id,
                 },
             )
-        except Exception:
-            logging.exception("room.control.pause handler error")
+        except Exception as e:
+            logging.exception("room.control.pause handler error: %s", e)
+            rej(f"room.control.pause handler error: {e}")
 
     @socketio.on("room.control.play")
     @require_room_by_code
-    def _on_room_control_play(room, user_id, data):
+    def _on_room_control_play(room: Room, user_id: int, data: dict):
+        res, rej = Room.emit(room.code, trigger="room.control.play")
         try:
-            now_ms = int(time.time() * 1000)
-
-            # Cancel timeout if transitioning from starting state
+            _now_ms = now_ms()
+            result, error = room.start_playback(_now_ms)
+            if result is None or error:
+                rej(error)
+                return
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
-
-            # Start playback (handles all cases: starting->playing, new entry, resume)
-            result = room.start_playback(now_ms)
-            if not result:
-                return
-
-            db.session.commit()
-            db.session.refresh(room)
-
-            # Build payload - use result entry when starting, otherwise get current entry
             if result["state"] == "starting":
-                entry_dict = result["entry"]
-                progress_ms = entry_dict.get("progress_ms", 0)
                 schedule_starting_to_playing_timeout(room.code, delay_seconds=15)
-            else:
-                db.session.refresh(room.current_queue.current_entry)
-                entry_dict = None
-                progress_ms = room.current_queue.current_entry.progress_ms
-
-            socketio.emit(
-                "room.playback",
-                {
-                    "trigger": "room.control.play",
-                    "code": room.code,
-                    "state": result["state"],
-                    "playing_since_ms": (
-                        now_ms if result["state"] == "playing" else None
-                    ),
-                    "progress_ms": progress_ms,
-                    "current_entry": entry_dict,
-                    "actor_user_id": user_id,
-                },
-            )
-        except Exception:
+            res("room.playback", {"actor_user_id": user_id, **result})
+        except Exception as e:
             logging.exception("room.control.play handler error")
+            rej(f"room.control.play handler error: {e}")
 
     @socketio.on("room.control.restartvideo")
     @require_room_by_code
-    def _on_room_control_restartvideo(room, user_id, data):
+    def _on_room_control_restartvideo(room: Room, user_id: int, data: dict):
+        res, rej = Room.emit(room.code, trigger="room.control.restartvideo")
         try:
-            now_ms = int(time.time() * 1000)
-            room.restart_video(now_ms)
-            db.session.commit()
-            db.session.refresh(room)
-            socketio.emit(
+            _now_ms = now_ms()
+            _, error = room.restart_video(_now_ms)
+            if error:
+                rej(error)
+                return
+            if room.state == "starting":
+                cancel_starting_timeout(room.code)
+            res(
                 "room.playback",
                 {
-                    "trigger": "room.control.restartvideo",
-                    "code": room.code,
                     "state": "playing",
                     "progress_ms": 0,
-                    "playing_since_ms": now_ms,
+                    "playing_since_ms": _now_ms,
                     "paused_at": None,
                     "actor_user_id": user_id,
                 },
             )
-        except Exception:
-            logging.exception("room.control.restartvideo handler error")
+        except Exception as e:
+            logging.exception("room.control.restartvideo handler error: %s", e)
+            rej(f"room.control.restartvideo handler error: {e}")
 
     @socketio.on("room.control.seek")
     @require_room_by_code
-    def _on_room_control_seek(room, user_id, data):
+    def _on_room_control_seek(room: Room, user_id: int, data: dict):
+        res, rej = Room.emit(room.code, trigger="room.control.seek")
         try:
             progress_ms = (data or {}).get("progress_ms")
             delta_ms = (data or {}).get("delta_ms")
             play = (data or {}).get("play")
             frame_step = (data or {}).get("frame_step")
-            now_ms = int(time.time() * 1000)
-            room.seek_video(progress_ms, now_ms, play)
-            db.session.commit()
+            _now_ms = now_ms()
+            _, error = room.seek_video(progress_ms, _now_ms, play)
+            if error:
+                rej(error)
+                return
             db.session.refresh(room)
             current_entry = None
             if room.current_queue and room.current_queue.current_entry:
                 db.session.refresh(room.current_queue.current_entry)
                 current_entry = room.current_queue.current_entry
-            socketio.emit(
+            res(
                 "room.playback",
                 {
-                    "trigger": "room.control.seek",
-                    "code": room.code,
                     "state": room.state,
                     "delta_ms": delta_ms,
                     "progress_ms": progress_ms,
@@ -138,46 +117,39 @@ def register_socket_handlers():
 
     @socketio.on("room.control.skip")
     @require_room_by_code
-    def _on_room_control_skip(room, user_id, data):
+    def _on_room_control_skip(room: Room, user_id: int, data: dict):
         try:
-            if not room.current_queue:
+            res, rej = Room.emit(room.code, trigger="room.control.skip")
+            next_entry, error = room.skip_to_next()
+            if error:
+                rej(error)
                 return
-
-            if not room.current_queue.current_entry:
-                return
-
-            # Cancel any pending starting timeout
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
-
-            # Skip to next using model method
-            next_entry = room.skip_to_next()
-            if not next_entry:
-                return
-
-            db.session.commit()
             db.session.refresh(room)
-            db.session.refresh(room.current_queue)
-            db.session.refresh(next_entry)
-
-            socketio.emit(
-                "room.playback",
-                {
-                    "trigger": "room.control.skip",
-                    "code": room.code,
-                    "state": "starting",
-                    "playing_since_ms": None,
-                    "progress_ms": next_entry.progress_ms,
-                    "current_entry": next_entry.to_dict(),
-                    "actor_user_id": user_id,
-                },
-            )
-
-            # Emit queue update
-            queue_dict = room.current_queue.to_dict()
-            socketio.emit("queue.update", queue_dict, room=f"room:{room.code}")
-
-            # Schedule timeout to transition from starting to playing
-            schedule_starting_to_playing_timeout(room.code, delay_seconds=15)
+            if next_entry:
+                db.session.refresh(next_entry)
+                res(
+                    "room.playback",
+                    {
+                        "state": "starting",
+                        "playing_since_ms": None,
+                        "progress_ms": next_entry.progress_ms,
+                        "current_entry": next_entry.to_dict(),
+                        "actor_user_id": user_id,
+                    },
+                )
+                schedule_starting_to_playing_timeout(room.code, delay_seconds=15)
+            else:
+                res(
+                    "room.playback",
+                    {
+                        "state": room.state,
+                        "playing_since_ms": None,
+                        "progress_ms": 0,
+                        "current_entry": None,
+                        "actor_user_id": user_id,
+                    },
+                )
         except Exception:
             logging.exception("room.control.skip handler error")

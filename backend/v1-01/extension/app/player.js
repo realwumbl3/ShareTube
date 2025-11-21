@@ -1,7 +1,8 @@
 // Log module load for diagnostics
 console.log("cs/player.js loaded");
 
-import { LiveVar, html, css, throttle } from "./dep/zyx.js";
+import { LiveVar, html, css } from "./dep/zyx.js";
+import { throttle } from "./utils.js";
 import state from "./state.js";
 import Splash from "./components/Splash.js";
 import Intermission from "./components/Intermission.js";
@@ -24,6 +25,7 @@ css`
         align-items: center;
         justify-content: center;
         display: none;
+        contain: strict;
         &.visible {
             display: flex;
         }
@@ -58,6 +60,9 @@ export default class YoutubePlayerManager {
         this.last_programmatic_media_ms = 0;
         this.lastAdState = false;
         this.pendingPauseAfterAd = false;
+        this.lastVideoClickTime = 0;
+        this.videoClickTimeout = null;
+        this.seekBarEl = null;
 
         this.seek_throttle_accumulator = -1;
 
@@ -105,10 +110,12 @@ export default class YoutubePlayerManager {
         // Track recent user gestures to classify media events
         try {
             document.addEventListener("pointerdown", this.onUserGesture, true);
+            document.addEventListener("pointerup", this.onBodyPointerUpCapture, true);
             document.addEventListener("keydown", this.onUserGesture, true);
             document.addEventListener("keydown", this.onControlKeydown, true);
             document.addEventListener("keyup", this.onControlKeyup, true);
             document.addEventListener("click", this.onBodyClickCapture, true);
+            document.addEventListener("dblclick", this.onBodyDoubleClickCapture, true);
         } catch {}
     }
 
@@ -120,10 +127,12 @@ export default class YoutubePlayerManager {
         }
         try {
             document.removeEventListener("pointerdown", this.onUserGesture, true);
+            document.removeEventListener("pointerup", this.onBodyPointerUpCapture, true);
             document.removeEventListener("keydown", this.onUserGesture, true);
             document.removeEventListener("keydown", this.onControlKeydown, true);
             document.removeEventListener("keyup", this.onControlKeyup, true);
             document.removeEventListener("click", this.onBodyClickCapture, true);
+            document.removeEventListener("dblclick", this.onBodyDoubleClickCapture, true);
         } catch {}
         this.unbindFromVideo();
     }
@@ -168,7 +177,7 @@ export default class YoutubePlayerManager {
         this.verbose && console.log("bindToVideo", video);
         this.video = video;
         this.nearEndProbeSent = false;
-        this.video.before(this.badge.main);
+        this.video.after(this.badge.main);
         this.video.parentElement.after(this.splash.main);
         this.video.parentElement.after(this.intermission.main);
         this.video.addEventListener("play", this.onPlay);
@@ -181,6 +190,14 @@ export default class YoutubePlayerManager {
         this.video.addEventListener("ended", this.onEnded);
         this.startFrameRateDetection();
         this.enforceDesiredState("bind");
+
+        // Cache the YouTube seek bar element for click proximity detection
+        try {
+            const playerEl = this.video.closest(".html5-video-player") || document.querySelector(".html5-video-player");
+            this.seekBarEl = playerEl ? playerEl.querySelector(".ytp-progress-bar") : null;
+        } catch {
+            this.seekBarEl = null;
+        }
     }
 
     // Detach from current video element and cleanup
@@ -198,6 +215,7 @@ export default class YoutubePlayerManager {
         this.video = null;
         this.lastAdState = false;
         this.pendingPauseAfterAd = false;
+        this.seekBarEl = null;
     }
 
     onPlay = (e) => {
@@ -483,18 +501,97 @@ export default class YoutubePlayerManager {
         const playerEl = document.querySelector("#ytp-player") || document.querySelector(".html5-video-player");
         if (!playerEl) return;
         const target = /** @type {Element} */ (e.target);
-        if (!target || !playerEl.contains(target)) return;
+        if (!target) return;
+
+        // If the event target is not inside the player DOM (e.g. YouTube overlays/pseudo-handles),
+        // fall back to a geometric hit test against the player rect so clicks visually on the
+        // player area still count.
+        if (!playerEl.contains(target) && typeof e.clientX === "number" && typeof e.clientY === "number") {
+            const bounds = playerEl.getBoundingClientRect();
+            const x = e.clientX;
+            const y = e.clientY;
+            if (x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom) return;
+        } else if (!playerEl.contains(target)) {
+            return;
+        }
         this.onPlayerClick(e, path);
+    };
+
+    onBodyPointerUpCapture = (e) => {
+        // Ignore pointerups initiated within ShareTube UI
+        const path = (e.composedPath && e.composedPath()) || [];
+        if (path.some((el) => el && el.id === "sharetube_main")) return;
+        // Find YouTube player container
+        const playerEl = document.querySelector("#ytp-player") || document.querySelector(".html5-video-player");
+        if (!playerEl) return;
+        const target = /** @type {Element} */ (e.target);
+        if (!target) return;
+
+        // Same geometric fallback as click handler so pointerup on overlays above the player
+        // (like YouTube's drawer swipe handle) are still recognized when visually on the player.
+        if (!playerEl.contains(target) && typeof e.clientX === "number" && typeof e.clientY === "number") {
+            const bounds = playerEl.getBoundingClientRect();
+            const x = e.clientX;
+            const y = e.clientY;
+            if (x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom) return;
+        } else if (!playerEl.contains(target)) {
+            return;
+        }
+
+        // For pointerup we only care about seek-bar interactions; don't interfere with YouTube defaults
+        const clickedOnSeekBar = path.some((el) => el && el.classList?.contains("ytp-progress-bar"));
+        let clickedNearSeekBar = false;
+
+        if (!clickedOnSeekBar && this.seekBarEl && typeof e.clientX === "number" && typeof e.clientY === "number") {
+            try {
+                const paddingXPx = 30;
+                const paddingYPx = 8;
+                const bounds = this.seekBarEl.getBoundingClientRect();
+                const x = e.clientX;
+                const y = e.clientY;
+                if (
+                    x >= bounds.left - paddingXPx &&
+                    x <= bounds.right + paddingXPx &&
+                    y >= bounds.top - paddingYPx &&
+                    y <= bounds.bottom + paddingYPx
+                ) {
+                    clickedNearSeekBar = true;
+                }
+            } catch {}
+        }
+
+        if (clickedOnSeekBar || clickedNearSeekBar) {
+            // Mirror seek-bar behavior without cancelling YouTube's drag handling
+            this.onSeekBarClick(e, path);
+        }
+    };
+
+    onBodyDoubleClickCapture = (e) => {
+        // Ignore double-clicks initiated within ShareTube UI
+        const path = (e.composedPath && e.composedPath()) || [];
+        if (path.some((el) => el && el.id === "sharetube_main")) return;
+        // Find YouTube player container
+        const playerEl = document.querySelector("#ytp-player") || document.querySelector(".html5-video-player");
+        if (!playerEl) return;
+        const target = /** @type {Element} */ (e.target);
+        if (!target || !playerEl.contains(target)) return;
+        // Only cancel play/pause toggle if double-clicking the video element itself
+        if (target === this.video) {
+            // Cancel any pending play/pause toggle from the first click
+            if (this.videoClickTimeout) {
+                clearTimeout(this.videoClickTimeout);
+                this.videoClickTimeout = null;
+            }
+            this.lastVideoClickTime = 0;
+            // Let YouTube handle the double-click for fullscreen
+            this.verbose &&
+                console.log("onBodyDoubleClickCapture: double-click detected on video, allowing YouTube fullscreen");
+        }
     };
 
     onPlayerClick(e, path) {
         this.verbose && console.log("onPlayerClick", e);
-        if (path.some((el) => el && el.classList?.contains("ytp-progress-bar"))) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.onSeekBarClick(e, path);
-            return;
-        } else if (path.some((el) => el && el.classList?.contains("ytp-chrome-controls"))) {
+        if (path.some((el) => el && el.classList?.contains("ytp-chrome-controls"))) {
             this.verbose && console.log("onPlayerClick: chrome controls clicked");
             if (path.some((el) => el && el.classList?.contains("ytp-play-button"))) {
                 e.preventDefault();
@@ -504,20 +601,53 @@ export default class YoutubePlayerManager {
             return;
         } else if (e.target === this.video) {
             this.verbose && console.log("onPlayerClick: video clicked");
+            // Detect double-click: if two clicks happen within 300ms, skip play/pause toggle
+            const now = Date.now();
+            const timeSinceLastClick = now - this.lastVideoClickTime;
+
+            if (timeSinceLastClick < 300) {
+                // This is a double-click, cancel pending play/pause toggle and let YouTube handle fullscreen
+                this.verbose && console.log("onPlayerClick: double-click detected, skipping play/pause");
+                if (this.videoClickTimeout) {
+                    clearTimeout(this.videoClickTimeout);
+                    this.videoClickTimeout = null;
+                }
+                this.lastVideoClickTime = 0; // Reset to prevent triple-click issues
+                // Don't prevent default to allow YouTube's double-click handler to work
+                return;
+            }
+
+            // Cancel any pending timeout from previous click
+            if (this.videoClickTimeout) {
+                clearTimeout(this.videoClickTimeout);
+            }
+
+            // Prevent default immediately to stop YouTube's single-click handler
             e.preventDefault();
             e.stopPropagation();
-            this.emitToggleRoomPlayPause();
+
+            // Delay the play/pause toggle to allow double-click detection
+            this.lastVideoClickTime = now;
+            this.videoClickTimeout = setTimeout(() => {
+                this.videoClickTimeout = null;
+                this.lastVideoClickTime = 0;
+                this.emitToggleRoomPlayPause();
+            }, 300);
         } else {
             this.verbose && console.log("onPlayerClick: other clicked", e);
         }
     }
 
     onSeekBarClick(e, path) {
+        console.log("onSeekBarClick: clicked", e);
+        e.preventDefault();
+        e.stopPropagation();
         throttle(
             this,
             "onSeekBarClick",
             () => {
-                const progressBar = path.find((el) => el && el.classList?.contains("ytp-progress-bar"));
+                const progressBar =
+                    (path && path.find((el) => el && el.classList?.contains("ytp-progress-bar"))) || this.seekBarEl;
                 if (!progressBar) return;
                 const bounds = progressBar.getBoundingClientRect();
                 const x = e.clientX - bounds.left;

@@ -185,70 +185,70 @@ def create_app() -> Flask:
 
 # Helper to bind routes, request hooks, and error handlers
 def register_routes(app: Flask) -> None:
-    # Before each request, capture start time and log basic request info
-    @app.before_request
-    def _log_request_start():
-        try:
-            # Record the request start time in g for duration calculation
-            g._req_start_ts = time.time()
-            # Extract select headers for debugging
-            ua = request.headers.get("User-Agent", "-")
-            ref = request.headers.get("Referer", "-")
-            # Decode query string for logging
-            qs = (
-                request.query_string.decode("utf-8", errors="ignore")
-                if request.query_string
-                else ""
-            )
-            # Log a single-line request summary
-            logger.info(
-                "REQ %s %s ip=%s ua=%s ref=%s qs=%s clen=%s",
-                request.method,
-                request.path,
-                request.remote_addr,
-                ua,
-                ref,
-                qs[:512],
-                request.headers.get("Content-Length", "0"),
-            )
-            # One-time schema verification in case app init path was bypassed
-            try:
-                if not getattr(g, "_schema_verified_once", False):
-                    # Inspect engine tables and create if missing
-                    insp = inspect(db.engine)
-                    if "room" not in insp.get_table_names():
-                        logging.info("verifying schema (on request): creating tables")
-                        db.create_all()
-                    # Remember we verified once during this process lifetime
-                    g._schema_verified_once = True
-            except Exception:
-                # Avoid breaking requests due to schema verification errors
-                logging.exception("request-time schema verify failed")
-        except Exception:
-            # Never raise from request start hook
-            pass
+    # # Before each request, capture start time and log basic request info
+    # @app.before_request
+    # def _log_request_start():
+    #     try:
+    #         # Record the request start time in g for duration calculation
+    #         g._req_start_ts = time.time()
+    #         # Extract select headers for debugging
+    #         ua = request.headers.get("User-Agent", "-")
+    #         ref = request.headers.get("Referer", "-")
+    #         # Decode query string for logging
+    #         qs = (
+    #             request.query_string.decode("utf-8", errors="ignore")
+    #             if request.query_string
+    #             else ""
+    #         )
+    #         # # Log a single-line request summary
+    #         logger.info(
+    #             "REQ %s %s ip=%s ua=%s ref=%s qs=%s clen=%s",
+    #             request.method,
+    #             request.path,
+    #             request.remote_addr,
+    #             ua,
+    #             ref,
+    #             qs[:512],
+    #             request.headers.get("Content-Length", "0"),
+    #         )
+    #         # One-time schema verification in case app init path was bypassed
+    #         try:
+    #             if not getattr(g, "_schema_verified_once", False):
+    #                 # Inspect engine tables and create if missing
+    #                 insp = inspect(db.engine)
+    #                 if "room" not in insp.get_table_names():
+    #                     logging.info("verifying schema (on request): creating tables")
+    #                     db.create_all()
+    #                 # Remember we verified once during this process lifetime
+    #                 g._schema_verified_once = True
+    #         except Exception:
+    #             # Avoid breaking requests due to schema verification errors
+    #             logging.exception("request-time schema verify failed")
+    #     except Exception:
+    #         # Never raise from request start hook
+    #         pass
 
-    # After each request, log the response code and duration
-    @app.after_request
-    def _log_request_end(resp):
-        try:
-            # Compute duration in milliseconds using start ts stored in g
-            dur_ms = int(
-                (time.time() - (getattr(g, "_req_start_ts", time.time()))) * 1000
-            )
-            # Log a compact response summary
-            logger.info(
-                "RESP %s %s %s %dms",
-                request.method,
-                request.path,
-                resp.status_code,
-                dur_ms,
-            )
-        except Exception:
-            # Swallow errors from logging
-            pass
-        # Always return the original response
-        return resp
+    # # After each request, log the response code and duration
+    # @app.after_request
+    # def _log_request_end(resp):
+    #     try:
+    #         # Compute duration in milliseconds using start ts stored in g
+    #         dur_ms = int(
+    #             (time.time() - (getattr(g, "_req_start_ts", time.time()))) * 1000
+    #         )
+    #         # Log a compact response summary
+    #         logger.info(
+    #             "RESP %s %s %s %dms",
+    #             request.method,
+    #             request.path,
+    #             resp.status_code,
+    #             dur_ms,
+    #         )
+    #     except Exception:
+    #         # Swallow errors from logging
+    #         pass
+    #     # Always return the original response
+    #     return resp
 
     # Global error handler to ensure stacktraces get logged
     @app.errorhandler(Exception)

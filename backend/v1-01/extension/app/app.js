@@ -21,12 +21,12 @@ import SearchBox from "./components/SearchBox.js";
 export const zyxInput = new ZyXInput();
 
 css`
-    @import url(${chrome.runtime.getURL("app/styles/styles.css")});
-    @import url(${chrome.runtime.getURL("app/styles/pill.css")});
-    @import url(${chrome.runtime.getURL("app/styles/adOverlay.css")});
-    @import url(${chrome.runtime.getURL("app/styles/queue.css")});
-    @import url(${chrome.runtime.getURL("app/styles/firstParty.css")});
-    @import url(${chrome.runtime.getURL("app/styles/splash.css")});
+    @import url(${chrome.runtime.getURL("app/css/styles.css")});
+    @import url(${chrome.runtime.getURL("app/css/pill.css")});
+    @import url(${chrome.runtime.getURL("app/css/adOverlay.css")});
+    @import url(${chrome.runtime.getURL("app/css/queue.css")});
+    @import url(${chrome.runtime.getURL("app/css/firstParty.css")});
+    @import url(${chrome.runtime.getURL("app/css/splash.css")});
 `;
 
 export default class ShareTubeApp {

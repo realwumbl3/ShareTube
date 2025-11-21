@@ -5,8 +5,6 @@ import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } f
 
 import { msDurationTimeStamp } from "../utils.js";
 
-import ShareTubeQueueComponent from "./QueueItem.js";
-
 export default class ShareTubeQueue {
     constructor(app) {
         this.app = app;
@@ -14,6 +12,7 @@ export default class ShareTubeQueue {
         html`
             <div
                 id="sharetube_queue"
+                class="SlideDisplayToggle"
                 role="complementary"
                 aria-label="ShareTube queue"
                 zyx-if=${[state.queueVisible, (v) => v]}
@@ -84,16 +83,82 @@ export default class ShareTubeQueue {
                     <span class="current_playing_placeholder_text">No video playing</span>
                 </div>
 
-                <div
-                    zyx-if=${[state.queue, (v) => v.length > 0]}
-                    class="queue-list"
-                    id="sharetube_queue_list"
-                    zyx-live-list=${{ list: state.queue, compose: ShareTubeQueueComponent }}
-                ></div>
-                <div zyx-else class="queue-empty">
-                    <span class="queue-empty-text">Queue is empty</span>
+                <div class="queues">
+                    <div class="queue_container" zyx-radioview="queues.queued">
+                        <div
+                            zyx-if=${[state.queue, (v) => v.length > 0]}
+                            class="queue-list"
+                            id="sharetube_queue_list"
+                            zyx-live-list=${{
+                                list: state.queue,
+                                compose: ShareTubeQueueComponent,
+                                filter: (v) => {
+                                    console.log("filter", v);
+                                    return v.status.get() === "queued";
+                                },
+                            }}
+                        ></div>
+                        <div zyx-else class="queue-empty">
+                            <span class="queue-empty-text">Queue is empty</span>
+                        </div>
+                    </div>
+                    <div class="queue_container" zyx-radioview="queues.played">
+                        <div
+                            zyx-if=${[state.queue, (v) => v.length > 0]}
+                            class="queue-list"
+                            id="sharetube_queue_list"
+                            zyx-live-list=${{
+                                list: state.queue,
+                                compose: ShareTubeQueueComponent,
+                                filter: (v) => v.status.get() === "played",
+                            }}
+                        ></div>
+                        <div zyx-else class="queue-empty">
+                            <span class="queue-empty-text">Queue is empty</span>
+                        </div>
+                    </div>
+                    <div class="queue_container" zyx-radioview="queues.skipped">
+                        <div
+                            zyx-if=${[state.queue, (v) => v.length > 0]}
+                            class="queue-list"
+                            id="sharetube_queue_list"
+                            zyx-live-list=${{
+                                list: state.queue,
+                                compose: ShareTubeQueueComponent,
+                                filter: (v) => v.status.get() === "skipped",
+                            }}
+                        ></div>
+                    </div>
+                    <div class="queue_container" zyx-radioview="queues.deleted">
+                        <div
+                            zyx-if=${[state.queue, (v) => v.length > 0]}
+                            class="queue-list"
+                            id="sharetube_queue_list"
+                            zyx-live-list=${{
+                                list: state.queue,
+                                compose: ShareTubeQueueComponent,
+                                filter: (v) => v.status.get() === "deleted",
+                            }}
+                        ></div>
+                        <div zyx-else class="queue-empty">
+                            <span class="queue-empty-text">Queue is empty</span>
+                        </div>
+                    </div>
                 </div>
-
+                <div class="queue_selector">
+                    <div class="queue_selector_item" zyx-radioview="queues.queued.open">
+                        <span class="queue_selector_item_text">Queued</span>
+                    </div>
+                    <div class="queue_selector_item" zyx-radioview="queues.played.open">
+                        <span class="queue_selector_item_text">Played</span>
+                    </div>
+                    <div class="queue_selector_item" zyx-radioview="queues.skipped.open">
+                        <span class="queue_selector_item_text">Skipped</span>
+                    </div>
+                    <div class="queue_selector_item" zyx-radioview="queues.deleted.open">
+                        <span class="queue_selector_item_text">Deleted</span>
+                    </div>
+                </div>
                 <div class="queue-footer"></div>
             </div>
         `.bind(this);
@@ -136,5 +201,43 @@ export default class ShareTubeQueue {
 
     toggleQueueVisibility() {
         state.queueVisible.set(!state.queueVisible.get());
+    }
+}
+
+// UI component representing a queued YouTube item
+export class ShareTubeQueueComponent {
+    /**
+     * @param {ShareTubeQueueItem} item
+     */
+    constructor(item) {
+        this.item = item;
+        // Render queue item DOM structure and bind LiveVars
+        html`
+            <div class="queue-item" data-id=${this.item.id}>
+                <div class="queue-item-thumbnail">
+                    <img class="thumb" alt=${this.item.title || ""} src=${this.item.thumbnail_url} loading="lazy" />
+                    <div class="queue-item-duration">
+                        ${this.item.duration_ms.interp((v) => (v ? new Date(v).toISOString().substr(11, 8) : "") || "")}
+                    </div>
+                </div>
+                <div class="meta">
+                    <div class="title">${this.item.title}</div>
+                    <div class="url">${this.item.url}</div>
+                </div>
+                <button
+                    class="x-button"
+                    type="button"
+                    aria-label="Remove from queue"
+                    title="Remove from queue"
+                    zyx-click=${() => this.removeFromQueue()}
+                >
+                    X
+                </button>
+            </div>
+        `.bind(this);
+    }
+
+    removeFromQueue() {
+        this.item.remove();
     }
 }

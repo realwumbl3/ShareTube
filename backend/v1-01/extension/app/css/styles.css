@@ -71,3 +71,25 @@ h1 {
         opacity: 1;
     }
 }
+
+.SlideDisplayToggle {
+    /* Transitions */
+    transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1),
+        transform 0.3s cubic-bezier(0.2, 0, 0, 1),
+        display 0.3s cubic-bezier(0.2, 0, 0, 1) allow-discrete,
+        overlay 0.3s cubic-bezier(0.2, 0, 0, 1) allow-discrete;
+    opacity: 1;
+    transform: translateY(0);
+
+    @starting-style {
+        & {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+    }
+
+    &[style*="display: none"] {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}

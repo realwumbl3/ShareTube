@@ -3,9 +3,9 @@ import { html, css } from "../dep/zyx.js";
 import { msDurationTimeStamp } from "../utils.js";
 
 class ActorAuditEntry {
-    #fade_out_duration_ms = 300;
-    #fade_in_duration_ms = 400;
-    #remove_timeout_ms = 5000;
+    #fade_out_duration_ms = 100;
+    #fade_in_duration_ms = 200;
+    #remove_timeout_ms = 2000;
     constructor(playbackData, actor) {
         const trigger = playbackData.trigger || "room.control.seek";
         const actionClass = this.getActionClass(playbackData, trigger);
@@ -65,7 +65,7 @@ class ActorAuditEntry {
 
 class ActorAudit {
     #max_entries = 5;
-    constructor(container) {
+    constructor() {
         this.actorAuditTrail = [];
         html`<div this="actor_audit" class="actor_audit"></div>`.bind(this);
         /** zyx-sense @type {HTMLDivElement} */
@@ -163,15 +163,24 @@ class PlayPauseBadge extends BadgeBase {
 class SeekBadge extends BadgeBase {
     constructor(playbackData) {
         super();
-        html`<div this="label" class="label"></div>`.join(this).appendTo(this.badge);
+        const direction = playbackData.delta_ms !== null
+            ? (playbackData.delta_ms > 0 ? "forward" : "backward")
+            : "";
+
+        html`<div this="label" class="label frame_step_label ${direction}">
+            <div class="frame_step_icon" style="${playbackData.delta_ms === null ? 'display:none' : ''}">➤➤</div>
+            <span this="text_span"></span>
+        </div>`.join(this).appendTo(this.badge);
+
         this.updateLabel(playbackData);
     }
 
     updateLabel(playbackData) {
+        console.log("updateLabel: playbackData", playbackData);
         if (playbackData.delta_ms !== null) {
-            this.label.textContent = `${playbackData.delta_ms / 1000}s ${playbackData.delta_ms > 0 ? ">>" : "<<"}`;
+            this.text_span.textContent = `${Math.abs(playbackData.delta_ms / 1000)}s`;
         } else {
-            this.label.textContent = msDurationTimeStamp(playbackData.progress_ms);
+            this.text_span.textContent = msDurationTimeStamp(playbackData.progress_ms);
         }
     }
 }
@@ -182,7 +191,10 @@ class FrameStepBadge extends BadgeBase {
 
         const direction = playbackData.frame_step > 0 ? "forward" : "backward";
         // Create label with frame step styling
-        html`<div this="label" class="label frame_step_label">${direction === "forward" ? "▶▶" : "◀◀"} framestep</div>`
+        html`<div this="label" class="label frame_step_label ${direction}">
+            <div class="frame_step_icon">➤➤</div>
+            framestep
+        </div>`
             .join(this)
             .appendTo(this.badge);
 

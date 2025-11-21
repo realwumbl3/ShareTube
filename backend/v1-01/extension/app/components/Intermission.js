@@ -24,6 +24,7 @@ css`
         pointer-events: none;
         background: rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(10px);
+        contain: strict;
     }
 
     .intermission_message {

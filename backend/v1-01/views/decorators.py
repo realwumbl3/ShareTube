@@ -6,6 +6,7 @@ from functools import wraps
 from ..extensions import db
 from ..models import Room, RoomMembership, Queue
 from ..sockets import get_user_id_from_socket
+import logging
 
 
 def require_room_by_code(handler: Callable) -> Callable:
@@ -27,10 +28,12 @@ def require_room_by_code(handler: Callable) -> Callable:
         user_id = get_user_id_from_socket()
         code = (data or {}).get("code")
         if not code:
-            return
+            logging.warning("require_room_by_code: no code in data")
+            return None, "require_room_by_code: no code"
         room = Room.query.filter_by(code=code).first()
         if not room:
-            return
+            logging.warning("require_room_by_code: no room found for code: %s", code)
+            return None, "require_room_by_code: no room found"
         return handler(room, user_id, data)
     return wrapper
 
@@ -54,10 +57,12 @@ def require_room(handler: Callable) -> Callable:
     def wrapper(data: Optional[dict]) -> None:
         user_id = get_user_id_from_socket()
         if not user_id:
-            return
+            logging.warning("require_room: no user_id from socket")
+            return None, "require_room: no user_id"
         room = RoomMembership.get_active_room_for_user(user_id)
         if not room:
-            return
+            logging.warning("require_room: no active room for user: %s", user_id)
+            return None, "require_room: no active room"
         return handler(room, user_id, data)
     return wrapper
 
@@ -83,11 +88,13 @@ def require_queue_entry(handler: Callable) -> Callable:
     @wraps(handler)
     def wrapper(room: Room, user_id: int, data: Optional[dict]) -> None:
         if not room.current_queue:
+            logging.warning("require_queue_entry: no current queue for room: %s", room.code)
             return
         queue = room.current_queue
         current_entry = queue.current_entry
         if not current_entry:
-            return
+            logging.warning("require_queue_entry: no current entry for room: %s", room.code)
+            return None, "require_queue_entry: no current entry"
         return handler(room, user_id, queue, current_entry, data)
     return wrapper
 
@@ -115,6 +122,7 @@ def ensure_queue(handler: Callable) -> Callable:
         if not room.current_queue:
             # Create a new queue for the room
             queue = Queue(room_id=room.id, created_by_id=user_id)
+            logging.info("ensure_queue: created new queue for room: %s", room.code)
             room.current_queue = queue
             db.session.add(queue)
             db.session.flush()  # Ensure queue gets an ID

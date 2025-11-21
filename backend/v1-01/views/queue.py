@@ -11,9 +11,10 @@ from flask import current_app
 
 from ..extensions import db, socketio
 
-from ..models import QueueEntry, Room
+from ..models import QueueEntry, Room, Queue
 
 from ..utils import (
+    now_ms,
     build_watch_url,
     extract_video_id,
     fetch_video_meta,
@@ -33,30 +34,23 @@ def register_socket_handlers():
     @socketio.on("queue.add")
     @require_room
     @ensure_queue
-    def _on_enqueue_url(room, user_id, queue, data):
+    def _on_enqueue_url(room: Room, user_id: int, queue: Queue, data: dict):
         try:
+            res, rej = Room.emit(room.code, trigger="queue.add")
             url = ((data or {}).get("url") or "").strip()
             if not url:
-                return
-
-            # Normalize URL and fetch lightweight metadata
+                return rej("queue.add: no url provided")
             vid = extract_video_id(url)
 
             if not vid:
                 logging.warning("queue.add: no video id found in url (url=%s)", url)
-                return
+                return rej("queue.add: no video id found in url")
 
             canonical_url = build_watch_url(vid) if vid else url
             meta = fetch_video_meta(vid)
             if not meta:
-                logging.warning(
-                    "queue.add: no metadata found for video (url=%s, video_id=%s)",
-                    url,
-                    vid,
-                )
-                return
+                return rej("queue.add: no metadata found for video")
 
-            # Add entry using model method
             queue.add_entry(
                 user_id=user_id,
                 url=canonical_url,
@@ -65,19 +59,19 @@ def register_socket_handlers():
                 thumbnail_url=meta.get("thumbnail_url") or "",
                 duration_ms=meta.get("duration_ms") or 0,
             )
-
-            # Broadcast updated queue to room participants
             emit_queue_update_for_room(room)
+            res("queue.add.result", {"added": True})
         except Exception:
             logging.exception("queue.add handler error")
 
     @socketio.on("queue.remove")
     @require_room
-    def _on_queue_remove(room, user_id, data):
+    def _on_queue_remove(room: Room, user_id: int, data: dict):
         try:
+            res, rej = Room.emit(room.code, trigger="queue.remove")
             id = (data or {}).get("id")
             if not id:
-                return
+                return rej("queue.remove: no id provided")
             entry = (
                 db.session.query(QueueEntry)
                 .filter_by(id=id, added_by_id=user_id)
@@ -89,9 +83,11 @@ def register_socket_handlers():
                     id,
                     user_id,
                 )
-                return
+                return rej("queue.remove: no entry found for id")
             entry.remove()
+            db.session.refresh(room)
             emit_queue_update_for_room(room)
+            res("queue.remove.result", {"removed": True})
         except Exception:
             logging.exception(
                 "queue.remove handler error (id=%s) (user_id=%s) (room=%s)",
@@ -103,60 +99,57 @@ def register_socket_handlers():
     @socketio.on("queue.probe")
     @require_room
     @require_queue_entry
-    def _on_queue_probe(room, user_id, queue, current_entry, data):
+    def _on_queue_probe(
+        room: Room, user_id: int, queue: Queue, current_entry: QueueEntry, data: dict
+    ):
+        res, rej = Room.emit(room.code, trigger="queue.probe")
         try:
             logging.info("[[[[[[queue.probe]]]]]]")
 
-            # Skip completion check if room is in "starting" state - video hasn't started playing yet
             if room.state == "starting":
-                logging.info(
-                    "[[[[[[queue.probe: room in starting state, skipping completion check]]]]]]"
+                return rej("queue.probe: room.state is starting")
+
+            _now_ms = now_ms()
+
+            if not current_entry.check_completion(_now_ms):
+                return rej("queue.probe: video not completed")
+
+            next_entry, error = room.complete_and_advance()
+            if error:
+                logging.warning("queue.probe: complete_and_advance error: %s", error)
+                return rej(f"queue.probe: complete_and_advance error: {error}")
+            if next_entry:
+                res(
+                    "room.playback",
+                    {
+                        "state": "starting",
+                        "playing_since_ms": None,
+                        "progress_ms": next_entry.progress_ms,
+                        "current_entry": next_entry.to_dict(),
+                        "actor_user_id": user_id,
+                    },
                 )
-                return
-
-            now_ms = int(time.time() * 1000)
-
-            # Check completion using model method
-            if not current_entry.check_completion(now_ms):
-                return
-
-            # Complete current entry and advance to next using model method
-            next_entry = room.complete_and_advance()
-            if not next_entry:
-                logging.info("[[[[[[queue.probe: no next entry]]]]]]")
-                return
-
-            logging.info(f"current_entry: {current_entry.to_dict()}")
-            logging.info(f"next_entry: {next_entry.to_dict()}")
-
-            db.session.commit()
-            db.session.refresh(room)
-            db.session.refresh(queue)
-            db.session.refresh(next_entry)
-
-            socketio.emit(
-                "room.playback",
-                {
-                    "code": room.code,
-                    "state": "starting",
-                    "playing_since_ms": None,
-                    "progress_ms": next_entry.progress_ms,
-                    "current_entry": next_entry.to_dict(),
-                    "actor_user_id": user_id,
-                },
-                room=f"room:{room.code}",
-            )
-            emit_queue_update_for_room(room)
-
-            # Schedule timeout to transition from starting to playing after 15 seconds
-            schedule_starting_to_playing_timeout(room.code, delay_seconds=15)
-        except Exception:
-            logging.exception("queue.probe handler error")
+                schedule_starting_to_playing_timeout(room.code, delay_seconds=15)
+            else:
+                res(
+                    "room.playback",
+                    {
+                        "state": room.state,
+                        "playing_since_ms": None,
+                        "progress_ms": 0,
+                        "current_entry": None,
+                        "actor_user_id": user_id,
+                        "queue_empty": True,
+                    },
+                )
+        except Exception as e:
+            logging.exception("queue.probe handler error: %s", e)
+            rej(f"queue.probe handler error: {e}")
 
     @socketio.on("queue.load-debug-list")
     @require_room
     @ensure_queue
-    def _on_queue_load_debug_list(room, user_id, queue, data):
+    def _on_queue_load_debug_list(room: Room, user_id: int, queue: Queue, data: dict):
         # load the debug list from the testdata/queue.json file
         with open(
             os.path.join(current_app.root_path, ".test-data", "queue.json"), "r"

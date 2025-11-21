@@ -3,11 +3,11 @@ from __future__ import annotations
 
 # Regular expressions for parsing, time utility alias, sqlite error class, HTTP requests, and Flask app access
 import re
-import time as _time
 import sqlite3
 import requests
 from flask import current_app
 from sqlalchemy.exc import OperationalError as SAOperationalError
+import time
 
 
 # Extract a YouTube video id from either a URL or a raw id-like string
@@ -126,8 +126,6 @@ def fetch_video_meta(video_id: str) -> dict:
 
 # Return current epoch time in milliseconds
 def now_ms() -> int:
-    import time
-
     return int(time.time() * 1000)
 
 
@@ -160,7 +158,7 @@ def commit_with_retry(
             except Exception:
                 pass
             # Sleep before next attempt and increase delay exponentially
-            _time.sleep(delay)
+            time.sleep(delay)
             delay *= backoff
             last_exc = e
         except Exception as e:  # other errors: rollback and re-raise

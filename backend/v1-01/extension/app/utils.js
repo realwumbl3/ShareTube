@@ -81,7 +81,7 @@ export function isYouTubeUrl(u) {
 }
 
 export function msDurationTimeStamp(ms) {
-    return ms ? new Date(ms).toISOString().substr(11, 8) : "";
+    return ms ? new Date(ms).toISOString().substr(11, 8) : "00:00:00";
 }
 
 // Generic helper to synchronize a local observable list with a remote list
@@ -102,18 +102,10 @@ export function msDurationTimeStamp(ms) {
  * @returns {{created:number, updated:number, total:number}}
  */
 export function syncLiveList(opts) {
-    const {
-        localList,
-        remoteItems,
-        extractRemoteId,
-        extractLocalId,
-        createInstance,
-        updateInstance,
-    } = opts;
+    const { localList, remoteItems, extractRemoteId, extractLocalId, createInstance, updateInstance } = opts;
 
-    const current = (localList && typeof localList.get === "function")
-        ? localList.get()
-        : (Array.isArray(localList) ? localList : []);
+    const current =
+        localList && typeof localList.get === "function" ? localList.get() : Array.isArray(localList) ? localList : [];
     const idToLocal = new Map();
     for (const inst of current) {
         try {
@@ -166,4 +158,72 @@ export function syncLiveList(opts) {
     }
 
     return { created, updated, total: next.length };
+}
+
+/**
+ * Throttles a function call, ensuring it is called at most once in a specified time frame.
+ * Supports trailing execution to ensure the latest call is eventually executed.
+ * @param {Object} that - The context in which the throttle is applied.
+ * @param {string} keyname - The key name for the throttle.
+ * @param {Function} func - The function to throttle.
+ * @param {number} ms - The throttle duration in milliseconds.
+ */
+export function throttle(that, keyname, func, ms) {
+    // Polyfill for GlobalGet(that, "throttlers")
+    if (!that._throttlers) {
+        Object.defineProperty(that, "_throttlers", {
+            value: {},
+            enumerable: false,
+            writable: true,
+        });
+    }
+    const map = that._throttlers;
+
+    if (keyname in map) {
+        const now = Date.now();
+        const entry = map[keyname];
+
+        // Always update the function to the latest one
+        entry.func = func;
+
+        if (now - entry.lastRun >= ms) {
+            // Time has passed, run immediately
+            entry.lastRun = now;
+            if (entry.timeout) {
+                clearTimeout(entry.timeout);
+                entry.timeout = null;
+            }
+            try {
+                entry.func();
+            } catch (e) {
+                throw new Error(e);
+            }
+        } else {
+            // Throttled, ensure a trailing call is scheduled
+            if (!entry.timeout) {
+                const remaining = ms - (now - entry.lastRun);
+                entry.timeout = setTimeout(() => {
+                    entry.timeout = null;
+                    entry.lastRun = Date.now();
+                    try {
+                        entry.func();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }, remaining);
+            }
+        }
+    } else {
+        // First call
+        try {
+            func();
+        } catch (e) {
+            throw new Error(e);
+        }
+        map[keyname] = {
+            lastRun: Date.now(),
+            func,
+            timeout: null,
+        };
+    }
 }

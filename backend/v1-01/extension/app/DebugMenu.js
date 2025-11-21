@@ -13,7 +13,7 @@ export default class DebugMenu {
         this.visible = new LiveVar(false);
 
         html`
-            <div id="debug-menu" zyx-if=${this.visible}>
+            <div id="debug-menu" class="SlideDisplayToggle" zyx-if=${this.visible}>
                 <div class="debug-header">
                     <span class="debug-title">Debug Menu</span>
                     <button class="rounded_btn" title="Hide" zyx-click=${() => this.toggleVisibility()}>Hide</button>
@@ -136,7 +136,10 @@ export default class DebugMenu {
                 </div>
             </div>
         `.bind(this);
-    }
+        /** zyx-sense @type {HTMLInputElement} */
+        this.search_query_input;
+
+        }
 
     toggleVisibility() {
         this.visible.set(!this.visible.get());

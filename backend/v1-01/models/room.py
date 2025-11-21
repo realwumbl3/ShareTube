@@ -6,48 +6,57 @@ import time
 import secrets
 
 # Provide Optional typing for clarity in relationships or lookups
-from typing import Optional
+from typing import Optional, List, TYPE_CHECKING, Callable, Tuple
 
-# Import the SQLAlchemy instance from the shared extensions module
-from ..extensions import db
+# SQLAlchemy typing helper for mapped attributes / relationships
+from sqlalchemy.orm import Mapped
 
-from .queue import QueueEntry
+# Import the SQLAlchemy instance and socketio from the shared extensions module
+from ..extensions import db, socketio
+from ..utils import commit_with_retry
+
+if TYPE_CHECKING:
+    # Imported only for static type checking to avoid circular imports at runtime
+    from .queue import Queue, QueueEntry
+    from .user import User
 
 
 # A room represents a collaborative watch session identified by a short code
 class Room(db.Model):
     # Surrogate primary key id
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = db.Column(db.Integer, primary_key=True)
     # Unique room code string used by clients to join; indexed for queries
-    code = db.Column(
+    code: Mapped[str] = db.Column(
         db.String(64), unique=True, index=True, default=lambda: secrets.token_hex(7)
     )
     # Owner (room author) user id
-    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    owner_id: Mapped[Optional[int]] = db.Column(
+        db.Integer, db.ForeignKey("user.id"), nullable=True
+    )
     # Epoch seconds when the room was created
-    created_at = db.Column(db.Integer, default=lambda: int(time.time()))
+    created_at: Mapped[int] = db.Column(db.Integer, default=lambda: int(time.time()))
     # Whether room is private (UI-level hint; not enforced here)
-    is_private = db.Column(db.Boolean, default=True)
+    is_private: Mapped[bool] = db.Column(db.Boolean, default=True)
     # Control mode for playback/queue: owner_only | operators | any
-    control_mode = db.Column(db.String(16), default="operators")
+    control_mode: Mapped[str] = db.Column(db.String(16), default="operators")
     # Current controller baton holder identifier (user id or client id string)
-    controller_id = db.Column(db.String(64), default="")
+    controller_id: Mapped[str] = db.Column(db.String(64), default="")
     # Ad sync policy: off | pause_all | trigger_and_pause
-    ad_sync_mode = db.Column(db.String(24), default="off")
+    ad_sync_mode: Mapped[str] = db.Column(db.String(24), default="off")
     # Current playback/state machine status for the room
     # idle | starting | playing | paused
-    state = db.Column(db.String(16), default="idle")
+    state: Mapped[str] = db.Column(db.String(16), default="idle")
     # Current queue being played
-    current_queue_id = db.Column(
+    current_queue_id: Mapped[Optional[int]] = db.Column(
         db.Integer, db.ForeignKey("queue.id"), nullable=True, index=True
     )
 
     # ORM relationship to memberships, cascade deletion when room is removed
-    memberships = db.relationship(
+    memberships: Mapped[list["RoomMembership"]] = db.relationship(
         "RoomMembership", backref="room", lazy=True, cascade="all, delete-orphan"
     )
     # ORM relationship to queues (historical); cascade deletion when room is removed
-    queues = db.relationship(
+    queues: Mapped[list["Queue"]] = db.relationship(
         "Queue",
         lazy=True,
         cascade="all, delete-orphan",
@@ -55,15 +64,53 @@ class Room(db.Model):
         back_populates="room",
     )
     # ORM relationship to current queue; cascade deletion when current queue is removed
-    current_queue = db.relationship(
+    current_queue: Mapped[Optional["Queue"]] = db.relationship(
         "Queue",
         foreign_keys=[current_queue_id],
         uselist=False,
     )
     # Operators assigned to the room (separate from membership roles)
-    operators = db.relationship(
+    operators: Mapped[list["RoomOperator"]] = db.relationship(
         "RoomOperator", backref="room", lazy=True, cascade="all, delete-orphan"
     )
+
+    @staticmethod
+    def emit(code: str, trigger: str) -> tuple[Callable, Callable]:
+        """Return (resolve, reject) helpers for emitting Socket.IO events for this room.
+
+        - resolve(event, payload) -> emits to ``room:{code}`` with ``trigger`` and ``code`` injected.
+        - reject(error, state='error', event='room.error') -> emits an error payload to the same room.
+        """
+
+        def resolve(event: str, payload: Optional[dict] = None) -> None:
+            payload = payload or {}
+            socketio.emit(
+                event,
+                {
+                    "trigger": trigger,
+                    "code": code,
+                    **payload,
+                },
+                room=f"room:{code}",
+            )
+
+        def reject(
+            error: str,
+            state: str = "error",
+            event: str = "room.error",
+        ) -> None:
+            socketio.emit(
+                event,
+                {
+                    "trigger": trigger,
+                    "code": code,
+                    "state": state,
+                    "error": error,
+                },
+                room=f"room:{code}",
+            )
+
+        return resolve, reject
 
     def to_dict(self):
         return {
@@ -82,76 +129,121 @@ class Room(db.Model):
             "memberships": [membership.user_id for membership in self.memberships],
         }
 
-    def pause_playback(self, now_ms: int) -> Optional[int]:
-        """Pause playback and return the paused progress in milliseconds."""
+    def pause_playback(self, now_ms: int) -> tuple[Optional[int], Optional[str]]:
+        """Pause playback and return (paused_progress_ms, error_message)."""
         if not self.current_queue or not self.current_queue.current_entry:
-            return None
+            return None, "room.pause_playback: no current queue or current entry"
         paused_progress_ms = self.current_queue.current_entry.pause(now_ms)
         self.state = "paused"
-        return paused_progress_ms
+        commit_with_retry(db.session)
+        return paused_progress_ms, None
 
-    def start_playback(self, now_ms: int) -> Optional[dict]:
-        """Start playback. Returns dict with state and entry info if starting new video."""
+    def start_playback(self, now_ms: int) -> tuple[Optional[dict], Optional[str]]:
+        """Start playback. Returns tuple with dict with state and entry info if starting new video and error message if there is an error."""
         if not self.current_queue:
-            return None
-
-        # If already in starting state, transition to playing
-        if self.state == "starting":
-            self.state = "playing"
-            current_entry = self.current_queue.current_entry
-            if current_entry:
-                current_entry.play(now_ms)
-            return {"state": "playing", "entry": None}
+            return None, "room.start_playback: no current queue"
 
         # If no current entry, load next and set to starting
         if not self.current_queue.current_entry:
             if len(self.current_queue.entries) == 0:
-                return None
+                return None, "room.start_playback: no entries in queue"
             entry, error = self.current_queue.load_next_entry()
             if error:
-                return None
+                return None, f"room.start_playback: load_next_entry error: {error}"
             self.state = "starting"
-            entry.playing_since_ms = None  # Don't set until transitioning to playing
-            entry.paused_at = None
-            return {"state": "starting", "entry": entry.to_dict()}
+            entry.reset()
+            commit_with_retry(db.session)
+            return {"state": "starting", "current_entry": entry.to_dict()}, None
 
-        # Resuming existing video
-        current_entry = self.current_queue.current_entry
-        self.state = "playing"
-        current_entry.play(now_ms)
-        return {"state": "playing", "entry": None}
+        # If already in starting state, transition to playing
+        if self.state == "starting":
+            self.state = "playing"
+            commit_with_retry(db.session)
+            current_entry = self.current_queue.current_entry
+            if current_entry:
+                current_entry.start(now_ms)
+            return {
+                "state": "playing",
+                "playing_since_ms": now_ms,
+                "progress_ms": current_entry.progress_ms,
+            }, None
 
-    def restart_video(self, now_ms: int) -> None:
+        # If paused with an active entry, resume playback from stored progress
+        if self.state == "paused":
+            current_entry = self.current_queue.current_entry
+            if not current_entry:
+                return None, "room.start_playback: no current entry to resume"
+            current_entry.start(now_ms)
+            self.state = "playing"
+            commit_with_retry(db.session)
+            return {
+                "state": "playing",
+                "progress_ms": current_entry.progress_ms,
+            }, None
+
+        return None, "room.start_playback: no current entry"
+
+    def restart_video(self, now_ms: int) -> tuple[Optional[dict], Optional[str]]:
         """Restart the current video from the beginning."""
-        if not self.current_queue or not self.current_queue.current_entry:
-            return
+        if not self.current_queue:
+            return None, "room.restart_video: no current queue"
+        if not self.current_queue.current_entry:
+            return None, "room.restart_video: no current entry"
         self.current_queue.current_entry.restart(now_ms)
         self.state = "playing"
+        commit_with_retry(db.session)
+        return None, None
 
-    def seek_video(self, progress_ms: int, now_ms: int, play: bool) -> None:
+    def seek_video(
+        self, progress_ms: int, now_ms: int, play: bool
+    ) -> tuple[Optional[dict], Optional[str]]:
         """Seek to a specific position in the current video."""
-        if not self.current_queue or not self.current_queue.current_entry:
-            return
+        if not self.current_queue:
+            return None, "room.seek_video: no current queue"
+        if not self.current_queue.current_entry:
+            return None, "room.seek_video: no current entry"
         self.current_queue.current_entry.seek(progress_ms, now_ms, play)
         self.state = "playing" if play else "paused"
+        commit_with_retry(db.session)
+        return None, None
 
-    def skip_to_next(self) -> Optional[QueueEntry]:
+    def skip_to_next(self) -> tuple[Optional[QueueEntry], Optional[str]]:
         """Skip current entry and advance to next."""
         if not self.current_queue:
-            return None
-        next_entry = self.current_queue.skip_to_next()
+            return None, "room.skip_to_next: no current queue"
+        # Track whether we had an active entry before skipping so we can
+        # distinguish between "no-op" skips and skips that exhaust the queue.
+        had_current = self.current_queue.current_entry is not None
+        next_entry, error = self.current_queue.skip_to_next()
+        if error:
+            return None, f"room.skip_to_next: {error}"
         if next_entry:
             self.state = "starting"
-        return next_entry
+        elif had_current and not self.current_queue.current_entry:
+            # We just skipped the last available entry. Leave the room with
+            # no current entry and a non-playing state so clients unload the
+            # video.
+            self.state = "paused"
+        commit_with_retry(db.session)
+        return next_entry, None
 
-    def complete_and_advance(self) -> Optional[QueueEntry]:
+    def complete_and_advance(self) -> tuple[Optional[QueueEntry], Optional[str]]:
         """Complete current entry and advance to next, setting state to starting."""
         if not self.current_queue:
-            return None
-        next_entry = self.current_queue.complete_and_advance()
+            return None, "room.complete_and_advance: no current queue"
+        next_entry, error = self.current_queue.complete_and_advance()
+        if error:
+            return None, f"room.complete_and_advance: {error}"
         if next_entry:
+            # We have another entry to play, transition through "starting"
+            # so clients can pre-roll before we enter the playing state.
             self.state = "starting"
-        return next_entry
+        else:
+            # No more entries in the queue – leave the room in a non-playing
+            # state so clients can unload the video.
+            self.state = "paused"
+        commit_with_retry(db.session)
+        return next_entry, None
 
     @classmethod
     def create(cls, owner_id: int):
@@ -184,32 +276,36 @@ class Room(db.Model):
 # Association between a user and a room, with presence and player state
 class RoomMembership(db.Model):
     # Surrogate primary key id
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = db.Column(db.Integer, primary_key=True)
     # Parent room id; indexed for fast room membership queries
-    room_id = db.Column(
+    room_id: Mapped[int] = db.Column(
         db.Integer, db.ForeignKey("room.id"), nullable=False, index=True
     )
     # Member user id; indexed for fast user presence lookups
-    user_id = db.Column(
+    user_id: Mapped[int] = db.Column(
         db.Integer, db.ForeignKey("user.id"), nullable=False, index=True
     )
     # Timestamp of when user joined the room
-    joined_at = db.Column(db.Integer, default=lambda: int(time.time()))
+    joined_at: Mapped[int] = db.Column(db.Integer, default=lambda: int(time.time()))
     # Last time the user was seen active (heartbeat)
-    last_seen = db.Column(db.Integer, default=lambda: int(time.time()))
+    last_seen: Mapped[int] = db.Column(db.Integer, default=lambda: int(time.time()))
     # Whether the user is currently active in the room
-    active = db.Column(db.Boolean, default=True)
+    active: Mapped[bool] = db.Column(db.Boolean, default=True)
 
     # Relationship back to the user entity for convenient access
-    user = db.relationship("User")
+    user: Mapped["User"] = db.relationship("User")
 
     # Role within the room: owner | operator | participant
-    role = db.Column(db.String(16), default="participant")
+    role: Mapped[str] = db.Column(db.String(16), default="participant")
 
     # Ad sync fields persisted on membership for TTL/debounce and active set derivation
-    ad_active = db.Column(db.Boolean, default=False, index=True)
-    ad_last_true_ts = db.Column(db.BigInteger, nullable=True, index=True)
-    ad_last_false_ts = db.Column(db.BigInteger, nullable=True, index=True)
+    ad_active: Mapped[bool] = db.Column(db.Boolean, default=False, index=True)
+    ad_last_true_ts: Mapped[Optional[int]] = db.Column(
+        db.BigInteger, nullable=True, index=True
+    )
+    ad_last_false_ts: Mapped[Optional[int]] = db.Column(
+        db.BigInteger, nullable=True, index=True
+    )
 
     # Ensure a user can have at most one membership per room
     __table_args__ = (
@@ -257,17 +353,17 @@ class RoomMembership(db.Model):
 
 class RoomOperator(db.Model):
     # Surrogate primary key id
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = db.Column(db.Integer, primary_key=True)
     # Parent room id; indexed
-    room_id = db.Column(
+    room_id: Mapped[int] = db.Column(
         db.Integer, db.ForeignKey("room.id"), nullable=False, index=True
     )
     # Operator user id; indexed
-    user_id = db.Column(
+    user_id: Mapped[int] = db.Column(
         db.Integer, db.ForeignKey("user.id"), nullable=False, index=True
     )
     # Relationship back to user
-    user = db.relationship("User")
+    user: Mapped["User"] = db.relationship("User")
     # Ensure each operator is unique per room
     __table_args__ = (
         db.UniqueConstraint("room_id", "user_id", name="uq_room_operator_room_user"),

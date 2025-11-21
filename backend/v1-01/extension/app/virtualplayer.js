@@ -17,6 +17,11 @@ export default class VirtualPlayer {
         socket.on("room.state.update", this.onRoomStateUpdate.bind(this));
         socket.on("user.join.result", this.onRoomJoinResult.bind(this));
         socket.on("room.playback", this.onRoomPlayback.bind(this));
+        socket.on("queue.probe", this.onQueueProbe.bind(this));
+    }
+
+    async onQueueProbe(data) {
+        console.log("onQueueProbe: data", data);
     }
 
     async onRoomJoinResult(result) {
@@ -45,6 +50,7 @@ export default class VirtualPlayer {
     }
 
     async onRoomPlayback(data) {
+        console.log("onRoomPlayback: data", data);
         if (!this.isForCurrentRoom(data.code)) return;
 
         // Show actor avatar if present
@@ -52,7 +58,9 @@ export default class VirtualPlayer {
             this.app.player.splash.call(data, state.getUserById(data.actor_user_id));
         }
 
-        if (data.current_entry) {
+        // When a playback event includes a concrete current_entry object,
+        // update the currently playing entry and navigate to it if needed.
+        if (data.current_entry !== undefined) {
             this.updateCurrentPlayingFromEntry(data.current_entry);
             this.gotoVideoIfNotOnVideoPage(data.current_entry);
         } else {
@@ -71,10 +79,16 @@ export default class VirtualPlayer {
         this.updateCurrentPlayingFromEntry(queue.current_entry);
         syncLiveList({
             localList: state.queue,
-            remoteItems: queue.entries,
+            // Keep client ordering in sync with server-side position
+            remoteItems: (queue.entries || []).slice().sort((a, b) => {
+                const pa = a.position ?? 0;
+                const pb = b.position ?? 0;
+                return pa - pb;
+            }),
             extractRemoteId: (v) => v.id,
-            extractLocalId: (u) => u.url,
+            extractLocalId: (u) => u.id,
             createInstance: (item) => new ShareTubeQueueItem(this.app, item),
+            updateInstance: (inst, item) => inst.updateFromRemote(item),
         });
     }
 
