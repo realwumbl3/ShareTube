@@ -86,11 +86,11 @@ export default class ShareTubeQueue {
                 <div class="queues">
                     <div class="queue_container" zyx-radioview="queues.queued">
                         <div
-                            zyx-if=${[state.queue, (v) => v.length > 0]}
+                            zyx-if=${[state.queueQueued, (v) => v.length > 0]}
                             class="queue-list"
                             id="sharetube_queue_list"
                             zyx-live-list=${{
-                                list: state.queue,
+                                list: state.queueQueued,
                                 compose: ShareTubeQueueComponent,
                                 filter: (v) => {
                                     console.log("filter", v);
@@ -104,11 +104,11 @@ export default class ShareTubeQueue {
                     </div>
                     <div class="queue_container" zyx-radioview="queues.played">
                         <div
-                            zyx-if=${[state.queue, (v) => v.length > 0]}
+                            zyx-if=${[state.queuePlayed, (v) => v.length > 0]}
                             class="queue-list"
                             id="sharetube_queue_list"
                             zyx-live-list=${{
-                                list: state.queue,
+                                list: state.queuePlayed,
                                 compose: ShareTubeQueueComponent,
                                 filter: (v) => v.status.get() === "played",
                             }}
@@ -119,11 +119,11 @@ export default class ShareTubeQueue {
                     </div>
                     <div class="queue_container" zyx-radioview="queues.skipped">
                         <div
-                            zyx-if=${[state.queue, (v) => v.length > 0]}
+                            zyx-if=${[state.queueSkipped, (v) => v.length > 0]}
                             class="queue-list"
                             id="sharetube_queue_list"
                             zyx-live-list=${{
-                                list: state.queue,
+                                list: state.queueSkipped,
                                 compose: ShareTubeQueueComponent,
                                 filter: (v) => v.status.get() === "skipped",
                             }}
@@ -131,11 +131,11 @@ export default class ShareTubeQueue {
                     </div>
                     <div class="queue_container" zyx-radioview="queues.deleted">
                         <div
-                            zyx-if=${[state.queue, (v) => v.length > 0]}
+                            zyx-if=${[state.queueDeleted, (v) => v.length > 0]}
                             class="queue-list"
                             id="sharetube_queue_list"
                             zyx-live-list=${{
-                                list: state.queue,
+                                list: state.queueDeleted,
                                 compose: ShareTubeQueueComponent,
                                 filter: (v) => v.status.get() === "deleted",
                             }}
@@ -147,21 +147,34 @@ export default class ShareTubeQueue {
                 </div>
                 <div class="queue_selector">
                     <div class="queue_selector_item" zyx-radioview="queues.queued.open">
-                        <span class="queue_selector_item_text">Queued</span>
+                        <span class="queue_selector_item_text"
+                            >Queued (${state.queueQueued.interp((v) => v.length)})</span
+                        >
                     </div>
                     <div class="queue_selector_item" zyx-radioview="queues.played.open">
-                        <span class="queue_selector_item_text">Played</span>
+                        <span class="queue_selector_item_text"
+                            >Played (${state.queuePlayed.interp((v) => v.length)})</span
+                        >
                     </div>
                     <div class="queue_selector_item" zyx-radioview="queues.skipped.open">
-                        <span class="queue_selector_item_text">Skipped</span>
+                        <span class="queue_selector_item_text"
+                            >Skipped (${state.queueSkipped.interp((v) => v.length)})</span
+                        >
                     </div>
                     <div class="queue_selector_item" zyx-radioview="queues.deleted.open">
-                        <span class="queue_selector_item_text">Deleted</span>
+                        <span class="queue_selector_item_text"
+                            >Deleted (${state.queueDeleted.interp((v) => v.length)})</span
+                        >
                     </div>
                 </div>
                 <div class="queue-footer"></div>
             </div>
         `.bind(this);
+        /** zyXSense @type {HTMLDivElement} */
+        this.current_playing;
+        /** zyXSense @type {HTMLDivElement} */
+        this.current_playing_progress;
+
         /** zyx-sense @type {HTMLDivElement} */
         this.current_playing;
         /** zyx-sense @type {HTMLDivElement} */
@@ -204,6 +217,8 @@ export default class ShareTubeQueue {
     }
 }
 
+const openInNewTabSVG = chrome.runtime.getURL("app/assets/open-in-new-tab.svg");
+
 // UI component representing a queued YouTube item
 export class ShareTubeQueueComponent {
     /**
@@ -222,7 +237,12 @@ export class ShareTubeQueueComponent {
                 </div>
                 <div class="meta">
                     <div class="title">${this.item.title}</div>
-                    <div class="url">${this.item.url}</div>
+                    <div class="url">
+                        ${this.item.url}
+                        <span class="external-link-icon" zyx-click=${() => this.item.openUrl()}>
+                            <img src=${openInNewTabSVG} alt="Open in new tab" />
+                        </span>
+                    </div>
                 </div>
                 <button
                     class="x-button"

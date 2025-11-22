@@ -66,22 +66,9 @@ export default class YoutubePlayerManager {
 
         this.seek_throttle_accumulator = -1;
 
-        // Frame rate detection for frame-by-frame navigation
-        this.detectedFrameRate = null;
-        this.frameTimeSamples = [];
-        this.frameRateDetectionStartTime = null;
-        this.frameRateDetectionRafId = null;
-
-        // Frame step throttling - store latest pending direction
-        this.pendingFrameStepDirection = null;
-
-        this.binds = {
-            onSeek: new Set(),
-            onSeeked: new Set(),
-            onSeeking: new Set(),
-            onPause: new Set(),
-            onPlay: new Set(),
-        };
+        // Track frame step seeks to sync after native YouTube frame-by-frame navigation
+        this.pendingFrameStepSync = null;
+        this.pendingFrameStepPosition = null;
 
         this.splash = new Splash(this.video);
         this.intermission = new Intermission();
@@ -95,10 +82,6 @@ export default class YoutubePlayerManager {
                 <span>is_programmatic_seek: ${this.is_programmatic_seek.interp()}</span>
             </div>
         </div>`.const();
-    }
-
-    on(event, callback) {
-        this.binds[event].add(callback);
     }
 
     // Begin scanning for an active video element and bind to it
@@ -188,7 +171,6 @@ export default class YoutubePlayerManager {
         this.video.addEventListener("seeking", this.onSeeking);
         this.video.addEventListener("seeked", this.onSeeked);
         this.video.addEventListener("ended", this.onEnded);
-        this.startFrameRateDetection();
         this.enforceDesiredState("bind");
 
         // Cache the YouTube seek bar element for click proximity detection
@@ -211,7 +193,6 @@ export default class YoutubePlayerManager {
         this.video.removeEventListener("seeking", this.onSeeking);
         this.video.removeEventListener("seeked", this.onSeeked);
         this.video.removeEventListener("ended", this.onEnded);
-        this.stopFrameRateDetection();
         this.video = null;
         this.lastAdState = false;
         this.pendingPauseAfterAd = false;
@@ -221,7 +202,6 @@ export default class YoutubePlayerManager {
     onPlay = (e) => {
         this.verbose && console.log("onPlay");
         if (!this.isUserInitiatedMediaEvent(e)) return this.verbose && console.log("onPlay return: programmatic");
-        this.binds.onPlay.forEach((callback) => callback(e));
         this.enforceDesiredState("onPlay");
     };
 
@@ -234,7 +214,6 @@ export default class YoutubePlayerManager {
         this.verbose && console.log("onPause");
         this.checkIfVideoFinished();
         if (!this.isUserInitiatedMediaEvent(e)) return this.verbose && console.log("onPause return: programmatic");
-        this.binds.onPause.forEach((callback) => callback(e));
         this.enforceDesiredState("onPause");
     };
 
@@ -251,14 +230,52 @@ export default class YoutubePlayerManager {
     onSeeking = (e) => {
         this.verbose && console.log("onSeeking");
         if (this.is_programmatic_seek.get()) return this.verbose && console.log("onSeeking return: programmatic seek");
-        this.binds.onSeeking.forEach((callback) => callback(e));
         this.enforceDesiredState("onSeeking");
     };
 
     onSeeked = (e) => {
         this.verbose && console.log("onSeeked");
-        if (this.is_programmatic_seek.get()) return this.verbose && console.log("onSeeked return: programmatic seek");
-        this.binds.onSeeked.forEach((callback) => callback(e));
+        if (this.is_programmatic_seek.get()) {
+            this.verbose && console.log("onSeeked return: programmatic seek");
+            this.enforceDesiredState("onSeeked");
+            return;
+        }
+
+        // If this was a frame step, sync it after the native seek completes
+        if (this.pendingFrameStepSync !== null) {
+            const direction = this.pendingFrameStepSync;
+            this.pendingFrameStepSync = null;
+
+            const actualMs = this.video.currentTime * 1000;
+            this.pendingFrameStepPosition = Math.floor(actualMs);
+
+            // Throttle the sync emission to avoid spamming rapid frame steps
+            throttle(
+                this,
+                "emitFrameStepSync",
+                () => {
+                    const positionToSync = this.pendingFrameStepPosition;
+                    this.pendingFrameStepPosition = null;
+
+                    if (positionToSync === null) return;
+
+                    this.verbose &&
+                        console.log("emitFrameStepSync: syncing frame step", {
+                            direction,
+                            positionToSync,
+                        });
+
+                    // Emit as a seek so the splash shows accordingly
+                    this.app.socket.emit("room.control.seek", {
+                        progress_ms: positionToSync,
+                        play: false, // Always pause for frame-by-frame navigation,
+                        frame_step: direction,
+                    });
+                },
+                100 // Throttle delay: 100ms between frame step sync emits
+            );
+        }
+
         this.enforceDesiredState("onSeeked");
     };
 
@@ -482,14 +499,21 @@ export default class YoutubePlayerManager {
             e.preventDefault();
             e.stopPropagation();
             this.emitSeekRelative(5000);
-        } else if (e.code === "Comma") {
+        } else if (e.code === "Comma" || e.code === "Period") {
+            // Let YouTube handle native frame-by-frame navigation
+            // We'll sync after the seek completes
+            if (!state.roomCode.get()) return;
+            if (!this.video) return;
+            const direction = e.code === "Period" ? 1 : -1;
+            this.pendingFrameStepSync = direction;
+            // Don't prevent default - let YouTube handle it natively
+        } else if (e.code >= "Digit0" && e.code <= "Digit9") {
             e.preventDefault();
             e.stopPropagation();
-            this.emitFrameStep(-1);
-        } else if (e.code === "Period") {
-            e.preventDefault();
-            e.stopPropagation();
-            this.emitFrameStep(1);
+            // 0 = 0%, 1 = 10%, 2 = 20%, ..., 9 = 90%
+            const digit = parseInt(e.code.replace("Digit", ""), 10);
+            const percentage = digit / 10;
+            this.emitSeekToPercentage(percentage);
         }
     };
 
@@ -652,17 +676,7 @@ export default class YoutubePlayerManager {
                 const bounds = progressBar.getBoundingClientRect();
                 const x = e.clientX - bounds.left;
                 const progress = Math.max(0, Math.min(1, x / bounds.width));
-                const progressMs = Math.floor(progress * this.video.duration * 1000);
-
-                const currentPlayingProgressMs = currentPlayingProgressMsPercentageToMs(progress);
-                this.verbose &&
-                    console.log("onPlayerClick: progress bar clicked", {
-                        progress,
-                        progressMs,
-                        currentPlayingProgressMs,
-                        videoDuration: this.video.duration,
-                    });
-                this.binds.onSeek.forEach((callback) => callback(currentPlayingProgressMs));
+                this.emitSeekToPercentage(progress);
             },
             1000
         );
@@ -707,154 +721,30 @@ export default class YoutubePlayerManager {
         );
     }
 
-    startFrameRateDetection() {
-        this.stopFrameRateDetection();
-        this.frameTimeSamples = [];
-        this.frameRateDetectionStartTime = null;
-        this.detectedFrameRate = null;
-
-        const detectFrame = () => {
-            if (!this.video) {
-                this.stopFrameRateDetection();
-                return;
-            }
-
-            // Only detect when video is playing
-            if (!this.video.paused && !this.video.ended) {
-                const now = performance.now();
-                const currentTime = this.video.currentTime;
-
-                if (this.frameRateDetectionStartTime === null) {
-                    this.frameRateDetectionStartTime = now;
-                    this.frameTimeSamples = [{ time: now, videoTime: currentTime }];
-                } else {
-                    // Sample frame timing
-                    this.frameTimeSamples.push({ time: now, videoTime: currentTime });
-
-                    // Keep only recent samples (last 2 seconds)
-                    const sampleWindow = 2000;
-                    const cutoff = now - sampleWindow;
-                    this.frameTimeSamples = this.frameTimeSamples.filter((s) => s.time >= cutoff);
-
-                    // Need at least 30 samples for accurate detection
-                    if (this.frameTimeSamples.length >= 30) {
-                        // Calculate time deltas between consecutive samples
-                        const timeDeltas = [];
-                        for (let i = 1; i < this.frameTimeSamples.length; i++) {
-                            const delta = this.frameTimeSamples[i].videoTime - this.frameTimeSamples[i - 1].videoTime;
-                            if (delta > 0 && delta < 0.1) {
-                                // Filter out large jumps (seeks)
-                                timeDeltas.push(delta);
-                            }
-                        }
-
-                        if (timeDeltas.length >= 20) {
-                            // Calculate median delta to avoid outliers
-                            timeDeltas.sort((a, b) => a - b);
-                            const medianDelta = timeDeltas[Math.floor(timeDeltas.length / 2)];
-
-                            if (medianDelta > 0) {
-                                const estimatedFps = 1 / medianDelta;
-
-                                // Round to common frame rates: 23.976, 24, 25, 29.97, 30, 50, 50.24, 60, 120
-                                const commonRates = [23.976, 24, 25, 29.97, 30, 50, 50.24, 60, 120];
-                                let closestRate = commonRates[0];
-                                let minDiff = Math.abs(estimatedFps - closestRate);
-
-                                for (const rate of commonRates) {
-                                    const diff = Math.abs(estimatedFps - rate);
-                                    if (diff < minDiff) {
-                                        minDiff = diff;
-                                        closestRate = rate;
-                                    }
-                                }
-
-                                // Only update if we're reasonably confident (within 15% of a common rate)
-                                if (minDiff / closestRate < 0.15) {
-                                    this.detectedFrameRate = closestRate;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            this.frameRateDetectionRafId = requestAnimationFrame(detectFrame);
-        };
-
-        this.frameRateDetectionRafId = requestAnimationFrame(detectFrame);
-    }
-
-    stopFrameRateDetection() {
-        if (this.frameRateDetectionRafId !== null) {
-            cancelAnimationFrame(this.frameRateDetectionRafId);
-            this.frameRateDetectionRafId = null;
-        }
-        this.frameTimeSamples = [];
-        this.frameRateDetectionStartTime = null;
-    }
-
-    getFrameDurationMs() {
-        // Use detected frame rate if available, otherwise use a small increment for high frame rates
-        if (this.detectedFrameRate) {
-            return 1000 / this.detectedFrameRate;
-        }
-        // Default to 1/120 second (8.33ms) which works for up to 120fps
-        // For lower frame rates, this just means more precise navigation
-        return 1000 / 120;
-    }
-
-    emitFrameStep(direction) {
-        // Don't do frame-by-frame if not in a room
-        if (!state.roomCode.get()) {
-            this.verbose && console.log("emitFrameStep: not in a room");
-            return;
-        }
-
-        // Store the latest direction (will be used when throttle executes)
-        this.pendingFrameStepDirection = direction;
-
-        // Throttle frame step emits, but always send the latest one
+    emitSeekToPercentage(percentage) {
+        // percentage should be between 0 and 1 (0 = 0%, 1 = 100%)
         throttle(
             this,
-            "emitFrameStep",
+            "emitSeekToPercentage",
             () => {
-                // Use the latest pending direction
-                const latestDirection = this.pendingFrameStepDirection;
-                this.pendingFrameStepDirection = null;
-
-                // Get current progress (may have changed since the request)
-                const { progress_ms, duration_ms } = getCurrentPlayingProgressMs();
-                if (progress_ms === null || duration_ms === null) {
-                    this.verbose && console.log("emitFrameStep: no current playing item");
+                const { duration_ms } = getCurrentPlayingProgressMs();
+                if (!duration_ms || duration_ms <= 0) {
+                    this.verbose && console.log("emitSeekToPercentage: no valid duration");
                     return;
                 }
-
-                // Get frame duration based on detected frame rate
-                const FRAME_DURATION_MS = this.getFrameDurationMs();
-
-                // Calculate target position based on current progress and latest direction
-                let targetMs = progress_ms + latestDirection * FRAME_DURATION_MS;
-
-                // Clamp to video bounds
-                targetMs = Math.max(0, Math.min(targetMs, duration_ms));
-
-                // Seek to the exact frame position with play=false (frame-by-frame always pauses)
+                const targetMs = Math.floor(Math.max(0, Math.min(1, percentage)) * duration_ms);
                 this.verbose &&
-                    console.log("emitFrameStep", {
-                        direction: latestDirection,
-                        progress_ms,
+                    console.log("emitSeekToPercentage", {
+                        percentage,
                         targetMs,
-                        frameDurationMs: FRAME_DURATION_MS,
-                        detectedFps: this.detectedFrameRate,
+                        duration_ms,
                     });
                 this.app.socket.emit("room.control.seek", {
-                    progress_ms: Math.floor(targetMs),
-                    play: false, // Always pause for frame-by-frame navigation
-                    frame_step: latestDirection, // Indicate this is a frame step navigation
+                    progress_ms: targetMs,
+                    play: state.roomState.get() === "playing",
                 });
             },
-            100 // Throttle delay: 100ms between frame step emits
+            300
         );
     }
 

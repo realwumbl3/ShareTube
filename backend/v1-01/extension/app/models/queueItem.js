@@ -26,4 +26,8 @@ export default class ShareTubeQueueItem {
         if (item.duration_ms != null) this.duration_ms.set(item.duration_ms);
         if (item.status != null) this.status.set(item.status);
     }
+
+    openUrl() {
+        window.open(this.url, "_blank");
+    }
 }

@@ -109,9 +109,7 @@ def register_socket_handlers():
             if room.state == "starting":
                 return rej("queue.probe: room.state is starting")
 
-            _now_ms = now_ms()
-
-            if not current_entry.check_completion(_now_ms):
+            if not current_entry.check_completion():
                 return rej("queue.probe: video not completed")
 
             next_entry, error = room.complete_and_advance()

@@ -20,6 +20,8 @@ import SearchBox from "./components/SearchBox.js";
 
 export const zyxInput = new ZyXInput();
 
+const lockSVG = chrome.runtime.getURL("app/assets/lock.svg");
+
 css`
     @import url(${chrome.runtime.getURL("app/css/styles.css")});
     @import url(${chrome.runtime.getURL("app/css/pill.css")});
@@ -28,6 +30,14 @@ css`
     @import url(${chrome.runtime.getURL("app/css/firstParty.css")});
     @import url(${chrome.runtime.getURL("app/css/splash.css")});
 `;
+
+function getLocalStorage(key) {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(key, (result) => {
+            resolve(result[key]);
+        });
+    });
+}
 
 export default class ShareTubeApp {
     logSelf() {
@@ -77,18 +87,31 @@ export default class ShareTubeApp {
 
         this.debugButtonVisible = new LiveVar(false);
 
+        this.locked = new LiveVar(false);
+
+        getLocalStorage("locked").then((locked) => this.locked.set(locked));
+
         html`
-            <div id="sharetube_main" class="st_reset">
+            <div id="sharetube_main" class="st_reset" is_locked=${this.locked.interp()}>
                 ${this.queue} ${this.debugMenu}
                 <div id="sharetube_pill">
+                    <button
+                        id="sharetube_lock_btn"
+                        class="lock_btn"
+                        zyx-click=${() => this.setLock(false)}
+                        zyx-if=${this.locked}
+                    >
+                        <img src=${lockSVG} alt="Lock" />
+                    </button>
                     <img draggable="false" alt="Profile" src=${state.avatarUrl.interp((v) => v || "")} />
                     ${this.logo} ${this.userIcons}
                     <div
                         id="sharetube_toggle_queue"
                         class="rounded_btn"
                         zyx-click=${() => this.queue.toggleQueueVisibility()}
+                        zyx-if=${state.roomCode}
                     >
-                        Queue ${state.queue.interp((v) => (v.length > 0 ? `(${v.length})` : ""))}
+                        Queue ${state.queueQueued.interp((v) => (v.length > 0 ? `(${v.length})` : ""))}
                     </div>
                     ${this.controls}
                     <button
@@ -105,8 +128,9 @@ export default class ShareTubeApp {
         this.setupKeypressListeners();
 
         this.setupDragAndDrop();
+        this.setupRevealBehavior();
+        this.setupPillLockBehavior();
         this.bindSocketListeners();
-        this.bindPlayerListeners();
         this.virtualPlayer.bindListeners(this.socket);
 
         this.player.start();
@@ -115,10 +139,6 @@ export default class ShareTubeApp {
     bindSocketListeners() {
         this.socket.on("presence.update", this.onSocketPresenceUpdate.bind(this));
         this.socket.setupBeforeUnloadHandler();
-    }
-
-    bindPlayerListeners() {
-        this.player.on("onSeek", this.virtualPlayer.emitSeek.bind(this.virtualPlayer));
     }
 
     setupKeypressListeners() {
@@ -217,6 +237,7 @@ export default class ShareTubeApp {
             e.preventDefault();
             e.stopPropagation();
             this.sharetube_main.classList.add("dragover");
+            this.sharetube_main.classList.add("revealed");
         };
         const onOver = (e) => {
             e.preventDefault();
@@ -235,12 +256,48 @@ export default class ShareTubeApp {
             const ytUrls = urls.filter(isYouTubeUrl);
             if (ytUrls.length === 0) return;
             ytUrls.forEach((u) => this.enqueueUrl(u));
-            state.queueVisible.set(true);
         };
         this.sharetube_main.addEventListener("dragenter", onEnter);
         this.sharetube_main.addEventListener("dragover", onOver);
         this.sharetube_main.addEventListener("dragleave", onLeave);
         this.sharetube_main.addEventListener("drop", onDrop);
+    }
+
+    setupRevealBehavior() {
+        // Reveal on mouse enter
+        this.sharetube_main.addEventListener("mouseenter", () => {
+            this.sharetube_main.classList.add("revealed");
+        });
+
+        // Hide on mouse leave (only if not locked)
+        this.sharetube_main.addEventListener("mouseleave", () => {
+            if (this.locked.get()) return;
+            this.sharetube_main.classList.remove("revealed");
+        });
+    }
+
+    setupPillLockBehavior() {
+        // Handle click on pill directly (not on child elements)
+        this.sharetube_pill.addEventListener("click", (e) => {
+            // Ensure we have an element target and are not locked
+            if (e.target !== this.sharetube_pill || this.locked.get()) return;
+            this.setLock(true);
+        });
+    }
+
+    async setLock(locked) {
+        this.locked.set(locked);
+        await chrome.storage.local.set({ locked: locked });
+
+        if (locked) {
+            // Lock: ensure revealed, show lock icon
+            this.sharetube_main.classList.add("revealed");
+        } else {
+            // Optionally hide if mouse is not over it
+            if (!this.sharetube_main.matches(":hover")) {
+                this.sharetube_main.classList.remove("revealed");
+            }
+        }
     }
 
     attachBrowserListeners() {

@@ -21,6 +21,11 @@ class ShareTubeState {
 
         // Queue
         this.queue = new LiveList([]);
+        this.queueQueued = new LiveList([]);
+        this.queuePlayed = new LiveList([]);
+        this.queueSkipped = new LiveList([]);
+        this.queueDeleted = new LiveList([]);
+
         this.queueVisible = new LiveVar(false);
 
         // Current playing

@@ -77,19 +77,29 @@ export default class VirtualPlayer {
     async onQueueUpdate(queue) {
         if (!queue || !queue.entries) return;
         this.updateCurrentPlayingFromEntry(queue.current_entry);
-        syncLiveList({
-            localList: state.queue,
-            // Keep client ordering in sync with server-side position
-            remoteItems: (queue.entries || []).slice().sort((a, b) => {
-                const pa = a.position ?? 0;
-                const pb = b.position ?? 0;
-                return pa - pb;
-            }),
-            extractRemoteId: (v) => v.id,
-            extractLocalId: (u) => u.id,
-            createInstance: (item) => new ShareTubeQueueItem(this.app, item),
-            updateInstance: (inst, item) => inst.updateFromRemote(item),
+
+        const entries = (queue.entries || []).slice().sort((a, b) => {
+            const pa = a.position ?? 0;
+            const pb = b.position ?? 0;
+            return pa - pb;
         });
+
+        const sync = (list, filter) => {
+            syncLiveList({
+                localList: list,
+                remoteItems: filter ? entries.filter(filter) : entries,
+                extractRemoteId: (v) => v.id,
+                extractLocalId: (u) => u.id,
+                createInstance: (item) => new ShareTubeQueueItem(this.app, item),
+                updateInstance: (inst, item) => inst.updateFromRemote(item),
+            });
+        };
+
+        sync(state.queue);
+        sync(state.queueQueued, (i) => i.status === "queued");
+        sync(state.queuePlayed, (i) => i.status === "played");
+        sync(state.queueSkipped, (i) => i.status === "skipped");
+        sync(state.queueDeleted, (i) => i.status === "deleted");
     }
 
     playerStateChange(priorState, newState) {

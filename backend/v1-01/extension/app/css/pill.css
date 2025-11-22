@@ -19,6 +19,22 @@
     line-height: 20px;
     backdrop-filter: blur(0.4em) brightness(0.6) contrast(1.05);
     pointer-events: auto;
+    margin-bottom: 12px;
+    min-height: 2.5em;
+
+
+
+    &:before {
+        content: "";
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        width: calc(100% + 16px);
+        height: calc(100% + 200px);
+        background: transparent;
+        pointer-events: auto;
+        z-index: -1;
+    }
 }
 
 #sharetube_pill:hover {
@@ -124,4 +140,45 @@
 #sharetube_pill span {
     white-space: nowrap;
     font-weight: 500;
+}
+
+#sharetube_lock_btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.45);
+    color: var(--yt-spec-text-primary, #fff);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    font-size: 14px;
+    cursor: pointer;
+    transition:
+        background 140ms ease,
+        border-color 140ms ease,
+        transform 80ms ease,
+        box-shadow 140ms ease;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+    min-width: 24px;
+    height: 24px;
+    margin-right: 4px;
+}
+
+#sharetube_lock_btn:hover {
+    background: rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+}
+
+#sharetube_lock_btn:active {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    transform: scale(0.95);
+}
+
+#sharetube_lock_btn img {
+    width: 14px;
+    height: 14px;
+    background: none;
+    border-radius: 0;
+    border: none;
 }

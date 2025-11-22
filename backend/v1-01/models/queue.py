@@ -6,13 +6,14 @@ virtual clock state used to coordinate playback across clients.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import List, Optional, TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, Query
 
 from ..extensions import db
-from ..utils import commit_with_retry
+from ..utils import commit_with_retry, now_ms
 
 if TYPE_CHECKING:
     # Imported only for type checking to avoid runtime circular imports
@@ -379,11 +380,20 @@ class QueueEntry(db.Model):
             self.playing_since_ms = None
         commit_with_retry(db.session)
 
-    def check_completion(self, now_ms: int) -> bool:
-        """Check if this entry has reached completion (within 2 seconds of end)."""
+    def check_completion(self, _now_ms: int = None) -> bool:
+        """Check if this entry has reached completion (within 2 seconds of end).
+
+        Args:
+            _now_ms: The current time in milliseconds. Defaults to the current time.
+
+        Returns:
+            True if the entry has reached completion, False otherwise.
+        """
+        if _now_ms is None:
+            _now_ms = now_ms()
         base_progress_ms = self.progress_ms or 0
         elapsed_ms = (
-            max(0, now_ms - int(self.playing_since_ms)) if self.playing_since_ms else 0
+            max(0, _now_ms - int(self.playing_since_ms)) if self.playing_since_ms else 0
         )
         effective_progress_ms = base_progress_ms + elapsed_ms
         duration_ms = max(0, int(self.duration_ms or 0))
@@ -391,7 +401,8 @@ class QueueEntry(db.Model):
         if duration_ms <= 0:
             return False
 
-        near_end = max(0, duration_ms - 2000)
+        near_end = max(0, duration_ms - 5000)
+        logging.info("queue.check_completion: effective_progress_ms=%s, near_end=%s", effective_progress_ms, near_end)
         return effective_progress_ms >= near_end
 
     def complete_and_rotate(self) -> None:

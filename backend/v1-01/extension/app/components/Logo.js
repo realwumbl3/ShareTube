@@ -33,7 +33,7 @@ css`
         line-height: 1;
     }
 
-    /* Default (expanded) typography */
+    /*Default (expanded) typography */
     #sharetube_logo > span {
         display: inline-block;
         white-space: nowrap;
@@ -65,16 +65,13 @@ css`
         transition-delay: 120ms, 120ms;
     }
     #sharetube_logo.expanded > span:nth-child(4) {
-        max-width: 3ch; /* 'ube' */
+        max-width: 3.3ch; /* 'ube' */
         opacity: 1;
         transition-delay: 120ms, 120ms;
     }
 
     /* Collapsed state - only S and T remain, gap tightens */
-    #sharetube_logo:not(.expanded) > span:nth-child(1),
-    #sharetube_logo:not(.expanded) > span:nth-child(3) {
-        transform: scale(0.95);
-    }
+    
     #sharetube_logo:not(.expanded) > span:nth-child(2) {
         max-width: 0ch;
         opacity: 0;

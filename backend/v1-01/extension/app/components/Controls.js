@@ -7,11 +7,15 @@ export default class Controls {
         this.app = app;
         this.buttonLabel = new LiveVar("Play");
         html`
-            <div id="sharetube_controls">
-                <button class="main_btn" zyx-click=${(e) => this.onMainButtonClick(e)}>
-                    ${state.roomState.interp((v) => this.stateToButtonLabel(v))}
-                </button>
-                <button class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>Skip</button>
+            <div id="sharetube_controls" zyx-if=${state.roomCode}>
+                <div class="control">
+                    <button class="main_btn" zyx-click=${(e) => this.onMainButtonClick(e)}>
+                        ${state.roomState.interp((v) => this.stateToButtonLabel(v))}
+                    </button>
+                </div>
+                <div class="control">
+                    <button class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>Skip</button>
+                </div>
             </div>
         `.bind(this);
     }
@@ -61,10 +65,17 @@ css`
         justify-content: center;
         gap: 8px;
         pointer-events: auto;
+        height: 100%;
     }
-    #sharetube_controls .main_btn {
-        all: unset;
+    #sharetube_controls .control {
         display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+    }
+    #sharetube_controls .control .main_btn {
+        display: flex;
         align-items: center;
         justify-content: center;
         padding: 4px 8px;
@@ -72,7 +83,5 @@ css`
         background: rgba(255, 255, 255, 0.08);
         color: var(--yt-spec-text-primary, #fff);
         border: 1px solid rgba(255, 255, 255, 0.12);
-        cursor: pointer;
-        line-height: 1;
     }
 `;
