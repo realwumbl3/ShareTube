@@ -27,8 +27,7 @@ css`
     #sharetube_logo {
         display: inline-flex;
         align-items: baseline;
-        height: max-content;
-        overflow: hidden;
+        height: 0.8em;
         transition: gap 200ms ease;
         line-height: 1;
     }
@@ -71,7 +70,7 @@ css`
     }
 
     /* Collapsed state - only S and T remain, gap tightens */
-    
+
     #sharetube_logo:not(.expanded) > span:nth-child(2) {
         max-width: 0ch;
         opacity: 0;

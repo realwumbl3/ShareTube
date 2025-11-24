@@ -8,7 +8,7 @@
         background 160ms ease,
         border-color 160ms ease;
     gap: 8px;
-    padding: 3px 6px;
+    padding: 3px 8px;
     border-radius: 21px;
     background: rgba(255, 255, 255, 0.18);
     color: var(--yt-spec-text-primary, #fff);
@@ -58,7 +58,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 8px;
+    padding: 0 8px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.45);
     color: var(--yt-spec-text-primary, #fff);
@@ -88,12 +88,22 @@
     border-style: dashed;
 }
 
-#sharetube_pill img {
+#sharetube_pill img.user_icon_avatar {
     width: 27px;
     height: 27px;
     border-radius: 50%;
     object-fit: cover;
     background: #222;
+}
+
+#sharetube_pill img.user_icon_avatar[user-ready="false"] {
+    border: 2px solid rgba(255, 82, 82, 0.95);
+    box-shadow: 0 0 6px rgba(255, 82, 82, 0.55);
+}
+
+#sharetube_pill img.user_icon_avatar[user-ready="true"] {
+    border: 2px solid rgba(0, 255, 148, 0.95);
+    box-shadow: 0 0 6px rgba(0, 255, 148, 0.55);
 }
 
 #sharetube_pill span {

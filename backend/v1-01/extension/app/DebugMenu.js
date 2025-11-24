@@ -72,34 +72,39 @@ export default class DebugMenu {
                         <div class="debug-section-header">
                             <span class="debug-section-title">Player Controls</span>
                             <span class="debug-status"
-                                >Desired state: ${this.app.player.desired_state.interp((v) => v)}</span
+                                >Desired state: ${this.app.youtubePlayer.desired_state.interp((v) => v)}</span
                             >
                             <span class="debug-status"
-                                >Enforcing: ${this.app.player.is_enforcing.interp((v) => (v ? "Yes" : "No"))}</span
+                                >Enforcing:
+                                ${this.app.youtubePlayer.is_enforcing.interp((v) => (v ? "Yes" : "No"))}</span
                             >
                             <span class="debug-status"
-                                >Ad playing: ${this.app.player.ad_playing.interp((v) => (v ? "Yes" : "No"))}</span
+                                >Ad playing:
+                                ${this.app.youtubePlayer.ad_playing.interp((v) => (v ? "Yes" : "No"))}</span
                             >
                         </div>
 
                         <div class="debug-actions">
-                            <button class="rounded_btn" zyx-click=${() => this.app.player.setDesiredState("playing")}>
+                            <button
+                                class="rounded_btn"
+                                zyx-click=${() => this.app.youtubePlayer.setDesiredState("playing")}
+                            >
                                 Set desired state to playing
-                            </button>
-                            <button class="rounded_btn" zyx-click=${() => this.app.player.setDesiredState("paused")}>
-                                Set desired state to paused
                             </button>
                             <button
                                 class="rounded_btn"
-                                zyx-click=${() => this.app.virtualPlayer && this.app.virtualPlayer.emitRestartVideo()}
+                                zyx-click=${() => this.app.youtubePlayer.setDesiredState("paused")}
                             >
+                                Set desired state to paused
+                            </button>
+                            <button class="rounded_btn" zyx-click=${() => this.app.virtualPlayer.emitRestartVideo()}>
                                 Restart video
                             </button>
                             <button
                                 class="rounded_btn"
                                 zyx-click=${() =>
-                                    this.app.player.setDesiredProgressMs(
-                                        Math.random() * this.app.player.video.duration * 1000
+                                    this.app.youtubePlayer.setDesiredProgressMs(
+                                        Math.random() * this.app.youtubePlayer.videoDurationMs
                                     )}
                             >
                                 Set desired progress to random position
@@ -136,10 +141,12 @@ export default class DebugMenu {
                 </div>
             </div>
         `.bind(this);
-        /** zyx-sense @type {HTMLInputElement} */
+        /** zyXSense @type {HTMLInputElement} */
         this.search_query_input;
 
-        }
+        /** zyx-sense @type {HTMLInputElement} */
+        this.search_query_input;
+    }
 
     toggleVisibility() {
         this.visible.set(!this.visible.get());

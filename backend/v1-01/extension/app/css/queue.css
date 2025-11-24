@@ -146,6 +146,64 @@
     overflow: auto;
 }
 
+#sharetube_queue .no_video_playing_label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    text-align: center;
+    opacity: 0.8;
+    font-size: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+#sharetube_queue .current_playing_placeholder_text {
+    font-size: 12px;
+    opacity: 0.8;
+    text-align: center;
+}
+
+#sharetube_queue .current_playing_progress {
+    --padding: 3px;
+    font-size: 9px;
+    opacity: 0.9;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    position: relative;
+}
+
+#sharetube_queue .current_playing_progress .progress_bar {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
+    display: grid;
+    align-items: stretch;
+    /* padding: var(--padding); */
+}
+
+#sharetube_queue .current_playing_progress .bar_inner {
+    position: relative;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 2px;
+    width: calc(var(--progress-int) * 100%);
+    transition: width 100ms ease;
+}
+
+#sharetube_queue .current_playing_progress_stamps {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 9px;
+    opacity: 0.9;
+    padding: calc(var(--padding) * 2);
+    user-select: none;
+}
+
 #sharetube_queue .playing_status {
     display: flex;
     flex-wrap: wrap;
@@ -433,62 +491,4 @@
     display: flex;
     justify-content: space-between;
     /* padding: 6px; */
-}
-
-#sharetube_queue .no_video_playing_label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-    text-align: center;
-    opacity: 0.8;
-    font-size: 12px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.08);
-}
-
-#sharetube_queue .current_playing_placeholder_text {
-    font-size: 12px;
-    opacity: 0.8;
-    text-align: center;
-}
-
-#sharetube_queue .current_playing_progress {
-    --padding: 3px;
-    font-size: 9px;
-    opacity: 0.9;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 3px;
-    display: grid;
-    place-items: center;
-    width: 100%;
-    position: relative;
-}
-
-#sharetube_queue .current_playing_progress .progress_bar {
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 3px;
-    display: grid;
-    align-items: stretch;
-    padding: var(--padding);
-}
-
-#sharetube_queue .current_playing_progress .bar_inner {
-    position: relative;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 2px;
-    width: calc(var(--progress-int) * 100%);
-    transition: width 100ms ease;
-}
-
-#sharetube_queue .current_playing_progress_stamps {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    font-size: 9px;
-    opacity: 0.9;
-    padding: calc(var(--padding) * 2);
-    user-select: none;
 }

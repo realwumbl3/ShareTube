@@ -50,7 +50,7 @@ export default class SocketManager {
                     state.inRoom.set(false);
                     state.roomCode.set("");
                     state.roomState.set("");
-                    this.app.player.onRoomStateChange("");
+                    this.app.youtubePlayer.onRoomStateChange("");
                 } catch (e) {
                     console.warn("ShareTube: failed to clear room state on disconnect", e);
                 }
@@ -99,7 +99,6 @@ export default class SocketManager {
                 state.inRoom.set(false);
                 state.roomCode.set("");
                 state.roomState.set("");
-                this.app.player.onRoomStateChange("");
             } catch (e) {
                 console.warn("ShareTube: failed to clear room state on beforeunload", e);
             }
@@ -114,9 +113,5 @@ export default class SocketManager {
                 ...data,
             });
         });
-    }
-
-    async emitUserReady(ready) {
-        return await this.emit("user.ready", { ready });
     }
 }

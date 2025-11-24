@@ -13,6 +13,7 @@ class ShareTubeState {
         // User
         this.avatarUrl = new LiveVar("");
         this.userId = new LiveVar(null);
+        this.userReady = new LiveVar(false);
 
         // Server
         this.serverNowMs = new LiveVar(0);

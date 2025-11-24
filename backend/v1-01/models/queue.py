@@ -328,9 +328,9 @@ class QueueEntry(db.Model):
             "title": self.title,
             "thumbnail_url": self.thumbnail_url,
             "youtube_author_id": self.youtube_author_id,
-            "youtube_author": self.youtube_author.to_dict()
-            if self.youtube_author
-            else None,
+            "youtube_author": (
+                self.youtube_author.to_dict() if self.youtube_author else None
+            ),
             "position": self.position,
             "status": self.status,
             "watch_count": self.watch_count,
@@ -429,8 +429,12 @@ class QueueEntry(db.Model):
         if duration_ms <= 0:
             return False
 
-        near_end = max(0, duration_ms - 2000)
-        logging.info("queue.check_completion: effective_progress_ms=%s, near_end=%s", effective_progress_ms, near_end)
+        near_end = max(0, duration_ms - 6000)
+        logging.info(
+            "queue.check_completion: effective_progress_ms=%s, near_end=%s",
+            effective_progress_ms,
+            near_end,
+        )
         return effective_progress_ms >= near_end
 
     def complete_and_rotate(self) -> None:

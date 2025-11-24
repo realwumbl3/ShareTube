@@ -1,0 +1,13 @@
+{
+  "name": "sharetube-backend",
+  "version": "1.0.0",
+  "description": "Backend for ShareTube",
+  "scripts": {
+    "icons": "node scripts/render_icons.js"
+  },
+  "dependencies": {
+    "sharp": "^0.33.2"
+  }
+}
+
+
