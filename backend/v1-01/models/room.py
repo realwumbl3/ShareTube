@@ -129,10 +129,43 @@ class Room(db.Model):
             "memberships": [membership.user_id for membership in self.memberships],
         }
 
+    def are_all_users_ready(self) -> bool:
+        """Return True if every active membership in this room is ready."""
+        memberships = (
+            db.session.query(RoomMembership.ready)
+            .filter(RoomMembership.room_id == self.id, RoomMembership.active.is_(True))
+            .all()
+        )
+        if not memberships:
+            return False
+        return all(bool(row[0]) for row in memberships)
+
+    def reset_ready_flags(self) -> None:
+        """Reset ready flags for all active memberships in this room."""
+        (
+            db.session.query(RoomMembership)
+            .filter(
+                RoomMembership.room_id == self.id,
+                RoomMembership.active.is_(True),
+            )
+            .update({RoomMembership.ready: False}, synchronize_session=False)
+        )
+        db.session.flush()
+
     def pause_playback(self, now_ms: int) -> tuple[Optional[int], Optional[str]]:
         """Pause playback and return (paused_progress_ms, error_message)."""
-        if not self.current_queue or not self.current_queue.current_entry:
-            return None, "room.pause_playback: no current queue or current entry"
+        if not self.current_queue:
+            return None, "room.pause_playback: no current queue"
+        if not self.current_queue.current_entry:
+            entry, error = self.current_queue.load_next_entry()
+            if error:
+                return None, f"room.pause_playback: {error}"
+            if entry:
+                entry.reset()
+                self.state = "paused"
+                commit_with_retry(db.session)
+                return 0, None
+            return None, "room.pause_playback: no current entry"
         paused_progress_ms = self.current_queue.current_entry.pause(now_ms)
         self.state = "paused"
         commit_with_retry(db.session)
@@ -151,6 +184,7 @@ class Room(db.Model):
             if error:
                 return None, f"room.start_playback: load_next_entry error: {error}"
             self.state = "starting"
+            self.reset_ready_flags()
             entry.reset()
             commit_with_retry(db.session)
             return {"state": "starting", "current_entry": entry.to_dict()}, None
@@ -166,6 +200,7 @@ class Room(db.Model):
                 "state": "playing",
                 "playing_since_ms": now_ms,
                 "progress_ms": current_entry.progress_ms,
+                "current_entry": current_entry.to_dict(),
             }, None
 
         # If paused with an active entry, resume playback from stored progress
@@ -179,8 +214,17 @@ class Room(db.Model):
             return {
                 "state": "playing",
                 "progress_ms": current_entry.progress_ms,
+                "current_entry": current_entry.to_dict(),
             }, None
 
+        current_entry = self.current_queue.current_entry
+        if current_entry:
+            return {
+                "state": self.state,
+                "playing_since_ms": current_entry.playing_since_ms,
+                "progress_ms": current_entry.progress_ms,
+                "current_entry": current_entry.to_dict(),
+            }, None
         return None, "room.start_playback: no current entry"
 
     def restart_video(self, now_ms: int) -> tuple[Optional[dict], Optional[str]]:
@@ -219,11 +263,22 @@ class Room(db.Model):
             return None, f"room.skip_to_next: {error}"
         if next_entry:
             self.state = "starting"
-        elif had_current and not self.current_queue.current_entry:
-            # We just skipped the last available entry. Leave the room with
-            # no current entry and a non-playing state so clients unload the
-            # video.
-            self.state = "paused"
+            self.reset_ready_flags()
+        else:
+            # No next entry; try to load the next from queue entries if possible
+            load_entry, load_error = self.current_queue.load_next_entry()
+            if load_error:
+                # Exhausted queue
+                if had_current and not self.current_queue.current_entry:
+                    self.state = "paused"
+                commit_with_retry(db.session)
+                return None, f"room.skip_to_next: {load_error}"
+            if load_entry:
+                self.state = "starting"
+                self.current_queue.current_entry = load_entry
+                load_entry.reset()
+                self.reset_ready_flags()
+                next_entry = load_entry
         commit_with_retry(db.session)
         return next_entry, None
 
@@ -238,6 +293,7 @@ class Room(db.Model):
             # We have another entry to play, transition through "starting"
             # so clients can pre-roll before we enter the playing state.
             self.state = "starting"
+            self.reset_ready_flags()
         else:
             # No more entries in the queue – leave the room in a non-playing
             # state so clients can unload the video.
@@ -298,13 +354,9 @@ class RoomMembership(db.Model):
     # Role within the room: owner | operator | participant
     role: Mapped[str] = db.Column(db.String(16), default="participant")
 
-    # Ad sync fields persisted on membership for TTL/debounce and active set derivation
-    ad_active: Mapped[bool] = db.Column(db.Boolean, default=False, index=True)
-    ad_last_true_ts: Mapped[Optional[int]] = db.Column(
-        db.BigInteger, nullable=True, index=True
-    )
-    ad_last_false_ts: Mapped[Optional[int]] = db.Column(
-        db.BigInteger, nullable=True, index=True
+    # Ready flag to coordinate playback when the room is in "starting"
+    ready: Mapped[bool] = db.Column(
+        db.Boolean, default=False, nullable=False, index=True
     )
 
     # Ensure a user can have at most one membership per room
@@ -331,6 +383,8 @@ class RoomMembership(db.Model):
         """Join a room, creating or updating membership as needed."""
         membership = cls.query.filter_by(room_id=room.id, user_id=user_id).first()
         now = int(time.time())
+        room_in_starting = room.state == "starting"
+        room_in_playing = room.state == "playing"
         if not membership:
             membership = cls(
                 room_id=room.id,
@@ -338,12 +392,29 @@ class RoomMembership(db.Model):
                 joined_at=now,
                 last_seen=now,
                 active=True,
+                # Never auto-mark a new membership as ready based solely on room state.
+                # Ready flags are only meaningful during the "starting" phase and are
+                # explicitly reset via Room.reset_ready_flags() when a new video cycle
+                # begins. For a user joining an already-playing room, the readiness
+                # handshake for the *next* video will be handled when the room next
+                # enters "starting".
+                ready=False,
             )
             db.session.add(membership)
         else:
             membership.active = True
             membership.last_seen = now
+            # When the room is in "starting", force membership.ready to False so that
+            # all users must explicitly report readiness for the new video. For any
+            # other room state, keep the existing ready flag; it will be reset when
+            # the room next transitions into "starting".
+            if room_in_starting:
+                membership.ready = False
         return membership
+
+    def set_ready(self, ready: bool) -> None:
+        """Update the ready flag for this membership."""
+        self.ready = bool(ready)
 
     def leave(self) -> None:
         """Mark this membership as inactive."""

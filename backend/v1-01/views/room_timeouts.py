@@ -67,7 +67,7 @@ def _get_timeout_key(room_code: str) -> str:
     return f"room:starting_timeout:{room_code}"
 
 
-def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 20.0) -> None:
+def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 30.0) -> None:
     """
     Schedule a background task to transition room from 'starting' to 'playing' after delay.
     Cancels any existing timeout for the same room.

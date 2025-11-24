@@ -30,5 +30,6 @@ class User(db.Model):
             "id": self.id,
             "name": self.name,
             "picture": self.picture,
+            "ready": getattr(self, "ready", None),
         }
 

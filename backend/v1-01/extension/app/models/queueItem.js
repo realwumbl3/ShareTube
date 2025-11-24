@@ -6,14 +6,19 @@ export default class ShareTubeQueueItem {
         this.id = item.id;
         this.url = item.url || "";
         this.title = item.title || "";
+        this.duration_ms = item.duration_ms;
         this.thumbnail_url = item.thumbnail_url || "";
         this.position = new LiveVar(item.position ?? null);
-        this.duration_ms = new LiveVar(item.duration_ms || 0);
         this.status = new LiveVar(item.status || "queued");
+        this.youtube_author = item.youtube_author || null;
     }
 
     async remove() {
         return await this.app.socket.emit("queue.remove", { id: this.id });
+    }
+
+    async requeueToTop() {
+        return await this.app.socket.emit("queue.requeue_to_top", { id: this.id });
     }
 
     /**
@@ -23,11 +28,19 @@ export default class ShareTubeQueueItem {
     updateFromRemote(item) {
         if (!item) return;
         if (item.position != null) this.position.set(item.position);
-        if (item.duration_ms != null) this.duration_ms.set(item.duration_ms);
         if (item.status != null) this.status.set(item.status);
     }
 
     openUrl() {
         window.open(this.url, "_blank");
+    }
+
+    openYoutubeAuthorUrl() {
+        window.open(
+            `https://www.youtube.com/${
+                this.youtube_author?.custom_url || `channel/${this.youtube_author?.channel_id}`
+            }`,
+            "_blank"
+        );
     }
 }

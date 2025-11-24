@@ -242,7 +242,7 @@
 #sharetube_queue .queue-item {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    grid-template-areas: "thumb meta x-button";
+    grid-template-areas: "thumb meta actions";
     align-items: center;
     gap: 8px;
     padding: 6px 8px;
@@ -284,6 +284,13 @@
     -webkit-box-orient: vertical;
 }
 
+#sharetube_queue .queue-item .meta .author {
+    font-size: 11px;
+    opacity: 0.7;
+    cursor: pointer;
+    user-select: none;
+}
+
 #sharetube_queue .queue-item .meta .url {
     opacity: 0.7;
     font-size: 11px;
@@ -299,6 +306,29 @@
     margin-left: 4px;
     cursor: pointer;
     transition: opacity 100ms ease;
+}
+
+#sharetube_queue .queue-item .meta .url .link-drag-icon {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.6;
+    margin-left: 4px;
+    cursor: grab;
+    transition: opacity 100ms ease;
+}
+
+#sharetube_queue .queue-item .meta .url .link-drag-icon:active {
+    cursor: grabbing;
+}
+
+#sharetube_queue .queue-item .meta .url .link-drag-icon:hover {
+    opacity: 1;
+}
+
+#sharetube_queue .queue-item .meta .url .link-drag-icon img {
+    width: 12px;
+    height: 12px;
+    display: block;
 }
 
 #sharetube_queue .queue-item .meta .url .external-link-icon:hover {
@@ -342,8 +372,16 @@
     position: relative;
 }
 
-#sharetube_queue .queue-item .x-button {
-    grid-area: x-button;
+#sharetube_queue .queue-item .queue-item-actions {
+    grid-area: actions;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+#sharetube_queue .queue-item .x-button,
+#sharetube_queue .queue-item .requeue-button {
     background: rgba(255, 255, 255, 0.08);
     color: var(--yt-spec-text-primary, #fff);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -361,14 +399,24 @@
     box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
-#sharetube_queue .queue-item .x-button:hover {
+#sharetube_queue .queue-item .x-button img,
+#sharetube_queue .queue-item .requeue-button img {
+    width: 14px;
+    height: 14px;
+    display: block;
+    opacity: 0.9;
+}
+
+#sharetube_queue .queue-item .x-button:hover,
+#sharetube_queue .queue-item .requeue-button:hover {
     background: rgba(255, 255, 255, 0.16);
     border-color: rgba(255, 255, 255, 0.28);
     transform: translateY(-0.5px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
-#sharetube_queue .queue-item .x-button:focus-visible {
+#sharetube_queue .queue-item .x-button:focus-visible,
+#sharetube_queue .queue-item .requeue-button:focus-visible {
     outline: 2px solid rgba(255, 255, 255, 0.4);
     outline-offset: 1px;
 }

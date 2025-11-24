@@ -37,8 +37,24 @@ export default class SocketManager {
             // Create a websocket-only Socket.IO client with auth token in query
             this.socket = io(base, { transports: ["websocket"], path: "/socket.io", query: { token: auth_token } });
             // Basic connection lifecycle logs
-            this.socket.on("connect", () => console.log("socket.io connected"));
-            this.socket.on("disconnect", () => console.log("socket.io disconnected"));
+            this.socket.on("connect", () => {
+                console.log("socket.io connected");
+            });
+            this.socket.on("disconnect", () => {
+                console.log("socket.io disconnected");
+                // When the underlying socket disconnects, we are no longer in
+                // a valid room membership. Clear local room state so that the
+                // extension stops emitting user.ready for a room the backend
+                // has already torn down.
+                try {
+                    state.inRoom.set(false);
+                    state.roomCode.set("");
+                    state.roomState.set("");
+                    this.app.player.onRoomStateChange("");
+                } catch (e) {
+                    console.warn("ShareTube: failed to clear room state on disconnect", e);
+                }
+            });
             // Low-level channel diagnostics/ping
             this.socket.on("hello", (payload) => console.log("socket.io hello", payload));
             this.socket.on("pong", (payload) => console.log("socket.io pong", payload));
@@ -76,6 +92,17 @@ export default class SocketManager {
 
     setupBeforeUnloadHandler() {
         window.addEventListener("beforeunload", () => {
+            // Proactively leave the current room and clear local room flags so
+            // that any late user.ready emissions (e.g. from video events
+            // during navigation) are suppressed client‑side.
+            try {
+                state.inRoom.set(false);
+                state.roomCode.set("");
+                state.roomState.set("");
+                this.app.player.onRoomStateChange("");
+            } catch (e) {
+                console.warn("ShareTube: failed to clear room state on beforeunload", e);
+            }
             this.emit("room.leave");
         });
     }
@@ -87,5 +114,9 @@ export default class SocketManager {
                 ...data,
             });
         });
+    }
+
+    async emitUserReady(ready) {
+        return await this.emit("user.ready", { ready });
     }
 }

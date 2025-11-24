@@ -26,7 +26,7 @@ from .migrations import run_all_migrations
 
 # Configure a standard log format for file and console handlers
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-# Initialize base logging to write into instance/app.log with INFO level
+# Initialize base logging with INFO level so our explicit logging.info calls show up
 logging.basicConfig(level=logging.INFO, format=log_format)
 # Create a logger specific to this module
 logger = logging.getLogger(__name__)
@@ -46,6 +46,20 @@ try:
 except Exception:
     # Never fail startup due to logging configuration problems
     pass
+
+# Reduce noisy third-party loggers so we only see our explicit INFO logs and exceptions
+for _noisy_name in (
+    "engineio",
+    "engineio.server",
+    "socketio",
+    "socketio.server",
+    "socketio.client",
+):
+    try:
+        logging.getLogger(_noisy_name).setLevel(logging.WARNING)
+    except Exception:
+        # Logging tweaks should never break app startup
+        pass
 
 
 # SQLite pragmas
@@ -185,6 +199,11 @@ def create_app() -> Flask:
 
 # Helper to bind routes, request hooks, and error handlers
 def register_routes(app: Flask) -> None:
+
+    @app.route("/api/health")
+    def index():
+        return "Hello, World!"
+
     # # Before each request, capture start time and log basic request info
     # @app.before_request
     # def _log_request_start():

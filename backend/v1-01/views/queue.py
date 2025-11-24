@@ -11,7 +11,7 @@ from flask import current_app
 
 from ..extensions import db, socketio
 
-from ..models import QueueEntry, Room, Queue
+from ..models import QueueEntry, Room, Queue, YouTubeAuthor
 
 from ..utils import (
     now_ms,
@@ -50,6 +50,7 @@ def register_socket_handlers():
             meta = fetch_video_meta(vid)
             if not meta:
                 return rej("queue.add: no metadata found for video")
+            author = YouTubeAuthor.get_or_create_from_video_meta(meta)
 
             queue.add_entry(
                 user_id=user_id,
@@ -58,6 +59,7 @@ def register_socket_handlers():
                 title=meta.get("title") or "",
                 thumbnail_url=meta.get("thumbnail_url") or "",
                 duration_ms=meta.get("duration_ms") or 0,
+                youtube_author=author,
             )
             emit_queue_update_for_room(room)
             res("queue.add.result", {"added": True})
@@ -96,6 +98,61 @@ def register_socket_handlers():
                 room.code,
             )
 
+    @socketio.on("queue.requeue_to_top")
+    @require_room
+    @ensure_queue
+    def _on_queue_requeue_to_top(room: Room, user_id: int, queue: Queue, data: dict):
+        """
+        Move a queue entry back to the front of the queue and reset its status to queued.
+
+        The entry must belong to the current room's active queue and have been added by
+        the current user (same permission model as queue.remove).
+        """
+        id = (data or {}).get("id")
+        res, rej = Room.emit(room.code, trigger="queue.requeue_to_top")
+        if not id:
+            return rej("queue.requeue_to_top: no id provided")
+
+        try:
+            entry = (
+                db.session.query(QueueEntry)
+                .filter_by(id=id, queue_id=queue.id, added_by_id=user_id)
+                .first()
+            )
+            if not entry:
+                logging.warning(
+                    "queue.requeue_to_top: no entry found for id (id=%s) (user_id=%s)",
+                    id,
+                    user_id,
+                )
+                return rej("queue.requeue_to_top: no entry found for id")
+
+            # Determine a position that will sort before any existing queued entries.
+            queued_entries = queue.query_entries_by_status("queued").all()
+            if queued_entries:
+                min_pos = min((e.position or 0) for e in queued_entries)
+                new_pos = min_pos - 1
+                if new_pos < 1:
+                    new_pos = 1
+            else:
+                new_pos = 1
+
+            entry.position = new_pos
+            entry.status = "queued"
+            db.session.commit()
+            db.session.refresh(room)
+            db.session.refresh(queue)
+            emit_queue_update_for_room(room)
+            res("queue.requeue_to_top.result", {"ok": True})
+        except Exception:
+            logging.exception(
+                "queue.requeue_to_top handler error (id=%s) (user_id=%s) (room=%s)",
+                id,
+                user_id,
+                room.code,
+            )
+            return rej("queue.requeue_to_top handler error")
+
     @socketio.on("queue.probe")
     @require_room
     @require_queue_entry
@@ -127,7 +184,8 @@ def register_socket_handlers():
                         "actor_user_id": user_id,
                     },
                 )
-                schedule_starting_to_playing_timeout(room.code, delay_seconds=15)
+                # Fallback: if clients don't all report ready, auto-transition after 30s
+                schedule_starting_to_playing_timeout(room.code, delay_seconds=30)
             else:
                 res(
                     "room.playback",
@@ -140,6 +198,10 @@ def register_socket_handlers():
                         "queue_empty": True,
                     },
                 )
+            db.session.commit()
+            db.session.refresh(room)
+            db.session.refresh(queue)
+            emit_queue_update_for_room(room)
         except Exception as e:
             logging.exception("queue.probe handler error: %s", e)
             rej(f"queue.probe handler error: {e}")

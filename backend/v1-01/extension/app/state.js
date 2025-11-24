@@ -7,6 +7,8 @@ class ShareTubeState {
         // Room
         this.roomCode = new LiveVar("");
         this.roomState = new LiveVar("");
+        // Whether this client currently considers itself joined to a room
+        this.inRoom = new LiveVar(false);
 
         // User
         this.avatarUrl = new LiveVar("");

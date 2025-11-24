@@ -68,10 +68,12 @@ class ActorAudit {
     constructor() {
         this.actorAuditTrail = [];
         html`<div this="actor_audit" class="actor_audit"></div>`.bind(this);
-        /** zyx-sense @type {HTMLDivElement} */
+        /** zyXSense @type {HTMLDivElement} */
         this.actor_audit;
 
-        }
+        /** zyx-sense @type {HTMLDivElement} */
+        this.actor_audit;
+    }
 
     addActor(playbackData, actor) {
         const entry = new ActorAuditEntry(playbackData, actor);
@@ -93,17 +95,14 @@ export default class Splash {
             <div this="badge_zone" class="badge_zone"></div>
             ${this.actorAudit}
         </div>`.bind(this);
-        /** zyx-sense @type {HTMLDivElement} */
+        /** zyXSense @type {HTMLDivElement} */
         this.badge_zone;
 
-        }
+        /** zyx-sense @type {HTMLDivElement} */
+        this.badge_zone;
+    }
 
     call(playbackData, actor) {
-        // Add actor to audit trail
-        if (actor) {
-            this.actorAudit.addActor(playbackData, actor);
-        }
-
         // Check if this is a frame step navigation
         if (playbackData.frame_step !== undefined && playbackData.frame_step !== null) {
             this.animate(FrameStepBadge, playbackData);
@@ -115,6 +114,10 @@ export default class Splash {
         if (!badgeClass) {
             console.warn("Splash: unknown trigger", trigger);
             return;
+        }
+        // Add actor to audit trail
+        if (actor) {
+            this.actorAudit.addActor(playbackData, actor);
         }
         this.animate(badgeClass, playbackData);
     }
@@ -132,6 +135,9 @@ class BadgeBase {
         html`<div class="badge_container">
             <div this="badge" class="badge"></div>
         </div>`.bind(this);
+        /** zyXSense @type {HTMLDivElement} */
+        this.badge;
+
         /** zyx-sense @type {HTMLDivElement} */
         this.badge;
 
@@ -163,14 +169,14 @@ class PlayPauseBadge extends BadgeBase {
 class SeekBadge extends BadgeBase {
     constructor(playbackData) {
         super();
-        const direction = playbackData.delta_ms !== null
-            ? (playbackData.delta_ms > 0 ? "forward" : "backward")
-            : "";
+        const direction = playbackData.delta_ms !== null ? (playbackData.delta_ms > 0 ? "forward" : "backward") : "";
 
         html`<div this="label" class="label frame_step_label ${direction}">
-            <div class="frame_step_icon" style="${playbackData.delta_ms === null ? 'display:none' : ''}">➤➤</div>
+            <div class="frame_step_icon" style="${playbackData.delta_ms === null ? "display:none" : ""}">➤➤</div>
             <span this="text_span"></span>
-        </div>`.join(this).appendTo(this.badge);
+        </div>`
+            .join(this)
+            .appendTo(this.badge);
 
         this.updateLabel(playbackData);
     }

@@ -138,6 +138,7 @@ export default class ShareTubeApp {
 
     bindSocketListeners() {
         this.socket.on("presence.update", this.onSocketPresenceUpdate.bind(this));
+        this.socket.on("user.ready.update", this.onSocketUserReadyUpdate.bind(this));
         this.socket.setupBeforeUnloadHandler();
     }
 
@@ -205,6 +206,13 @@ export default class ShareTubeApp {
             createInstance: (item) => new ShareTubeUser(item),
             updateInstance: (u, item) => u.updateFromRemote(item),
         });
+    }
+
+    onSocketUserReadyUpdate(payload) {
+        if (!payload || payload.user_id == null) return;
+        const user = state.getUserById(payload.user_id);
+        if (!user || !user.ready) return;
+        user.ready.set(Boolean(payload.ready));
     }
 
     async enqueueUrl(url) {

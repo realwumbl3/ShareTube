@@ -20,15 +20,17 @@ export default class VirtualPlayer {
         socket.on("queue.probe", this.onQueueProbe.bind(this));
     }
 
-    async onQueueProbe(data) {
-        console.log("onQueueProbe: data", data);
-    }
+    async onQueueProbe(data) {}
 
     async onRoomJoinResult(result) {
         if (!result.ok) return;
 
         this.updateServerClock(result);
         state.roomCode.set(result.code);
+        // Mark this client as actively joined to a room so that downstream
+        // components (e.g. the YouTube player observer) only emit readiness
+        // while a real room membership is established.
+        state.inRoom.set(true);
 
         const currentQueue = result.snapshot.current_queue;
         this.updateCurrentPlayingFromEntry(currentQueue?.current_entry);
@@ -50,8 +52,15 @@ export default class VirtualPlayer {
     }
 
     async onRoomPlayback(data) {
-        console.log("onRoomPlayback: data", data);
         if (!this.isForCurrentRoom(data.code)) return;
+
+        const localUserId = state.userId && state.userId.get ? state.userId.get() : null;
+        const isOwnActor = data.actor_user_id && localUserId && data.actor_user_id === localUserId;
+        const isFrameStep = data.frame_step !== undefined && data.frame_step !== null;
+        // For frame-by-frame navigation initiated by this client, avoid mutating the
+        // virtual timestamp/playback clock – the local <video> is already at the
+        // correct frame, and we only need to broadcast the change to others.
+        const suppressTimestampUpdate = isOwnActor && isFrameStep;
 
         // Show actor avatar if present
         if (data.actor_user_id) {
@@ -61,17 +70,24 @@ export default class VirtualPlayer {
         // When a playback event includes a concrete current_entry object,
         // update the currently playing entry and navigate to it if needed.
         if (data.current_entry !== undefined) {
-            this.updateCurrentPlayingFromEntry(data.current_entry);
+            if (!suppressTimestampUpdate) {
+                this.updateCurrentPlayingFromEntry(data.current_entry);
+            } else {
+                // Keep metadata (title, thumbnail, etc.) in sync without touching timing.
+                state.currentPlaying.item.set(data.current_entry);
+            }
             this.gotoVideoIfNotOnVideoPage(data.current_entry);
         } else {
-            this.updateCurrentPlayingTiming(data.playing_since_ms, data.progress_ms);
+            if (!suppressTimestampUpdate) {
+                this.updateCurrentPlayingTiming(data.playing_since_ms, data.progress_ms);
+            }
         }
 
         if (data.state) {
             this.setRoomState(data.state);
         }
 
-        this.applyTimestamp();
+        if (data.trigger === "room.control.seek" && !suppressTimestampUpdate) this.applyTimestamp();
     }
 
     async onQueueUpdate(queue) {
@@ -96,7 +112,7 @@ export default class VirtualPlayer {
         };
 
         sync(state.queue);
-        sync(state.queueQueued, (i) => i.status === "queued");
+        sync(state.queueQueued, (i) => i.status === "queued" || i.status === "playing");
         sync(state.queuePlayed, (i) => i.status === "played");
         sync(state.queueSkipped, (i) => i.status === "skipped");
         sync(state.queueDeleted, (i) => i.status === "deleted");
@@ -115,6 +131,9 @@ export default class VirtualPlayer {
         if (!newState) return;
         const priorState = state.roomState.get();
         state.roomState.set(newState);
+        if (this.app?.player?.onRoomStateChange) {
+            this.app.player.onRoomStateChange(newState);
+        }
         this.playerStateChange(priorState, newState);
     }
 

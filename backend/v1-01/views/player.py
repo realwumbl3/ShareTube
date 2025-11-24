@@ -48,7 +48,8 @@ def register_socket_handlers():
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
             if result["state"] == "starting":
-                schedule_starting_to_playing_timeout(room.code, delay_seconds=15)
+                # Fallback: if clients don't all report ready, auto-transition after 30s
+                schedule_starting_to_playing_timeout(room.code, delay_seconds=30)
             res("room.playback", {"actor_user_id": user_id, **result})
         except Exception as e:
             logging.exception("room.control.play handler error")
@@ -139,7 +140,8 @@ def register_socket_handlers():
                         "actor_user_id": user_id,
                     },
                 )
-                schedule_starting_to_playing_timeout(room.code, delay_seconds=15)
+                # Fallback: if clients don't all report ready, auto-transition after 30s
+                schedule_starting_to_playing_timeout(room.code, delay_seconds=30)
             else:
                 res(
                     "room.playback",

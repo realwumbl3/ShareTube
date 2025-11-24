@@ -7,6 +7,7 @@ from .room import Room, RoomMembership, RoomOperator
 from .queue import Queue, QueueEntry
 from .audit import RoomAudit
 from .chat import ChatMessage
+from .youtube_author import YouTubeAuthor
 
 __all__ = [
     "User",
@@ -17,5 +18,6 @@ __all__ = [
     "QueueEntry",
     "RoomAudit",
     "ChatMessage",
+    "YouTubeAuthor",
 ]
 

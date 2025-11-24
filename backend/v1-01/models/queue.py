@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     # Imported only for type checking to avoid runtime circular imports
     from .room import Room
     from .user import User
+    from .youtube_author import YouTubeAuthor
 
 
 class Queue(db.Model):
@@ -109,6 +110,7 @@ class Queue(db.Model):
         title: str,
         thumbnail_url: str,
         duration_ms: int,
+        youtube_author: Optional["YouTubeAuthor"] = None,
     ) -> "QueueEntry":
         """Add a new entry to this queue."""
         position = self.get_next_position()
@@ -122,6 +124,7 @@ class Queue(db.Model):
             position=position,
             status="queued",
             duration_ms=duration_ms,
+            youtube_author=youtube_author,
         )
         db.session.add(entry)
         commit_with_retry(db.session)
@@ -208,6 +211,7 @@ class Queue(db.Model):
             self.current_entry_id = None
 
         commit_with_retry(db.session)
+        db.session.refresh(self)
 
         return next_entry, None
 
@@ -215,7 +219,14 @@ class Queue(db.Model):
         """Skip current entry and advance to next, marking current as skipped."""
         current_entry = self.current_entry
         if not current_entry:
-            return None, "queue.skip_to_next: no current entry"
+            # No active entry; attempt to load the next queued item instead of failing.
+            entry, error = self.load_next_entry()
+            if error:
+                return None, f"queue.skip_to_next: {error}"
+            if not entry:
+                return None, "queue.skip_to_next: no entries in queue"
+            entry.reset()
+            return entry, None
 
         next_entry, error = self.advance_to_next()
         if error:
@@ -267,6 +278,16 @@ class QueueEntry(db.Model):
     # YouTube video id (canonical)
     video_id: Mapped[Optional[str]] = db.Column(db.String(64))
 
+    youtube_author_id: Mapped[Optional[int]] = db.Column(
+        db.Integer, db.ForeignKey("youtube_author.id"), nullable=True, index=True
+    )
+    youtube_author: Mapped[Optional["YouTubeAuthor"]] = db.relationship(
+        "YouTubeAuthor",
+        foreign_keys=[youtube_author_id],
+        back_populates="entries",
+        uselist=False,
+    )
+
     # Title fetched from YouTube APIs or oEmbed
     title: Mapped[Optional[str]] = db.Column(db.String(512))
 
@@ -306,6 +327,10 @@ class QueueEntry(db.Model):
             "video_id": self.video_id,
             "title": self.title,
             "thumbnail_url": self.thumbnail_url,
+            "youtube_author_id": self.youtube_author_id,
+            "youtube_author": self.youtube_author.to_dict()
+            if self.youtube_author
+            else None,
             "position": self.position,
             "status": self.status,
             "watch_count": self.watch_count,
@@ -330,8 +355,11 @@ class QueueEntry(db.Model):
         commit_with_retry(db.session)
 
     def remove(self) -> None:
-        """Mark this entry as deleted."""
-        self.status = "deleted"
+        """Mark this entry as deleted, or remove from DB if already marked."""
+        if self.status == "deleted":
+            db.session.delete(self)
+        else:
+            self.status = "deleted"
         commit_with_retry(db.session)
 
     def start(self, now_ms: int) -> None:
@@ -401,7 +429,7 @@ class QueueEntry(db.Model):
         if duration_ms <= 0:
             return False
 
-        near_end = max(0, duration_ms - 5000)
+        near_end = max(0, duration_ms - 2000)
         logging.info("queue.check_completion: effective_progress_ms=%s, near_end=%s", effective_progress_ms, near_end)
         return effective_progress_ms >= near_end
 

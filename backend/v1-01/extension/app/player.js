@@ -1,12 +1,18 @@
-// Log module load for diagnostics
-console.log("cs/player.js loaded");
-
 import { LiveVar, html, css } from "./dep/zyx.js";
 import { throttle } from "./utils.js";
 import state from "./state.js";
 import Splash from "./components/Splash.js";
 import Intermission from "./components/Intermission.js";
 import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } from "./getters.js";
+
+const PLAYBACK_DRIFT_INTERVAL_MS = 500;
+const PLAYBACK_DRIFT_THRESHOLD_MS = 20;
+const PLAYBACK_DRIFT_FULL_ADJUST_MS = 3000;
+const PLAYBACK_DRIFT_MIN_RATE = 0.85;
+const PLAYBACK_DRIFT_MAX_RATE = 1.2;
+const PLAYBACK_DRIFT_SEEK_THRESHOLD_MS = 6000;
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 css`
     .observer_badge {
@@ -48,7 +54,7 @@ css`
 export default class YoutubePlayerManager {
     constructor(app) {
         this.app = app;
-        this.verbose = false;
+        this.verbose = true;
         this.video = null;
         this.scanTimer = null;
         this.nearEndProbeSent = false;
@@ -58,20 +64,29 @@ export default class YoutubePlayerManager {
         this.is_programmatic_seek = new LiveVar(false);
         this.last_user_gesture_ms = 0;
         this.last_programmatic_media_ms = 0;
+        this.lastReportedReadyState = null;
         this.lastAdState = false;
         this.pendingPauseAfterAd = false;
         this.lastVideoClickTime = 0;
         this.videoClickTimeout = null;
         this.seekBarEl = null;
 
-        this.seek_throttle_accumulator = -1;
+        this.seekKeyStartTime = 0;
+        this.seekTimings = {
+            0: 5000,
+            3000: 10000,
+            6000: 30000,
+        };
 
         // Track frame step seeks to sync after native YouTube frame-by-frame navigation
         this.pendingFrameStepSync = null;
         this.pendingFrameStepPosition = null;
 
         this.splash = new Splash(this.video);
-        this.intermission = new Intermission();
+        // this.intermission = new Intermission();
+
+        this.playbackDriftInterval = null;
+        this.lastAppliedPlaybackRate = 1;
 
         this.badge = html`<div class="observer_badge">
             Video Observed.
@@ -157,12 +172,11 @@ export default class YoutubePlayerManager {
 
     // Hook into a specific <video>: intercept play(), add event listeners, enforce state
     bindToVideo(video) {
-        this.verbose && console.log("bindToVideo", video);
         this.video = video;
         this.nearEndProbeSent = false;
         this.video.after(this.badge.main);
         this.video.parentElement.after(this.splash.main);
-        this.video.parentElement.after(this.intermission.main);
+        // this.video.parentElement.after(this.intermission.main);
         this.video.addEventListener("play", this.onPlay);
         this.video.addEventListener("playing", this.onPlaying);
         this.video.addEventListener("pause", this.onPause);
@@ -172,6 +186,7 @@ export default class YoutubePlayerManager {
         this.video.addEventListener("seeked", this.onSeeked);
         this.video.addEventListener("ended", this.onEnded);
         this.enforceDesiredState("bind");
+        this.startPlaybackDriftMonitor();
 
         // Cache the YouTube seek bar element for click proximity detection
         try {
@@ -193,27 +208,100 @@ export default class YoutubePlayerManager {
         this.video.removeEventListener("seeking", this.onSeeking);
         this.video.removeEventListener("seeked", this.onSeeked);
         this.video.removeEventListener("ended", this.onEnded);
+        this.stopPlaybackDriftMonitor();
+        this.resetPlaybackRate(true);
         this.video = null;
         this.lastAdState = false;
         this.pendingPauseAfterAd = false;
         this.seekBarEl = null;
+        this.lastReportedReadyState = null;
+    }
+
+    startPlaybackDriftMonitor() {
+        this.stopPlaybackDriftMonitor();
+        if (!this.video) return;
+        this.playbackDriftInterval = setInterval(() => this.checkPlaybackDrift(), PLAYBACK_DRIFT_INTERVAL_MS);
+    }
+
+    stopPlaybackDriftMonitor() {
+        if (!this.playbackDriftInterval) return;
+        clearInterval(this.playbackDriftInterval);
+        this.playbackDriftInterval = null;
+    }
+
+    resetPlaybackRate(force = false) {
+        if (!this.video) {
+            this.lastAppliedPlaybackRate = 1;
+            return;
+        }
+        const currentRate = typeof this.video.playbackRate === "number" ? this.video.playbackRate : 1;
+        if (force || Math.abs(currentRate - 1) > 0.001) {
+            try {
+                this.video.playbackRate = 1;
+            } catch (err) {
+                this.verbose && console.warn("resetPlaybackRate failed", err);
+            }
+        }
+        this.lastAppliedPlaybackRate = 1;
+    }
+
+    checkPlaybackDrift() {
+        if (!this.video) return;
+        if (!state.roomCode.get()) return this.resetPlaybackRate();
+        if (state.roomState.get() !== "playing") return this.resetPlaybackRate();
+        if (this.video.paused) return this.resetPlaybackRate();
+        if (this.ad_playing.get && this.ad_playing.get()) return this.resetPlaybackRate();
+        if (this.isAdPlayingNow()) return this.resetPlaybackRate();
+        if (this.isNearContentEnd(1)) return this.resetPlaybackRate();
+        const { progress_ms } = getCurrentPlayingProgressMs();
+        if (progress_ms === null || progress_ms === undefined) {
+            return this.resetPlaybackRate();
+        }
+
+        const actualMs = Number(this.video.currentTime || 0) * 1000;
+        if (!isFinite(actualMs)) {
+            return this.resetPlaybackRate();
+        }
+
+        const driftMs = progress_ms - actualMs;
+        if (Math.abs(driftMs) >= PLAYBACK_DRIFT_SEEK_THRESHOLD_MS) {
+            this.setDesiredProgressMs(progress_ms);
+            this.resetPlaybackRate(true);
+            return;
+        }
+
+        if (Math.abs(driftMs) <= PLAYBACK_DRIFT_THRESHOLD_MS) return this.resetPlaybackRate();
+
+        const rateDelta = driftMs / PLAYBACK_DRIFT_FULL_ADJUST_MS;
+        const targetRate = clamp(1 + rateDelta, PLAYBACK_DRIFT_MIN_RATE, PLAYBACK_DRIFT_MAX_RATE);
+
+        // console.log("checkPlaybackDrift", {
+        //     driftMs,
+        //     rateDelta,
+        //     targetRate,
+        //     lastAppliedPlaybackRate: this.lastAppliedPlaybackRate,
+        // });
+
+        try {
+            this.video.playbackRate = targetRate;
+            this.lastAppliedPlaybackRate = targetRate;
+        } catch (err) {
+            this.verbose && console.warn("checkPlaybackDrift: failed to set playbackRate", err);
+        }
     }
 
     onPlay = (e) => {
-        this.verbose && console.log("onPlay");
-        if (!this.isUserInitiatedMediaEvent(e)) return this.verbose && console.log("onPlay return: programmatic");
+        if (!this.isUserInitiatedMediaEvent(e)) return;
         this.enforceDesiredState("onPlay");
     };
 
     onPlaying = (e) => {
-        this.verbose && console.log("onPlaying");
         this.enforceDesiredState("onPlaying");
     };
 
     onPause = (e) => {
-        this.verbose && console.log("onPause");
         this.checkIfVideoFinished();
-        if (!this.isUserInitiatedMediaEvent(e)) return this.verbose && console.log("onPause return: programmatic");
+        if (!this.isUserInitiatedMediaEvent(e)) return;
         this.enforceDesiredState("onPause");
     };
 
@@ -223,20 +311,17 @@ export default class YoutubePlayerManager {
     };
 
     onLoadedData = (e) => {
-        this.verbose && console.log("onLoadedData");
         this.enforceDesiredState("onLoadedData");
+        this.reportReadyState(true);
     };
 
     onSeeking = (e) => {
-        this.verbose && console.log("onSeeking");
-        if (this.is_programmatic_seek.get()) return this.verbose && console.log("onSeeking return: programmatic seek");
+        if (this.is_programmatic_seek.get()) return;
         this.enforceDesiredState("onSeeking");
     };
 
     onSeeked = (e) => {
-        this.verbose && console.log("onSeeked");
         if (this.is_programmatic_seek.get()) {
-            this.verbose && console.log("onSeeked return: programmatic seek");
             this.enforceDesiredState("onSeeked");
             return;
         }
@@ -259,12 +344,6 @@ export default class YoutubePlayerManager {
 
                     if (positionToSync === null) return;
 
-                    this.verbose &&
-                        console.log("emitFrameStepSync: syncing frame step", {
-                            direction,
-                            positionToSync,
-                        });
-
                     // Emit as a seek so the splash shows accordingly
                     this.app.socket.emit("room.control.seek", {
                         progress_ms: positionToSync,
@@ -280,7 +359,6 @@ export default class YoutubePlayerManager {
     };
 
     onEnded = (e) => {
-        this.verbose && console.log("onEnded");
         this.nearEndProbeSent = true;
         this.app.socket.emit("queue.probe");
         this.setDesiredState("paused", "onEnded");
@@ -315,13 +393,15 @@ export default class YoutubePlayerManager {
     }
 
     onAdStartCb() {
-        this.verbose && console.log("onAdStart");
         this.ad_playing.set(true);
+        this.resetPlaybackRate(true);
+        this.reportReadyState(true);
     }
 
     onAdEndCb() {
-        this.verbose && console.log("onAdEnd");
         this.ad_playing.set(false);
+        this.resetPlaybackRate(true);
+        this.reportReadyState(true);
     }
 
     getDesiredState() {
@@ -330,7 +410,6 @@ export default class YoutubePlayerManager {
 
     // External API for desired state
     setDesiredState(state) {
-        this.verbose && console.log("setDesiredState", state);
         if (state !== "playing" && state !== "paused") return;
         if (this.desired_state.get() === state) return;
         this.desired_state.set(state);
@@ -340,8 +419,10 @@ export default class YoutubePlayerManager {
 
     setDesiredProgressMs(progressMs) {
         const seconds = progressMs / 1000;
-        this.verbose && console.log("setDesiredProgressMs", seconds, "on video", this.video);
         if (!this.video) return;
+        // Don't seek during ads - let ads play naturally
+        if (this.ad_playing.get && this.ad_playing.get()) return;
+        if (this.isAdPlayingNow()) return;
         // Suppress our seeking/seeked handlers during programmatic seek
         this.is_programmatic_seek.set(true);
         this.video.addEventListener(
@@ -368,7 +449,6 @@ export default class YoutubePlayerManager {
         } else {
             this.is_enforcing.set(false);
         }
-        this.verbose && console.log("enforce: play", reason);
     }
 
     safePause(reason) {
@@ -380,7 +460,6 @@ export default class YoutubePlayerManager {
             this.video.pause();
         } catch {}
         this.is_enforcing.set(false);
-        this.verbose && console.log("enforce: pause", reason);
     }
 
     enforceDesiredState(reason = "") {
@@ -397,32 +476,27 @@ export default class YoutubePlayerManager {
 
         // Don't enforce state if not in a room
         if (!state.roomCode.get()) {
-            this.verbose && console.log("enforceDesiredState: not enforcing - not in a room", reason);
             return;
         }
 
-        if (!this.video || this.is_enforcing.get()) {
-            this.verbose && console.log("enforceDesiredState: not enforcing", reason, this);
-            return;
-        }
+        if (!this.video || this.is_enforcing.get()) return;
 
         // Suppress auto-play enforcement when video is essentially finished to avoid restarts
-        if (this.isNearContentEnd(1)) {
+        if (this.isNearContentEnd(1) && !isAd) {
             try {
                 const dur = Number(this.video.duration || 0);
                 const cur = Number(this.video.currentTime || 0);
-                this.verbose && console.log("enforceDesiredState: suppress near end", { cur, dur, reason });
             } catch {}
             return;
         }
 
         const desired = this.getDesiredState();
-        // this.verbose && console.log("enforceDesiredState", reason, { desired, isAd, wasAd });
-
-        // Allow ads to play when paused is desired
+        // Allow ads to **continue** playing when paused is desired, but do not
+        // programmatically (re)start them. Repeatedly calling play() on an
+        // ended/near-ended ad clip can cause YouTube to loop or restart ad pods.
         if (desired === "paused" && isAd) {
             this.pendingPauseAfterAd = true;
-            if (this.video.paused) this.safePlay("ad-allowed");
+            // Intentionally avoid safePlay("ad-allowed") to prevent ad loops.
             return;
         }
 
@@ -446,9 +520,23 @@ export default class YoutubePlayerManager {
 
     maybeEmitNearEndProbe() {
         if (!this.video || this.nearEndProbeSent) return;
-        if (this.isNearContentEnd(1)) {
+        // Don't probe if it's an ad
+        if (this.ad_playing.get && this.ad_playing.get()) return;
+        if (this.isAdPlayingNow()) return;
+
+        // Use authoritative server-side timing to decide when the video is "near end"
+        // rather than the raw <video> element, which can still reflect a previous
+        // clip or pre‑roll ad (especially around user.ready → room.playback).
+        const { progress_ms, duration_ms } = getCurrentPlayingProgressMs();
+        if (duration_ms === null || duration_ms === undefined || duration_ms <= 0) return;
+        if (progress_ms === null || progress_ms === undefined) return;
+
+        const remainingMs = duration_ms - progress_ms;
+        const thresholdMs = 1000; // 1s from real content end
+
+        // Only treat as near-end when the actual room playback is almost finished.
+        if (remainingMs <= thresholdMs) {
             this.nearEndProbeSent = true;
-            this.verbose && console.log("nearEnd: emitting queue.probe");
             // Prevent restarts while server advances the queue
             this.setDesiredState("paused");
             this.app.socket.emit("queue.probe");
@@ -459,26 +547,96 @@ export default class YoutubePlayerManager {
     isAdPlayingNow() {
         if (!this.video) return false;
         const container = this.video.closest(".html5-video-player") || document.querySelector(".html5-video-player");
-        // If content essentially ended, do not report ad
-        if (this.isNearContentEnd(1)) return false;
-        if (container && container.classList.contains("ad-showing")) return true;
-        // Require a strong ad indicator to avoid false positives
-        if (
-            container &&
-            container.querySelector(
-                ".ytp-ad-duration-remaining, .ytp-ad-player-overlay, .ytp-ad-skip-button, .ytp-ad-skip-button-modern"
-            ) != null
-        )
-            return true;
-        return false;
+        let hasAdClass = false;
+        let hasAdElements = false;
+
+        if (container) {
+            hasAdClass = container.classList.contains("ad-showing");
+            try {
+                hasAdElements =
+                    container.querySelector(
+                        ".ytp-ad-duration-remaining, .ytp-ad-player-overlay, .ytp-ad-skip-button, .ytp-ad-skip-button-modern"
+                    ) != null;
+            } catch {
+                hasAdElements = false;
+            }
+        }
+
+        const isNearEnd = this.isNearContentEnd(1);
+        const adDetected = Boolean((container && hasAdClass) || (container && hasAdElements));
+
+        // Only suppress ad detection near actual content end – never suppress purely
+        // based on ad video length (e.g. for 6s ads). We rely on server-side timing
+        // for near-end content detection elsewhere.
+        if (isNearEnd && !adDetected) return false;
+
+        return adDetected;
+    }
+
+    onRoomStateChange(newState) {
+        try {
+            const roomCode = state.roomCode && state.roomCode.get ? state.roomCode.get() : null;
+            const globalRoomState = state.roomState && state.roomState.get ? state.roomState.get() : null;
+        } catch {}
+
+        if (newState === "starting") {
+            this.lastReportedReadyState = null;
+            this.reportReadyState(true);
+            return;
+        }
+        // Leaving starting state, clear cached ready status so next cycle re-sends.
+        this.lastReportedReadyState = null;
+    }
+
+    reportReadyState(force = false) {
+        const roomCode = state.roomCode && state.roomCode.get ? state.roomCode.get() : null;
+        const roomState = state.roomState && state.roomState.get ? state.roomState.get() : null;
+        const inRoom = state.inRoom && state.inRoom.get ? Boolean(state.inRoom.get()) : false;
+
+        if (!roomCode) {
+            this.lastReportedReadyState = null;
+            return;
+        }
+        // If we are not currently joined to any room (e.g. after a leave or
+        // socket disconnect), do not emit readiness for stale room codes.
+        if (!inRoom) {
+            this.lastReportedReadyState = null;
+            return;
+        }
+        if (roomState !== "starting") {
+            return;
+        }
+        if (!this.video) {
+            if (!force) this.lastReportedReadyState = null;
+            return;
+        }
+
+        const haveCurrentData =
+            typeof HTMLMediaElement !== "undefined" && HTMLMediaElement ? HTMLMediaElement.HAVE_CURRENT_DATA : 2;
+        const canPlay = this.video.readyState >= haveCurrentData;
+        const adNow = this.isAdPlayingNow();
+        const ready = Boolean(canPlay && !adNow);
+
+        if (!force && this.lastReportedReadyState === ready) return;
+        this.lastReportedReadyState = ready;
+        if (!state.roomCode.get()) {
+            return;
+        }
+
+        if (this.app?.socket?.emitUserReady) {
+            this.app.socket.emitUserReady(ready);
+        } else if (this.app?.socket?.emit) {
+            this.app.socket.emit("user.ready", { ready });
+        }
     }
 
     onControlKeyup = () => {
-        this.seek_throttle_accumulator = -1;
+        this.seekKeyStartTime = 0;
     };
 
     // Override native YouTube controls with room controls
     onControlKeydown = (e) => {
+        if (e.altKey) return;
         // Ignore when typing in inputs or inside ShareTube UI
         const path = (e.composedPath && e.composedPath()) || [];
         if (path.some((el) => el && el.id === "sharetube_main")) return;
@@ -487,33 +645,51 @@ export default class YoutubePlayerManager {
         const isEditable =
             (t && (t.isContentEditable || tag === "input" || tag === "textarea" || tag === "select")) || false;
         if (isEditable) return;
-        if (e.code === "Space" || e.code === "KeyK") {
-            e.preventDefault();
-            e.stopPropagation();
-            this.emitToggleRoomPlayPause();
-        } else if (e.code === "ArrowLeft") {
-            e.preventDefault();
-            e.stopPropagation();
-            this.emitSeekRelative(-5000);
-        } else if (e.code === "ArrowRight") {
-            e.preventDefault();
-            e.stopPropagation();
-            this.emitSeekRelative(5000);
-        } else if (e.code === "Comma" || e.code === "Period") {
-            // Let YouTube handle native frame-by-frame navigation
-            // We'll sync after the seek completes
-            if (!state.roomCode.get()) return;
-            if (!this.video) return;
-            const direction = e.code === "Period" ? 1 : -1;
-            this.pendingFrameStepSync = direction;
-            // Don't prevent default - let YouTube handle it natively
-        } else if (e.code >= "Digit0" && e.code <= "Digit9") {
-            e.preventDefault();
-            e.stopPropagation();
-            // 0 = 0%, 1 = 10%, 2 = 20%, ..., 9 = 90%
-            const digit = parseInt(e.code.replace("Digit", ""), 10);
-            const percentage = digit / 10;
-            this.emitSeekToPercentage(percentage);
+        switch (e.code) {
+            case "Space":
+            case "KeyK":
+                e.preventDefault();
+                e.stopPropagation();
+                this.emitToggleRoomPlayPause();
+                break;
+
+            case "ArrowLeft":
+            case "KeyA":
+                if (e.ctrlKey) return;
+                e.preventDefault();
+                e.stopPropagation();
+                this.emitSeekRelative(-1);
+                break;
+
+            case "ArrowRight":
+            case "KeyD":
+                if (e.ctrlKey) return;
+                e.preventDefault();
+                e.stopPropagation();
+                this.emitSeekRelative(1);
+                break;
+
+            case "Comma":
+            case "Period":
+                // Let YouTube handle native frame-by-frame navigation
+                // We'll sync after the seek completes
+                if (!state.roomCode.get()) return;
+                if (!this.video) return;
+                const direction = e.code === "Period" ? 1 : -1;
+                this.pendingFrameStepSync = direction;
+                // Don't prevent default - let YouTube handle it natively
+                break;
+
+            default:
+                if (e.code >= "Digit0" && e.code <= "Digit9") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // 0 = 0%, 1 = 10%, 2 = 20%, ..., 9 = 90%
+                    const digit = parseInt(e.code.replace("Digit", ""), 10);
+                    const percentage = digit / 10;
+                    this.emitSeekToPercentage(percentage);
+                }
+                break;
         }
     };
 
@@ -625,11 +801,11 @@ export default class YoutubePlayerManager {
             return;
         } else if (e.target === this.video) {
             this.verbose && console.log("onPlayerClick: video clicked");
-            // Detect double-click: if two clicks happen within 300ms, skip play/pause toggle
+            // Detect double-click: if two clicks happen within 200ms, skip play/pause toggle
             const now = Date.now();
             const timeSinceLastClick = now - this.lastVideoClickTime;
 
-            if (timeSinceLastClick < 300) {
+            if (timeSinceLastClick < 200) {
                 // This is a double-click, cancel pending play/pause toggle and let YouTube handle fullscreen
                 this.verbose && console.log("onPlayerClick: double-click detected, skipping play/pause");
                 if (this.videoClickTimeout) {
@@ -656,7 +832,7 @@ export default class YoutubePlayerManager {
                 this.videoClickTimeout = null;
                 this.lastVideoClickTime = 0;
                 this.emitToggleRoomPlayPause();
-            }, 300);
+            }, 200);
         } else {
             this.verbose && console.log("onPlayerClick: other clicked", e);
         }
@@ -690,23 +866,35 @@ export default class YoutubePlayerManager {
             () => {
                 this.app.socket.emit(roomState === "playing" ? "room.control.pause" : "room.control.play");
             },
-            1000
+            300
         );
     }
 
-    emitSeekRelative(deltaMs) {
+    emitSeekRelative(direction) {
         const delay = 500;
-        const boost_ms = 20000;
-        this.seek_throttle_accumulator += 1;
+
+        if (this.seekKeyStartTime === 0) {
+            this.seekKeyStartTime = Date.now();
+        }
+
         throttle(
             this,
             "emitSeekRelative",
             () => {
-                const seek_throttle_accumulator = this.seek_throttle_accumulator;
-                this.seek_throttle_accumulator = -1;
-                const devided = seek_throttle_accumulator / 40;
-                const boosted_ms = boost_ms * devided;
-                const real_delta = deltaMs + (deltaMs > 0 ? boosted_ms : -boosted_ms);
+                const elapsed = this.seekKeyStartTime > 0 ? Date.now() - this.seekKeyStartTime : 0;
+
+                let increment = 5000;
+                const thresholds = Object.keys(this.seekTimings)
+                    .map(Number)
+                    .sort((a, b) => a - b);
+
+                for (const t of thresholds) {
+                    if (elapsed >= t) {
+                        increment = this.seekTimings[t];
+                    }
+                }
+
+                const real_delta = direction * increment;
                 const durMs = this.video ? Math.max(0, Number(this.video.duration || 0) * 1000) : 0;
                 const curMs = this.video ? Math.max(0, Number(this.video.currentTime || 0) * 1000) : 0;
                 let target = curMs + real_delta;

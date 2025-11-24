@@ -92,10 +92,7 @@ export default class ShareTubeQueue {
                             zyx-live-list=${{
                                 list: state.queueQueued,
                                 compose: ShareTubeQueueComponent,
-                                filter: (v) => {
-                                    console.log("filter", v);
-                                    return v.status.get() === "queued";
-                                },
+                                filter: (v) => v.status.get() === "queued",
                             }}
                         ></div>
                         <div zyx-else class="queue-empty">
@@ -114,7 +111,7 @@ export default class ShareTubeQueue {
                             }}
                         ></div>
                         <div zyx-else class="queue-empty">
-                            <span class="queue-empty-text">Queue is empty</span>
+                            <span class="queue-empty-text">No videos played</span>
                         </div>
                     </div>
                     <div class="queue_container" zyx-radioview="queues.skipped">
@@ -128,6 +125,9 @@ export default class ShareTubeQueue {
                                 filter: (v) => v.status.get() === "skipped",
                             }}
                         ></div>
+                        <div zyx-else class="queue-empty">
+                            <span class="queue-empty-text">No videos skipped</span>
+                        </div>
                     </div>
                     <div class="queue_container" zyx-radioview="queues.deleted">
                         <div
@@ -141,7 +141,7 @@ export default class ShareTubeQueue {
                             }}
                         ></div>
                         <div zyx-else class="queue-empty">
-                            <span class="queue-empty-text">Queue is empty</span>
+                            <span class="queue-empty-text">No videos deleted</span>
                         </div>
                     </div>
                 </div>
@@ -194,7 +194,6 @@ export default class ShareTubeQueue {
         const x = e.clientX - bounds.left;
         const progressPercentage = Math.max(0, Math.min(1, x / bounds.width));
         const progressMs = currentPlayingProgressMsPercentageToMs(progressPercentage);
-        console.log("onCurrentPlayingProgressBarClick", { progressPercentage, progressMs });
         if (typeof progressMs === "number" && this.app.virtualPlayer) {
             this.app.virtualPlayer.emitSeek(progressMs);
         }
@@ -218,6 +217,9 @@ export default class ShareTubeQueue {
 }
 
 const openInNewTabSVG = chrome.runtime.getURL("app/assets/open-in-new-tab.svg");
+const linkSVG = chrome.runtime.getURL("app/assets/link.svg");
+const xSVG = chrome.runtime.getURL("app/assets/x.svg");
+const requeueSVG = chrome.runtime.getURL("app/assets/requeue.svg");
 
 // UI component representing a queued YouTube item
 export class ShareTubeQueueComponent {
@@ -231,33 +233,66 @@ export class ShareTubeQueueComponent {
             <div class="queue-item" data-id=${this.item.id}>
                 <div class="queue-item-thumbnail">
                     <img class="thumb" alt=${this.item.title || ""} src=${this.item.thumbnail_url} loading="lazy" />
-                    <div class="queue-item-duration">
-                        ${this.item.duration_ms.interp((v) => (v ? new Date(v).toISOString().substr(11, 8) : "") || "")}
-                    </div>
+                    <div class="queue-item-duration">${msDurationTimeStamp(this.item.duration_ms)}</div>
                 </div>
                 <div class="meta">
-                    <div class="title">${this.item.title}</div>
+                    <div class="author" zyx-click=${() => this.item.openYoutubeAuthorUrl()}>
+                        ${this.item.youtube_author?.title}
+                    </div>
                     <div class="url">
-                        ${this.item.url}
-                        <span class="external-link-icon" zyx-click=${() => this.item.openUrl()}>
+                        <div class="title">${this.item.title}</div>
+                        <span
+                            class="link-drag-icon"
+                            draggable="true"
+                            title="Drag link or click to copy to clipboard."
+                            zyx-dragstart=${(e) => {
+                                e.e.dataTransfer.setData("text/plain", this.item.url);
+                                e.e.dataTransfer.effectAllowed = "copyLink";
+                            }}
+                            zyx-click=${(e) => {
+                                e.e.preventDefault();
+                                e.e.stopPropagation();
+                                // copy to clipboard
+                                navigator.clipboard.writeText(this.item.url);
+                            }}
+                        >
+                            <img src=${linkSVG} alt="Drag link" />
+                        </span>
+                        <span class="external-link-icon" title="Open in new tab" zyx-click=${() => this.item.openUrl()}>
                             <img src=${openInNewTabSVG} alt="Open in new tab" />
                         </span>
                     </div>
                 </div>
-                <button
-                    class="x-button"
-                    type="button"
-                    aria-label="Remove from queue"
-                    title="Remove from queue"
-                    zyx-click=${() => this.removeFromQueue()}
-                >
-                    X
-                </button>
+                <div class="queue-item-actions">
+                    <button
+                        class="x-button"
+                        type="button"
+                        aria-label="Remove from queue"
+                        title="Remove from queue"
+                        zyx-click=${() => this.removeFromQueue()}
+                    >
+                        <img src=${xSVG} alt="Remove" />
+                    </button>
+                    <button
+                        zyx-if=${[this.item.status, (v) => v !== "queued"]}
+                        class="requeue-button"
+                        type="button"
+                        aria-label="Move back to top of queue"
+                        title="Move back to top of queue"
+                        zyx-click=${() => this.moveToTop()}
+                    >
+                        <img src=${requeueSVG} alt="Requeue" />
+                    </button>
+                </div>
             </div>
         `.bind(this);
     }
 
     removeFromQueue() {
         this.item.remove();
+    }
+
+    moveToTop() {
+        this.item.requeueToTop();
     }
 }

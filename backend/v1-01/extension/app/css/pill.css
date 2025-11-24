@@ -54,47 +54,6 @@
     font-family: 'Roboto';
 }
 
-#sharetube_pill .room_presence {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    outline: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 999px;
-    padding: 4px 6px;
-    background: rgba(0, 0, 0, 0.35);
-}
-
-#sharetube_pill .presence {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-#sharetube_pill .presence .user_icon_avatar {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #222;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-
-    outline: 0px solid transparent;
-    transition: outline-width 200ms ease;
-
-    opacity: 0;
-    transition: opacity 200ms ease;
-    transition-delay: 50ms;
-
-    &[src] {
-        opacity: 1;
-    }
-
-    &:hover:not([src]) {
-        outline-width: 2px;
-        outline-color: rgba(255, 255, 255, 0.5);
-    }
-}
-
 #sharetube_toggle_queue {
     display: inline-flex;
     align-items: center;

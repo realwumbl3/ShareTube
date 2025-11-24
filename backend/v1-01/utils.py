@@ -91,6 +91,8 @@ def fetch_video_meta(video_id: str) -> dict:
                 )
                 title = sn.get("title") or title
                 thumb = best.get("url") or thumb
+                channel_id = sn.get("channelId", "")
+                channel_title = sn.get("channelTitle", "")
                 try:
                     # Parse ISO 8601 duration to milliseconds
                     cd = items[0].get("contentDetails", {})
@@ -108,6 +110,15 @@ def fetch_video_meta(video_id: str) -> dict:
                             "duration_ms": int(
                                 ((hours * 3600) + (minutes * 60) + seconds) * 1000
                             ),
+                            "channel_id": channel_id,
+                            "channel_title": channel_title,
+                            "channel_url": (
+                                f"https://www.youtube.com/channel/{channel_id}"
+                                if channel_id
+                                else ""
+                            ),
+                            "video_description": sn.get("description") or "",
+                            "video_published_at": sn.get("publishedAt"),
                         }
                 except Exception:
                     current_app.logger.exception(
@@ -120,6 +131,82 @@ def fetch_video_meta(video_id: str) -> dict:
             "fetch_video_meta: error getting video metadata (video_id=%s) (status_code=%s)",
             video_id,
             r2.status_code,
+        )
+        return None
+
+
+def fetch_youtube_channel_meta(channel_id: str) -> dict | None:
+    """Fetch extra metadata for a YouTube channel using the Data API."""
+
+    def _safe_int(value: str | int | None) -> int | None:
+        try:
+            if value is None:
+                return None
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    api_key = current_app.config.get("YOUTUBE_API_KEY", "")
+    if not api_key or not channel_id:
+        return None
+
+    try:
+        response = requests.get(
+            "https://www.googleapis.com/youtube/v3/channels",
+            params={
+                "id": channel_id,
+                "part": "snippet,statistics",
+                "key": api_key,
+            },
+            timeout=8,
+        )
+        if response.status_code != 200:
+            current_app.logger.warning(
+                "fetch_youtube_channel_meta: "
+                "non-200 response for channel_id=%s (status_code=%s)",
+                channel_id,
+                response.status_code,
+            )
+            return None
+
+        data = response.json()
+        items = data.get("items") or []
+        if not items:
+            current_app.logger.warning(
+                "fetch_youtube_channel_meta: no channel items for channel_id=%s",
+                channel_id,
+            )
+            return None
+
+        item = items[0]
+        snippet = item.get("snippet", {})
+        stats = item.get("statistics", {})
+        thumbnails = snippet.get("thumbnails", {}) or {}
+        best_thumb = (
+            thumbnails.get("maxres")
+            or thumbnails.get("high")
+            or thumbnails.get("medium")
+            or thumbnails.get("default")
+            or {}
+        )
+
+        return {
+            "channel_id": channel_id,
+            "title": snippet.get("title"),
+            "description": snippet.get("description"),
+            "custom_url": snippet.get("customUrl"),
+            "country": snippet.get("country"),
+            "published_at": snippet.get("publishedAt"),
+            "thumbnail_url": best_thumb.get("url"),
+            "subscriber_count": _safe_int(stats.get("subscriberCount")),
+            "view_count": _safe_int(stats.get("viewCount")),
+            "video_count": _safe_int(stats.get("videoCount")),
+            "raw_response": item,
+        }
+    except Exception:
+        current_app.logger.exception(
+            "fetch_youtube_channel_meta: error fetching metadata for channel_id=%s",
+            channel_id,
         )
         return None
 
