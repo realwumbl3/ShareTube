@@ -303,13 +303,12 @@ See `LAUNCH_EXT-README.md` for detailed usage options.
 
 #### Queue Management
 - `queue.add` - Add video to room queue
-  - Parameters: `url` (YouTube URL), `title` (optional)
+  - Parameters: `url` (YouTube URL)
 - `queue.remove` - Remove video from queue
   - Parameters: `queue_entry_id`
 - `queue.requeue_to_top` - Move queue item to top
   - Parameters: `queue_entry_id`
-- `queue.probe` - Check if URL is valid YouTube video
-  - Parameters: `url`
+- `queue.probe` - Check if current video is completed and advance to next in queue
 - `queue.load-debug-list` - Load debug video list (development only)
 
 ### Server → Client Events
