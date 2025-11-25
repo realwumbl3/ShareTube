@@ -39,7 +39,7 @@ ShareTube is available under a dual-license model:
 
 - **GitHub**: https://github.com/wumbl3/ShareTube
 - **Issues**: Create a "Commercial License Inquiry" issue
-- **Email**: [Add your contact email here]
+- **Email**: wumbl3@gmail.com
 
 ## What Requires a Commercial License?
 
