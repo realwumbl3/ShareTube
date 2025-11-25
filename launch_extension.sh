@@ -13,7 +13,7 @@ set -euo pipefail
 #
 # Detailed, line-by-line comments explain data flow and logic throughout.
 
-VERSION="v1-01"
+VERSION="ShareTube-v1-02"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # Absolute path to this script's directory
 PROJECT_ROOT="$SCRIPT_DIR"                                   # Define project root relative to script
@@ -73,7 +73,7 @@ DOUBLE=false                                              # Whether to launch a 
 DEFAULT_PROFILE_A="/home/wumbl3wsl/ShareTube/.browser-profiles/A"  # Default A profile path
 DEFAULT_PROFILE_B="/home/wumbl3wsl/ShareTube/.browser-profiles/B"  # Default B profile path
 PROFILE_DIR="$DEFAULT_PROFILE_A"                         # Primary profile default
-START_URL="https://www.youtube.com/#st:b8dd2511dde730"                     # Default start URL
+START_URL="https://www.youtube.com/#st:8d9cafb8bd36fe"                     # Default start URL
 WINDOW_POSITION="0,0"                                    # Default requested position (X honored)
 WINDOW_SIZE="1280,1400"                                  # Default requested size (H adjusted later)
 SHOWING_DEVTOOLS=false                                     # Whether to show devtools

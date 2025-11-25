@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="neonRed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff1744" />
+      <stop offset="100%" style="stop-color:#b2102f" />
+    </linearGradient>
+    <linearGradient id="neonCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00e5ff" />
+      <stop offset="100%" style="stop-color:#008299" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Minimalist Screen Outline -->
+  <rect x="16" y="28" width="96" height="72" rx="8" fill="#121212" stroke="#333" stroke-width="4"/>
+  
+  <g transform="translate(64, 64)">
+    <!-- Yin Yang style sync -->
+    <!-- Top Play (Red) -->
+    <path d="M -20 -15 L 20 -15 L 0 20 Z" fill="url(#neonRed)" transform="rotate(90) translate(10,0)"/>
+    
+    <!-- Bottom Play (Cyan) -->
+    <path d="M -20 -15 L 20 -15 L 0 20 Z" fill="url(#neonCyan)" transform="rotate(-90) translate(10,0)"/>
+    
+    <!-- Connection Arc -->
+    <path d="M -15 -30 A 40 40 0 0 1 15 -30" stroke="url(#neonRed)" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M -15 30 A 40 40 0 0 0 15 30" stroke="url(#neonCyan)" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

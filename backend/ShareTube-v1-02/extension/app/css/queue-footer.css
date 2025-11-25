@@ -1,0 +1,6 @@
+#sharetube_queue .queue-footer {
+    display: flex;
+    justify-content: space-between;
+    /* padding: 6px; */
+}
+

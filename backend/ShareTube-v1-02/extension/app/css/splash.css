@@ -1,0 +1,235 @@
+.splash_overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    gap: 10px;
+    z-index: 1000000001;
+    pointer-events: none;
+    overflow: hidden;
+    contain: strict;
+
+    &>.badge_zone {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+
+
+        &>.badge_container {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            gap: 10px;
+
+            &>.badge {
+                position: absolute;
+                height: 120px;
+                aspect-ratio: 1 / 1;
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+                backdrop-filter: blur(20px) saturate(180%);
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                font-weight: bold;
+                opacity: 0;
+                scale: 0.6;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+                &>.large_icon {
+                    position: absolute;
+                    inset: 0;
+                    background-size: 60%;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+                }
+
+                &>.label {
+                    position: absolute;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+                        sans-serif;
+                    font-size: 1.4em;
+                    font-weight: 700;
+                    color: #fff;
+                    letter-spacing: 1px;
+                    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 255, 255, 0.3);
+
+                    &.frame_step_label {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+
+                        &>.frame_step_icon {
+                            font-size: 1.2em;
+                            font-weight: 700;
+                            color: #fff;
+                            letter-spacing: 1px;
+                            text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 255, 255, 0.3);
+
+                            .frame_step_label.forward & {
+                                transform: rotate(0deg);
+                            }
+
+                            .frame_step_label.backward & {
+                                transform: rotate(180deg);
+                            }
+                        }
+                    }
+                }
+
+            }
+
+        }
+    }
+
+    &>.actor_audit {
+        position: absolute;
+        top: 2em;
+        left: 2em;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+        z-index: 1000000002;
+    }
+
+}
+
+@keyframes spring_in {
+    0% {
+        opacity: 0;
+        scale: 0.6;
+        filter: blur(8px);
+    }
+
+    20% {
+        opacity: 0.8;
+        scale: 0.95;
+        filter: blur(2px);
+    }
+
+    50% {
+        opacity: 1;
+        scale: 1.05;
+        filter: blur(0px);
+    }
+
+    80% {
+        opacity: 1;
+        scale: 1;
+        filter: blur(0px);
+    }
+
+    100% {
+        opacity: 0;
+        scale: 1.3;
+        filter: blur(4px);
+    }
+}
+
+.actor_entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: var(--bg-color, rgba(0, 0, 0, 0.7));
+    backdrop-filter: blur(12px) saturate(180%);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.3s ease;
+
+    &>.actor_details {
+        display: flex;
+        flex-direction: column;
+    }
+
+    &>.actor_avatar {
+        width: 32px;
+        height: 32px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    &>.actor_details>.actor_name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        letter-spacing: 0.2px;
+        white-space: nowrap;
+    }
+
+    &>.actor_details>.action_label {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.7);
+        white-space: nowrap;
+    }
+}
+
+.actor_entry.action-play {
+    --bg-color: rgba(76, 175, 80, 0.4);
+}
+
+.actor_entry.action-pause {
+    --bg-color: rgba(244, 67, 54, 0.4);
+}
+
+.actor_entry.action-seek-forward {
+    --bg-color: rgba(255, 152, 0, 0.4);
+}
+
+.actor_entry.action-seek-backward {
+    --bg-color: rgba(33, 150, 243, 0.4);
+}
+
+.actor_entry.action-restart {
+    --bg-color: rgba(156, 39, 176, 0.4);
+}
+
+.actor_entry.action-frame-forward {
+    --bg-color: rgba(205, 220, 57, 0.4);
+}
+
+.actor_entry.action-frame-backward {
+    --bg-color: rgba(0, 188, 212, 0.4);
+}
+
+.actor_entry.action-unknown {
+    --bg-color: rgba(158, 158, 158, 0.4);
+}
+
+@keyframes actor_fade_in {
+    0% {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes actor_fade_out {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+}

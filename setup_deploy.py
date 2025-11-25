@@ -126,10 +126,11 @@ def main() -> None:
         "sudo systemctl daemon-reload",
         f"sudo systemctl enable --now {APP_NAME}.{args.version}.service",
         # Ensure correct ownership and permissions on the unix socket so Nginx (www-data) can read/write it
-        f'sudo chown {username}:www-data "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
-        f'sudo ln -sf "$PROJECT_ROOT/instance/{args.version}/deploy/nginx.conf" /etc/nginx/sites-enabled/{APP_NAME}.{args.version}.conf',
+        f'sudo ln -sf "$PROJECT_ROOT/instance/ShareTube-nginx.conf" /etc/nginx/sites-enabled/ShareTube-entry.conf'
         "sudo nginx -t && sudo systemctl reload nginx",
+        # Run this command after the deployment is successful to ensure the correct ownership and permissions are set.
         f'sudo chmod 770 "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
+        f'sudo chown {username}:www-data "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
     ]
     print("--------------------------------")
     print("Run the following commands on the server to deploy the application:")

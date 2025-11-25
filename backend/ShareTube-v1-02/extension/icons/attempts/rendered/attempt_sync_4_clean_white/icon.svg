@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Flat Modern -->
+  <rect width="128" height="128" rx="32" fill="#ffffff"/>
+  
+  <g transform="translate(64, 64)">
+    <!-- Main Play Button Shape (Negative Space) -->
+    <path d="M -10 -30 L 40 0 L -10 30 Z" fill="#1f2937"/>
+    
+    <!-- Shadow/Echo Play Button (Synchronization) -->
+    <path d="M -35 -30 L 15 0 L -35 30 Z" fill="#ef4444" opacity="0.9"/>
+    
+    <!-- Connecting WiFi waves -->
+    <path d="M 50 -20 A 30 30 0 0 1 50 20" stroke="#1f2937" stroke-width="6" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

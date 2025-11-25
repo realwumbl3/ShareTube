@@ -1,0 +1,31 @@
+#sharetube_main {
+    position: fixed;
+    bottom: 0;
+    z-index: 10000000;
+    width: 100%;
+    display: grid;
+    justify-items: center;
+    align-items: center;
+    pointer-events: none;
+    background: #00000000;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 200ms ease, transform 300ms ease;
+    transform: translateY(80%);
+    /* Position container so only top 20% is visible (pill partially showing) */
+
+
+    &.visible {
+        opacity: 1;
+
+        &>* {
+            pointer-events: auto;
+        }
+    }
+
+    &.revealed,
+    &[is_locked="true"] {
+        transform: translateY(0);
+    }
+}
+

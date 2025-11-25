@@ -1,0 +1,206 @@
+console.log("app/app.js loaded");
+import { html, css, LiveVar, ZyXInput } from "./dep/zyx.js";
+
+import state from "./state.js";
+
+import SocketManager from "./socket.js";
+import DebugMenu from "./DebugMenu.js";
+import YoutubePlayerManager from "./youtubePlayer.js";
+import VirtualPlayer from "./virtualPlayer.js";
+import RoomManager from "./roomManager.js";
+import AuthManager from "./authManager.js";
+import UIManager from "./uiManager.js";
+import StorageManager from "./storageManager.js";
+
+import Queue from "./components/Queue.js";
+import UserIcons from "./components/UserIcons.js";
+import Controls from "./components/Controls.js";
+import Logo from "./components/Logo.js";
+import SearchBox from "./components/SearchBox.js";
+
+export const zyxInput = new ZyXInput();
+
+const lockSVG = chrome.runtime.getURL("app/assets/lock.svg");
+
+css`
+    @import url(${chrome.runtime.getURL("app/css/styles-base.css")});
+    @import url(${chrome.runtime.getURL("app/css/styles-popup.css")});
+    @import url(${chrome.runtime.getURL("app/css/styles-forms.css")});
+    @import url(${chrome.runtime.getURL("app/css/styles-components.css")});
+    @import url(${chrome.runtime.getURL("app/css/styles-main.css")});
+    @import url(${chrome.runtime.getURL("app/css/styles-animations.css")});
+    @import url(${chrome.runtime.getURL("app/css/pill.css")});
+    @import url(${chrome.runtime.getURL("app/css/adOverlay.css")});
+    @import url(${chrome.runtime.getURL("app/css/queue-container.css")});
+    @import url(${chrome.runtime.getURL("app/css/queue-header.css")});
+    @import url(${chrome.runtime.getURL("app/css/queue-current-playing.css")});
+    @import url(${chrome.runtime.getURL("app/css/queue-selector.css")});
+    @import url(${chrome.runtime.getURL("app/css/queue-list.css")});
+    @import url(${chrome.runtime.getURL("app/css/queue-footer.css")});
+    @import url(${chrome.runtime.getURL("app/css/firstParty.css")});
+    @import url(${chrome.runtime.getURL("app/css/splash.css")});
+`;
+
+export default class ShareTubeApp {
+    logSelf() {
+        console.log("ShareTubeApp", { app: this, state: state });
+    }
+
+    async backEndUrl() {
+        return await this.authManager.backEndUrl();
+    }
+
+    async authToken() {
+        return await this.authManager.authToken();
+    }
+
+    get hashRoomCode() {
+        return this.roomManager.hashRoomCode;
+    }
+
+    stHash(code) {
+        return this.roomManager.stHash(code);
+    }
+
+    updateCodeHashInUrl(code) {
+        return this.roomManager.updateCodeHashInUrl(code);
+    }
+
+    constructor() {
+        this.socket = new SocketManager(this);
+        this.youtubePlayer = new YoutubePlayerManager(this);
+        this.virtualPlayer = new VirtualPlayer(this);
+        this.roomManager = new RoomManager(this);
+        this.authManager = new AuthManager(this);
+        this.uiManager = new UIManager(this);
+        this.storageManager = new StorageManager(this);
+
+        // Components
+        this.queue = new Queue(this);
+        this.userIcons = new UserIcons(this);
+        this.debugMenu = new DebugMenu(this);
+        this.controls = new Controls(this);
+        this.logo = new Logo(this);
+
+        this.debugButtonVisible = new LiveVar(false);
+
+        this.locked = new LiveVar(false);
+
+        this.storageManager.getLocalStorage("locked").then((locked) => this.locked.set(locked));
+
+        html`
+            <div id="sharetube_main" class="st_reset" is_locked=${this.locked.interp()}>
+                ${this.queue} ${this.debugMenu}
+                <div id="sharetube_pill">
+                    <button
+                        id="sharetube_lock_btn"
+                        class="lock_btn"
+                        zyx-click=${() => this.uiManager.setLock(false)}
+                        zyx-if=${this.locked}
+                    >
+                        <img src=${lockSVG} alt="Lock" />
+                    </button>
+                    <img
+                        user-ready=${state.userReady.interp()}
+                        class="user_icon_avatar"
+                        draggable="false"
+                        alt="Profile"
+                        src=${state.avatarUrl.interp((v) => v || "")}
+                    />
+                    ${this.logo} ${this.userIcons}
+                    <div
+                        id="sharetube_toggle_queue"
+                        class="rounded_btn"
+                        zyx-click=${() => this.queue.toggleQueueVisibility()}
+                        zyx-if=${state.roomCode}
+                    >
+                        ${state.queueQueued.interp((v) => (v.length > 0 ? `Queue (${v.length})` : "Queue empty."))}
+                    </div>
+                    ${this.controls}
+                    <button
+                        class="rounded_btn"
+                        zyx-if=${this.debugButtonVisible}
+                        zyx-click=${() => this.debugMenu.toggleVisibility()}
+                    >
+                        dbg
+                    </button>
+                </div>
+            </div>
+        `.bind(this);
+
+        this.setupKeypressListeners();
+
+        this.uiManager.setupDragAndDrop();
+        this.uiManager.setupRevealBehavior();
+        this.uiManager.setupPillLockBehavior();
+        this.bindSocketListeners();
+        this.virtualPlayer.bindListeners(this.socket);
+
+        this.youtubePlayer.start();
+    }
+
+    bindSocketListeners() {
+        this.socket.on("presence.update", this.roomManager.onSocketPresenceUpdate.bind(this.roomManager));
+        this.socket.on("user.ready.update", this.roomManager.onSocketUserReadyUpdate.bind(this.roomManager));
+        this.socket.setupBeforeUnloadHandler();
+    }
+
+    setupKeypressListeners() {
+        document.addEventListener("keydown", (e) => {
+            if (e.key.toLowerCase() === "d" && e.ctrlKey && e.altKey) {
+                this.youtubePlayer.osdDebug.toggleVisibility();
+                this.debugButtonVisible.set(!this.debugButtonVisible.get());
+                return;
+            }
+        });
+    }
+
+    openSearch(query) {
+        new SearchBox(this, query);
+    }
+
+    async post(url, options = {}) {
+        return await this.authManager.post(url, options);
+    }
+
+    async createRoom() {
+        return await this.roomManager.createRoom();
+    }
+
+    async tryJoinRoomFromUrl() {
+        return await this.roomManager.tryJoinRoomFromUrl();
+    }
+
+    async copyCurrentRoomCodeToClipboard() {
+        return await this.roomManager.copyCurrentRoomCodeToClipboard();
+    }
+
+    async enqueueUrl(url) {
+        return await this.socket.emit("queue.add", { url });
+    }
+
+    async applyAvatarFromToken() {
+        return await this.authManager.applyAvatarFromToken();
+    }
+
+    attachBrowserListeners() {
+        return this.storageManager.attachBrowserListeners();
+    }
+
+    detachBrowserListeners() {
+        return this.storageManager.detachBrowserListeners();
+    }
+
+    start() {
+        console.log("ShareTube Init");
+        this.appendTo(document.body);
+        this.attachBrowserListeners();
+        this.applyAvatarFromToken();
+        this.tryJoinRoomFromUrl();
+        setTimeout(() => this.sharetube_main.classList.add("visible"), 1);
+    }
+
+    navKick() {
+        console.log("ShareTube navKick", this);
+    }
+}

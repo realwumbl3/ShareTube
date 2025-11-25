@@ -1,0 +1,29 @@
+#sharetube_queue .queue_selector {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#sharetube_queue .queue_selector .queue_selector_item {
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    user-select: none;
+}
+
+#sharetube_queue .queue_selector .queue_selector_item:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+#sharetube_queue .queue_selector .queue_selector_item:active {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+#sharetube_queue .queue_selector .queue_selector_item.active {
+    background: rgba(0, 0, 0, 0.6);
+}
+

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff0000;stop-opacity:1" /> <!-- YouTube Red -->
+      <stop offset="100%" style="stop-color:#cc0000;stop-opacity:1" /> <!-- Darker Red -->
+    </linearGradient>
+    
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="2" dy="3" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Main Container: Rounded Square representing a screen/room -->
+  <rect x="12" y="12" width="104" height="104" rx="22" fill="#ffffff" />
+  
+  <!-- Play Button / Share Symbol Fusion -->
+  <g filter="url(#dropShadow)">
+    <!-- The central element: A play button that is also a connector -->
+    <path d="M 42 34 L 96 64 L 42 94 Z" fill="url(#brandGradient)" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+    
+    <!-- Connection Nodes (Synchronization/Sharing aspect) -->
+    <!-- Top Node -->
+    <circle cx="96" cy="64" r="8" fill="#212121" stroke="#ffffff" stroke-width="2" />
+    
+    <!-- User Avatars / Connection Points hint -->
+    <circle cx="32" cy="34" r="6" fill="#212121" opacity="0.8" />
+    <circle cx="32" cy="94" r="6" fill="#212121" opacity="0.8" />
+    
+    <!-- WiFi/Signal Waves emanating from the play button (Real-time aspect) -->
+    <path d="M 104 44 C 114 50, 114 78, 104 84" stroke="#ff0000" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M 114 34 C 130 44, 130 84, 114 94" stroke="#ff0000" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.4"/>
+  </g>
+</svg>
