@@ -34,8 +34,7 @@ export default class DebugMenu {
                                 <span class="debug-label">Server offset:</span>
                                 <span class="debug-value"
                                     >${state.serverMsOffset.interp((v) => {
-                                        const hours = (v / 1000 / 60 / 60).toFixed(2);
-                                        return v > 0 ? `+${hours}h` : `${hours}h`;
+                                        return v > 0 ? `+${v}ms` : `${v}ms`;
                                     })}</span
                                 >
                             </div>

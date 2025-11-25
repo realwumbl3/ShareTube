@@ -2,8 +2,18 @@
 alwaysApply: true
 ---
 
-ACTIVE DEVELOPMENT VERSION: ShareTube-v1-02
+ROOT = PROJECTS REAL ROOT DIRECTORY: /home/wumbl3wsl/ShareTube/
 
-ignore contents of other /home/wumbl3wsl/ShareTube/backend/\* sub-directories.
+WORKING = WHERE WE CURRENTLY ARE: /home/wumbl3wsl/ShareTube/backend/ShareTube-v1-02/
 
-ONLY WORK WITHIN THIS DIRECTORY (/home/wumbl3wsl/ShareTube/backend/ShareTube-v1-02/)
+VERSION = ACTIVE DEVELOPMENT VERSION: ShareTube-v1-02
+
+ignore contents of other /home/wumbl3wsl/ShareTube/backend/ sub-directories.
+
+ONLY WORK WITHIN THIS(WORKING) DIRECTORY
+
+STAY OUT OF .root (it's a symbolic link to the ROOT directory)
+
+.instance takes you to /home/wumbl3wsl/ShareTube/instance/ShareTube-v1-02/ where the database/logs/runtime files are stored
+
+when opening a file, always open it from the WORKING directory and not from the ROOT directory

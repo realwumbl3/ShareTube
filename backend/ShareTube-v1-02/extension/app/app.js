@@ -23,6 +23,7 @@ export const zyxInput = new ZyXInput();
 const lockSVG = chrome.runtime.getURL("app/assets/lock.svg");
 
 css`
+    @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap");
     @import url(${chrome.runtime.getURL("app/css/styles-base.css")});
     @import url(${chrome.runtime.getURL("app/css/styles-popup.css")});
     @import url(${chrome.runtime.getURL("app/css/styles-forms.css")});
@@ -82,21 +83,19 @@ export default class ShareTubeApp {
         this.controls = new Controls(this);
         this.logo = new Logo(this);
 
-        this.debugButtonVisible = new LiveVar(false);
+        this.storageManager.getLocalStorage("locked", false).then((locked) => state.pillLocked.set(locked));
 
-        this.locked = new LiveVar(false);
-
-        this.storageManager.getLocalStorage("locked").then((locked) => this.locked.set(locked));
+        this.storageManager.getLocalStorage("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
 
         html`
-            <div id="sharetube_main" class="st_reset" is_locked=${this.locked.interp()}>
+            <div id="sharetube_main" class="st_reset" is_locked=${state.pillLocked.interp()}>
                 ${this.queue} ${this.debugMenu}
                 <div id="sharetube_pill">
                     <button
                         id="sharetube_lock_btn"
                         class="lock_btn"
                         zyx-click=${() => this.uiManager.setLock(false)}
-                        zyx-if=${this.locked}
+                        zyx-if=${state.pillLocked}
                     >
                         <img src=${lockSVG} alt="Lock" />
                     </button>
@@ -119,7 +118,7 @@ export default class ShareTubeApp {
                     ${this.controls}
                     <button
                         class="rounded_btn"
-                        zyx-if=${this.debugButtonVisible}
+                        zyx-if=${state.debug_mode}
                         zyx-click=${() => this.debugMenu.toggleVisibility()}
                     >
                         dbg
@@ -148,8 +147,8 @@ export default class ShareTubeApp {
     setupKeypressListeners() {
         document.addEventListener("keydown", (e) => {
             if (e.key.toLowerCase() === "d" && e.ctrlKey && e.altKey) {
-                this.youtubePlayer.osdDebug.toggleVisibility();
-                this.debugButtonVisible.set(!this.debugButtonVisible.get());
+                state.debug_mode.set(!state.debug_mode.get());
+                this.storageManager.setLocalStorage("debug_mode", state.debug_mode.get());
                 return;
             }
         });

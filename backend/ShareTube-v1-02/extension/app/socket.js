@@ -108,6 +108,10 @@ export default class SocketManager {
 
     setupBeforeUnloadHandler() {
         window.addEventListener("beforeunload", () => {
+            const code = state.roomCode.get();
+            if (code) {
+                this.emit("room.leave", { code });
+            }
             // Proactively leave the current room and clear local room flags so
             // that any late user.ready emissions (e.g. from video events
             // during navigation) are suppressed client‑side.
@@ -118,7 +122,6 @@ export default class SocketManager {
             } catch (e) {
                 console.warn("ShareTube: failed to clear room state on beforeunload", e);
             }
-            this.emit("room.leave");
         });
     }
 

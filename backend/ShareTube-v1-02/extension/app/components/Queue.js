@@ -57,25 +57,25 @@ export default class ShareTubeQueue {
                             <div class="bar_inner"></div>
                         </div>
                         <div class="current_playing_progress_stamps">
-                            <span>${state.currentPlaying.timestamp.interp((v) => msDurationTimeStamp(v || 0))}</span
-                            ><span></span>
-                            <span
+                            <span class="timestamp-current"
+                                >${state.currentPlaying.timestamp.interp((v) => msDurationTimeStamp(v || 0))}</span
+                            >
+                            <span class="timestamp-progress"
+                                >${state.currentPlaying.progress_ms.interp(
+                                    (v) => `PROGRESS: ${msDurationTimeStamp(v) || "00:00:00"}`
+                                )}</span
+                            >
+                            <span></span>
+                            <span class="timestamp-duration"
                                 >${state.currentPlaying.item.interp((v) =>
                                     msDurationTimeStamp(v?.duration_ms || 0)
                                 )}</span
                             >
-                        </div>
-                    </div>
-                    <div class="playing_status">
-                        <div class="playing_status_progress">
-                            Progress:
-                            ${state.currentPlaying.progress_ms.interp((v) => msDurationTimeStamp(v) || "00:00:00")}
-                        </div>
-                        <div class="playing_status_playing_since">
-                            Playing since:
-                            ${state.currentPlaying.playing_since_ms.interp(
-                                (v) => msDurationTimeStamp(v) || "Paused..."
-                            )}
+                            <span class="timestamp-playing-since"
+                                >${state.currentPlaying.playing_since_ms.interp(
+                                    (v) => `PLAYING SINCE: ${msDurationTimeStamp(v) || "Paused..."}`
+                                )}</span
+                            >
                         </div>
                     </div>
                 </div>

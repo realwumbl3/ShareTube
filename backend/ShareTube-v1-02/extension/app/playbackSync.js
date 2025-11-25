@@ -2,7 +2,7 @@ import { getCurrentPlayingProgressMs } from "./getters.js";
 import state from "./state.js";
 
 const PLAYBACK_DRIFT_INTERVAL_MS = 500;
-const PLAYBACK_DRIFT_THRESHOLD_MS = 10;
+const PLAYBACK_DRIFT_THRESHOLD_MS = 20;
 const PLAYBACK_DRIFT_FULL_ADJUST_MS = 3000;
 const PLAYBACK_DRIFT_MIN_RATE = 0.85;
 const PLAYBACK_DRIFT_MAX_RATE = 1.2;
@@ -16,6 +16,7 @@ export default class PlaybackSyncer {
         this.playback_drift_interval = null;
         this.last_applied_playrate = 1;
         this.verbose = false;
+        state.currentPlaybackRate.set(1);
     }
 
     start() {
@@ -35,6 +36,7 @@ export default class PlaybackSyncer {
         const video = this.youtubePlayer.video;
         if (!video) {
             this.last_applied_playrate = 1;
+            state.currentPlaybackRate.set(1);
             return;
         }
         const currentRate = typeof video.playbackRate === "number" ? video.playbackRate : 1;
@@ -46,6 +48,7 @@ export default class PlaybackSyncer {
             }
         }
         this.last_applied_playrate = 1;
+        state.currentPlaybackRate.set(1);
     }
 
     checkDrift() {
@@ -86,6 +89,7 @@ export default class PlaybackSyncer {
         try {
             video.playbackRate = targetRate;
             this.last_applied_playrate = targetRate;
+            state.currentPlaybackRate.set(targetRate);
         } catch (err) {
             this.verbose && console.warn("checkDrift: failed to set playbackRate", err);
         }

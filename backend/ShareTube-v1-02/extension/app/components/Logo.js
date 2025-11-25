@@ -28,7 +28,8 @@ css`
         display: inline-flex;
         align-items: baseline;
         transition: gap 200ms ease;
-        transform: translateY(-0.05em);
+        /*transform: translateY(-0.05em);*/
+        font-family: 'Roboto', sans-serif;
     }
 
     /*Default (expanded) typography */

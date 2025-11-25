@@ -5,10 +5,24 @@ export default class StorageManager {
         this.storageListener = null;
     }
 
-    getLocalStorage(key) {
+    getLocalStorage(key, defaultValue) {
         return new Promise((resolve) => {
             chrome.storage.local.get(key, (result) => {
-                resolve(result[key]);
+                if (result[key] === undefined && defaultValue !== undefined) {
+                    chrome.storage.local.set({ [key]: defaultValue }, () => {
+                        resolve(defaultValue);
+                    });
+                } else {
+                    resolve(result[key]);
+                }
+            });
+        });
+    }
+
+    setLocalStorage(key, value) {
+        return new Promise((resolve) => {
+            chrome.storage.local.set({ [key]: value }, () => {
+                resolve();
             });
         });
     }

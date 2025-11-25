@@ -2,6 +2,7 @@ import { LiveVar, LiveList } from "./dep/zyx.js";
 
 class ShareTubeState {
     constructor() {
+        this.debug_mode = new LiveVar(false);
         this.fakeTimeOffset = new LiveVar(1000 * 60 * 60 * 0); // 0 hours
 
         // Room
@@ -38,6 +39,10 @@ class ShareTubeState {
             progress_ms: new LiveVar(0),
             timestamp: new LiveVar(0),
         };
+
+        this.currentPlaybackRate = new LiveVar(1);
+
+        this.pillLocked = new LiveVar(false);
     }
 
     serverDateNow() {

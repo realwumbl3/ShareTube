@@ -141,30 +141,24 @@
     user-select: none;
 }
 
-#sharetube_queue .playing_status {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 12px;
-    width: 100%;
-    font-size: 11px;
+#sharetube_queue .current_playing_progress_stamps .timestamp-current,
+#sharetube_queue .current_playing_progress_stamps .timestamp-duration {
+    display: inline;
 }
 
-#sharetube_queue .playing_status>div {
-    opacity: 0.78;
+#sharetube_queue .current_playing_progress_stamps .timestamp-progress,
+#sharetube_queue .current_playing_progress_stamps .timestamp-playing-since {
+    display: none;
 }
 
-#sharetube_queue .playing_status_progress::before,
-#sharetube_queue .playing_status_playing_since::before {
-    content: "";
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    margin-right: 6px;
-    background: rgba(0, 200, 120, 0.9);
+#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-current,
+#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-duration {
+    display: none;
 }
 
-#sharetube_queue .playing_status_playing_since::before {
-    background: rgba(140, 160, 255, 0.9);
+#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-progress,
+#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-playing-since {
+    display: inline;
 }
+
 

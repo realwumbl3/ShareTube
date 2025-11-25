@@ -1,5 +1,7 @@
 import { extractUrlsFromDataTransfer, isYouTubeUrl } from "./utils.js";
 
+import state from "./state.js";
+
 // UIManager handles UI behaviors like drag/drop, reveal/hide, and pill locking
 export default class UIManager {
     constructor(app) {
@@ -46,21 +48,21 @@ export default class UIManager {
             this.app.sharetube_main.classList.add("revealed");
         });
         this.app.sharetube_main.addEventListener("mouseleave", () => {
-            if (this.app.locked.get()) return;
+            if (state.pillLocked.get()) return;
             this.app.sharetube_main.classList.remove("revealed");
         });
     }
 
     setupPillLockBehavior() {
         this.app.sharetube_pill.addEventListener("click", (e) => {
-            if (e.target !== this.app.sharetube_pill || this.app.locked.get()) return;
+            if (e.target !== this.app.sharetube_pill || state.pillLocked.get()) return;
             this.setLock(true);
         });
     }
 
     async setLock(locked) {
-        this.app.locked.set(locked);
-        await chrome.storage.local.set({ locked: locked });
+        state.pillLocked.set(locked);
+        await this.app.storageManager.setLocalStorage("locked", locked);
         if (locked) {
             this.app.sharetube_main.classList.add("revealed");
         } else {

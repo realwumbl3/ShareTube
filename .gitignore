@@ -22,3 +22,4 @@ node_modules/
 .pre-rewrite/
 
 **/__pycache__/**
+*.session.sql

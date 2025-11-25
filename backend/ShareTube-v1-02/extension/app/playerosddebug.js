@@ -1,5 +1,7 @@
 import { html, css, LiveList, LiveVar } from "./dep/zyx.js";
 
+import state from "./state.js";
+
 class PlayerOSDDebugItem {
     constructor(label, value) {
         this.label = label;
@@ -13,15 +15,14 @@ export default class PlayerOSDDebug {
 
         this.logList = new LiveList([]);
 
-        this.visible = new LiveVar(false);
-
-        html`<div class="player_osd_debug" zyx-if=${this.visible}>
+        html`<div class="player_osd_debug" zyx-if=${state.debug_mode}>
             Video Observed.
             <div class="debug-list">
                 <span>desired_state: ${this.youtubePlayer.desired_state.interp()}</span>
                 <span>ad_playing: ${this.youtubePlayer.ad_playing.interp()}</span>
                 <span>is_enforcing: ${this.youtubePlayer.is_enforcing.interp()}</span>
                 <span>is_programmatic_seek: ${this.youtubePlayer.is_programmatic_seek.interp()}</span>
+                <span>current_playback_rate: ${state.currentPlaybackRate.interp()}</span>
             </div>
             <div class="log-header">Log</div>
             <div
@@ -40,10 +41,6 @@ export default class PlayerOSDDebug {
         this.logList.unshift(new PlayerOSDDebugItem(message, value));
         console.log("player.osdDebug.log", message);
     }
-
-    toggleVisibility() {
-        this.visible.set(!this.visible.get());
-    }
 }
 
 css`
@@ -54,6 +51,7 @@ css`
         backdrop-filter: blur(10px) brightness(0.5) contrast(1.1);
         color: #fff;
         z-index: 1000000000;
+        min-width: 200px;
         padding: 2px;
         border-radius: 4px;
         font-size: 11px;

@@ -96,14 +96,14 @@ export default class YoutubePlayerManager {
     findActiveVideoElement() {
         // Prefer main watch video
         let vid = document.querySelector("video.html5-main-video");
-        if (vid && this.isElementVisible(vid)) return vid;
+        if (vid && this.isElementVisible(vid) && this.isActualVideoPlayer(vid)) return vid;
         // Shorts/reels
         const shorts = document.querySelector("ytd-reel-video-renderer video");
-        if (shorts && this.isElementVisible(shorts)) return shorts;
-        // Fallback to first visible video
+        if (shorts && this.isElementVisible(shorts) && this.isActualVideoPlayer(shorts)) return shorts;
+        // Fallback to first visible video that is an actual player (not preview)
         const all = Array.from(document.querySelectorAll("video"));
         for (const v of all) {
-            if (this.isElementVisible(v)) return v;
+            if (this.isElementVisible(v) && this.isActualVideoPlayer(v)) return v;
         }
         return null;
     }
@@ -112,6 +112,14 @@ export default class YoutubePlayerManager {
     isElementVisible(el) {
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0;
+    }
+
+    // Check if video is an actual player (descendant of ytd-video#ytd-player) and not a preview
+    isActualVideoPlayer(videoEl) {
+        // Must NOT be a child of ytd-video-preview
+        const videoPreview = videoEl.closest('ytd-video-preview');
+        if (videoPreview) return false;
+        return true;
     }
 
     // Hook into a specific <video>: intercept play(), add event listeners, enforce state
