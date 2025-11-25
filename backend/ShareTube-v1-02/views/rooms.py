@@ -90,9 +90,11 @@ def register_socket_handlers() -> None:
                 room_id=room.id, user_id=user_id
             ).first()
             if not membership:
+                logging.info("room.leave: no membership found for user %s in room %s", user_id, room.code)
                 return
             membership.leave()
             db.session.commit()
+            db.session.refresh(room)
             leave_room(f"room:{room.code}")
             emit_function_after_delay(emit_presence, room, 0.1)
         except Exception:

@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern Minimalist Tube/Screen -->
+  <rect x="60" y="80" width="392" height="352" rx="60" fill="#4285F4"/>
+  
+  <!-- Inner screen area -->
+  <rect x="100" y="120" width="312" height="272" rx="40" fill="white"/>
+  
+  <!-- Play Button as negative space or colored -->
+  <path d="M210 180 L350 256 L210 332 V180 Z" fill="#EA4335"/>
+  
+  <!-- Share/Connect lines overlay -->
+  <path d="M350 256 L420 256" stroke="#34A853" stroke-width="20" stroke-linecap="round"/>
+  <path d="M92 256 L100 256" stroke="#FBBC05" stroke-width="20" stroke-linecap="round"/>
+</svg>
+

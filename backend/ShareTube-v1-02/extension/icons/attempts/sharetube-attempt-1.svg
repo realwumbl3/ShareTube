@@ -1,0 +1,20 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.2"/>
+    </filter>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34A853;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <g filter="url(#shadow)">
+    <!-- Main Play Shape modified to look like sharing -->
+    <path d="M140 120 L380 256 L140 392 V120 Z" fill="url(#grad1)" />
+    <!-- Share nodes -->
+    <circle cx="380" cy="256" r="40" fill="#EA4335" />
+    <circle cx="140" cy="120" r="30" fill="#FBBC05" />
+    <circle cx="140" cy="392" r="30" fill="#4285F4" />
+  </g>
+</svg>
+

@@ -192,7 +192,8 @@ class Room(db.Model):
                 return None, f"room.start_playback: load_next_entry error: {error}"
             self.state = "starting"
             self.reset_ready_flags()
-            entry.reset()
+            # Mark entry as playing immediately when loaded for playback
+            entry.mark_as_playing()
             commit_with_retry(db.session)
             return {"state": "starting", "current_entry": entry.to_dict()}, None
 
@@ -283,7 +284,8 @@ class Room(db.Model):
             if load_entry:
                 self.state = "starting"
                 self.current_queue.current_entry = load_entry
-                load_entry.reset()
+                # Mark entry as playing immediately when loaded for playback
+                load_entry.mark_as_playing()
                 self.reset_ready_flags()
                 next_entry = load_entry
         commit_with_retry(db.session)
@@ -474,17 +476,21 @@ class RoomMembership(db.Model):
         self.ready = bool(ready)
 
     def leave(self) -> None:
-        """Mark this membership as inactive and update user's active status if needed."""
+        """Remove this membership and update user's active status if needed."""
         from .user import User
         # Update user's last_seen timestamp when leaving
         user = db.session.get(User, self.user_id)
         if user:
             user.last_seen = int(time.time())
-            # Check if user has any other room memberships
-            other_memberships = RoomMembership.query.filter_by(user_id=self.user_id).filter(RoomMembership.room_id != self.room_id).first()
-            if not other_memberships:
-                # No other memberships, mark user as inactive
-                user.active = False
+
+        # Delete this membership record
+        db.session.delete(self)
+
+        # Check if user has any other room memberships after deletion
+        other_memberships = RoomMembership.query.filter_by(user_id=self.user_id).first()
+        if not other_memberships and user:
+            # No other memberships, mark user as inactive
+            user.active = False
 
 
 class RoomOperator(db.Model):

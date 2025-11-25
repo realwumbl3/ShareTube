@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.svg" alt="ShareTube Logo" width="128" height="128">
+  <img src="assets/icon.svg" alt="ShareTube Logo" width="256" height="256">
 </p>
 
 <h1 align="center">ShareTube</h1>

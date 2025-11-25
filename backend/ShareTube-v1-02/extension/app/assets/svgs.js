@@ -1,0 +1,9 @@
+export const openInNewTabSVG = chrome.runtime.getURL("app/assets/open-in-new-tab.svg");
+export const linkSVG = chrome.runtime.getURL("app/assets/link.svg");
+export const xSVG = chrome.runtime.getURL("app/assets/x.svg");
+export const requeueSVG = chrome.runtime.getURL("app/assets/requeue.svg");
+export const playSVG = chrome.runtime.getURL("app/assets/play.svg");
+export const pauseSVG = chrome.runtime.getURL("app/assets/pause.svg");
+export const skipSVG = chrome.runtime.getURL("app/assets/skip.svg");
+export const idleSVG = chrome.runtime.getURL("app/assets/idle.svg");
+export const startingSVG = chrome.runtime.getURL("app/assets/starting.svg");

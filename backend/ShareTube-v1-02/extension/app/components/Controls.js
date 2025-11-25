@@ -2,11 +2,7 @@ import { html, css, LiveVar, throttle } from "../dep/zyx.js";
 
 import state from "../state.js";
 
-const playSVG = chrome.runtime.getURL("app/assets/play.svg");
-const pauseSVG = chrome.runtime.getURL("app/assets/pause.svg");
-const skipSVG = chrome.runtime.getURL("app/assets/skip.svg");
-const idleSVG = chrome.runtime.getURL("app/assets/idle.svg");
-const startingSVG = chrome.runtime.getURL("app/assets/starting.svg");
+import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG } from "../assets/svgs.js";
 
 export default class Controls {
     constructor(app) {

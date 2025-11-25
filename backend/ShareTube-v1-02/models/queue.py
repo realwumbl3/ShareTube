@@ -206,7 +206,7 @@ class Queue(db.Model):
         # indicate that the queue has been exhausted.
         if next_entry:
             self.current_entry_id = next_entry.id
-            next_entry.reset()
+            next_entry.mark_as_playing()
         else:
             self.current_entry_id = None
 
@@ -225,7 +225,8 @@ class Queue(db.Model):
                 return None, f"queue.skip_to_next: {error}"
             if not entry:
                 return None, "queue.skip_to_next: no entries in queue"
-            entry.reset()
+            # Mark entry as playing immediately when loaded for playback
+            entry.mark_as_playing()
             return entry, None
 
         next_entry, error = self.advance_to_next()
@@ -245,7 +246,7 @@ class Queue(db.Model):
 
         # Advance to next entry
         self.current_entry_id = next_entry.id
-        next_entry.reset()
+        next_entry.mark_as_playing()
         commit_with_retry(db.session)
 
         return next_entry, None
@@ -360,6 +361,18 @@ class QueueEntry(db.Model):
             db.session.delete(self)
         else:
             self.status = "deleted"
+        commit_with_retry(db.session)
+
+    def mark_as_playing(self) -> None:
+        """Mark this entry as playing without setting the playing timestamp.
+
+        This is used when an entry is loaded for immediate playback but hasn't
+        actually started playing yet (e.g., during control.play or control.skip).
+        """
+        self.status = "playing"
+        self.progress_ms = 0
+        self.playing_since_ms = None
+        self.paused_at = None
         commit_with_retry(db.session)
 
     def start(self, now_ms: int) -> None:

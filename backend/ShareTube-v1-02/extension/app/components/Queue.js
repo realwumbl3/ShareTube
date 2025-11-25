@@ -216,10 +216,7 @@ export default class ShareTubeQueue {
     }
 }
 
-const openInNewTabSVG = chrome.runtime.getURL("app/assets/open-in-new-tab.svg");
-const linkSVG = chrome.runtime.getURL("app/assets/link.svg");
-const xSVG = chrome.runtime.getURL("app/assets/x.svg");
-const requeueSVG = chrome.runtime.getURL("app/assets/requeue.svg");
+import { openInNewTabSVG, linkSVG, xSVG, requeueSVG } from "../assets/svgs.js";
 
 // UI component representing a queued YouTube item
 export class ShareTubeQueueComponent {
@@ -232,7 +229,7 @@ export class ShareTubeQueueComponent {
         html`
             <div class="queue-item" data-id=${this.item.id}>
                 <div class="queue-item-thumbnail">
-                    <img class="thumb" alt=${this.item.title || ""} src=${this.item.thumbnail_url} loading="lazy" />
+                    <img class="thumb" alt="${this.item.title || ""}" src="${this.item.thumbnail_url}" loading="lazy" />
                     <div class="queue-item-duration">${msDurationTimeStamp(this.item.duration_ms)}</div>
                 </div>
                 <div class="meta">
@@ -256,10 +253,10 @@ export class ShareTubeQueueComponent {
                                 navigator.clipboard.writeText(this.item.url);
                             }}
                         >
-                            <img src=${linkSVG} alt="Drag link" />
+                            <img src="${linkSVG}" alt="Drag link" />
                         </span>
                         <span class="external-link-icon" title="Open in new tab" zyx-click=${() => this.item.openUrl()}>
-                            <img src=${openInNewTabSVG} alt="Open in new tab" />
+                            <img src="${openInNewTabSVG}" alt="Open in new tab" />
                         </span>
                     </div>
                 </div>
@@ -271,7 +268,7 @@ export class ShareTubeQueueComponent {
                         title="Remove from queue"
                         zyx-click=${() => this.removeFromQueue()}
                     >
-                        <img src=${xSVG} alt="Remove" />
+                        <img src="${xSVG}" alt="Remove" />
                     </button>
                     <button
                         zyx-if=${[this.item.status, (v) => v !== "queued"]}
@@ -281,7 +278,7 @@ export class ShareTubeQueueComponent {
                         title="Move back to top of queue"
                         zyx-click=${() => this.moveToTop()}
                     >
-                        <img src=${requeueSVG} alt="Requeue" />
+                        <img src="${requeueSVG}" alt="Requeue" />
                     </button>
                 </div>
             </div>

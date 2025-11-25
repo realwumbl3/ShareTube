@@ -51,7 +51,7 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
                     user_memberships = RoomMembership.query.filter_by(
                         user_id=user.id
                     ).all()
-                    
+
                     for membership in user_memberships:
                         room = db.session.get(Room, membership.room_id)
                         if room:
@@ -62,9 +62,7 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
                                 room.code,
                             )
                             membership.leave()
-                    
-                    # Mark user as inactive after removing from all rooms
-                    user.active = False
+                    # Note: user.active is now set to False by the last membership.leave() call if no memberships remain
                 
                 # Commit all removals at once
                 if inactive_users:
