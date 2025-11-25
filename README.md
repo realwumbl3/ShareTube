@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icon.svg" alt="ShareTube Logo" width="128" height="128">
+  <img src="assets/icon.svg" alt="ShareTube Logo" width="128" height="128">
 </p>
 
 <h1 align="center">ShareTube</h1>
@@ -57,6 +57,8 @@ ShareTube allows users to create and join rooms where they can watch YouTube vid
 -   **Scalable Architecture**: Support for Redis message queues in multi-process deployments
 -   **Production Ready**: Gunicorn, Nginx, and systemd deployment templates
 
+
+
 ## Technology Stack
 
 ### Backend
@@ -85,6 +87,8 @@ ShareTube allows users to create and join rooms where they can watch YouTube vid
 -   **SQLite**: Default embedded database (development)
 -   **PostgreSQL**: Production database support
 -   **SQLAlchemy Migrations**: Database schema versioning
+
+
 
 ## Installation & Setup
 
@@ -193,6 +197,8 @@ This script automatically:
 
 See [LAUNCH_EXT-README.md](./md/LAUNCH_EXT-README.md) for detailed usage options.
 
+
+
 ## API Endpoints
 
 ### Authentication
@@ -253,17 +259,15 @@ See [LAUNCH_EXT-README.md](./md/LAUNCH_EXT-README.md) for detailed usage options
 
 #### Player Synchronization
 
--   `player.state` - Player state updates
-    -   Data: `state` (idle/starting/playing/paused), `current_entry`, `progress_ms`, etc.
--   `player.sync` - Player synchronization data
-    -   Data: `trigger`, `code`, `state`, `current_entry`, etc.
+-   `room.playback` - Player state and playback updates
+    -   Data: `trigger`, `code`, `state` (idle/starting/playing/paused), `progress_ms`, `current_entry`, `actor_user_id`, etc.
 
 #### Queue Updates
 
--   `queue.update` - Queue changes
-    -   Data: `entries` (queue entries), `current_entry`, `action` (add/remove/reorder)
--   `queue.probe_result` - URL probe results
-    -   Data: `url`, `valid` (boolean), `title`, `duration`, etc.
+-   `queue.update` - Complete queue state after changes
+    -   Data: `id`, `room_id`, `creator`, `entries` (array), `current_entry`
+-   `queue.add.result` - Result of adding a video to queue
+    -   Data: `added` (boolean)
 
 #### System Events
 
@@ -332,6 +336,8 @@ The application uses SQLAlchemy ORM with support for SQLite (default, developmen
 -   **Queue/QueueEntry**: Video queue management with ordering
 -   **Chat**: Real-time messaging within rooms
 -   **Audit**: Comprehensive event logging for room activities
+
+
 
 ## Development
 
@@ -483,6 +489,10 @@ The script also outputs the exact commands to run on your server for deployment.
     sudo apt install certbot python3-certbot-nginx
     sudo certbot --nginx -d yourdomain.com
     ```
+
+<p align="center">
+  <img src="assets/spacer.svg" alt="Section Separator" width="100%">
+</p>
 
 ## License
 

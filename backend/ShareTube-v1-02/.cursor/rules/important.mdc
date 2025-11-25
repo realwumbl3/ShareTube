@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+
+ACTIVE DEVELOPMENT VERSION: ShareTube-v1-02
+
+ignore contents of other /home/wumbl3wsl/ShareTube/backend/\* sub-directories.
+
+ONLY WORK WITHIN THIS DIRECTORY (/home/wumbl3wsl/ShareTube/backend/ShareTube-v1-02/)

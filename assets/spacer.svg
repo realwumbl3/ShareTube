@@ -1,0 +1,27 @@
+<svg width="800" height="80" viewBox="0 0 800 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:0" />
+      <stop offset="100%" style="stop-color:#4ecdc4;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gradRight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4ecdc4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#45b7d1;stop-opacity:0" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Central Diamond -->
+  <rect x="394" y="34" width="12" height="12" transform="rotate(45 400 40)" fill="none" stroke="#4ecdc4" stroke-width="2" />
+  
+  <!-- Chevrons -->
+  <polyline points="385,32 377,40 385,48" fill="none" stroke="#4ecdc4" stroke-width="2" opacity="0.8" />
+  <polyline points="415,32 423,40 415,48" fill="none" stroke="#4ecdc4" stroke-width="2" opacity="0.8" />
+
+  <!-- Horizontal Lines -->
+  <line x1="100" y1="40" x2="365" y2="40" stroke="url(#gradLeft)" stroke-width="1" />
+  <line x1="435" y1="40" x2="700" y2="40" stroke="url(#gradRight)" stroke-width="1" />
+  
+  <!-- Small Accent Dots at ends of lines -->
+  <circle cx="368" cy="40" r="1.5" fill="#4ecdc4" />
+  <circle cx="432" cy="40" r="1.5" fill="#4ecdc4" />
+</svg>

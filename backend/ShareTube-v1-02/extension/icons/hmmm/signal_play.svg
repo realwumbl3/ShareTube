@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Concept: "Pro Signal" - Minimalist, readable, dynamic. 
+       A Play button emitting a signal to the left (receiving) and right (broadcasting).
+       But focusing on the silhouette. -->
+       
+  <!-- The Core Play Shape -->
+  <path d="M 48 32 L 96 64 L 48 96 Z" fill="#FF0000" />
+  
+  <!-- The "Sync" Arc on the left -->
+  <!-- A thick curved line cupping the back of the play button -->
+  <path d="M 36 24 C 24 40, 24 88, 36 104" 
+        fill="none" stroke="#FF0000" stroke-width="12" stroke-linecap="round" />
+        
+  <!-- This creates a "Wifi" or "Signal" look combined with Play. 
+       Very recognizable as "Streaming/Remote Play". -->
+
+</svg>
+
