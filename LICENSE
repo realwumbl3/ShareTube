@@ -1,17 +1,48 @@
-MIT License
+ShareTube Commercial License
 
 Copyright (c) 2024 ShareTube
 https://github.com/wumbl3/ShareTube
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Personal/Non-Commercial Use License
+
+Permission is hereby granted, free of charge, to any natural person obtaining a copy
+of this software and associated documentation files (the "Software"), to use the Software
+for personal, non-commercial purposes only, subject to the following conditions:
+
+- The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+- The Software may not be used for any commercial purposes without a separate
+  commercial license agreement.
+
+2. Commercial Use License Required
+
+Any commercial use, including but not limited to:
+- Using the Software in a commercial product or service
+- Distributing the Software as part of a commercial offering
+- Providing the Software as a service (SaaS)
+- Forking or modifying the Software for commercial gain
+
+Requires a separate commercial license from the copyright holder. Contact:
+https://github.com/wumbl3/ShareTube
+
+Commercial licensing includes royalty payments based on usage/revenue generated.
+
+3. Redistribution Rights
+
+You may redistribute unmodified copies of the Software for non-commercial purposes
+only, provided that:
+- The above copyright notice and this permission notice are included
+- No commercial use is implied or enabled by the redistribution
+
+4. Modification and Derivative Works
+
+- Personal modifications for non-commercial use are permitted
+- Commercial modifications require a commercial license
+- Derivative works must include attribution to the original ShareTube project
+
+5. Disclaimer of Warranty
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,3 +51,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+6. Contact for Commercial Licensing
+
+For commercial licensing inquiries, please contact the copyright holder through:
+- GitHub: https://github.com/wumbl3/ShareTube
+- Email: [Add your contact email here]
+
+Commercial licenses start at $999/year for small businesses, with royalties
+based on revenue generated from products/services using this software.
