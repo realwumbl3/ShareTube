@@ -10,6 +10,42 @@ from sqlalchemy.exc import OperationalError as SAOperationalError
 import time
 
 
+
+def check_url(url: str) -> bool:
+    """Validate that the URL is well-formed and safe to process."""
+    if not url or not isinstance(url, str):
+        return False
+    # Arbitrary reasonable length limit
+    if len(url) > 2048:
+        return False
+    # Reject control characters
+    if re.search(r"[\x00-\x1f\x7f]", url):
+        return False
+    # Must start with http:// or https://
+    if not re.match(r"^https?://", url, re.IGNORECASE):
+        return False
+    return True
+
+
+def is_youtube_url(url: str) -> bool:
+    """Check if the URL belongs to a valid YouTube domain."""
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").lower()
+
+        if host == "youtu.be":
+            return True
+
+        if host == "youtube.com" or host.endswith(".youtube.com"):
+            return True
+
+        return False
+    except Exception:
+        return False
+
+
 # Extract a YouTube video id from either a URL or a raw id-like string
 def extract_video_id(value: str) -> str:
     try:

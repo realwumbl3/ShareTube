@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareTube Libraries Browser</title>
+    <!-- Page-local stylesheet served by Nginx from /libraries-browser/static/css/ -->
+    <link rel="stylesheet" href="/static/libraries_browser/css/styles.css">
+</head>
+
+<body>
+    <header>
+        <h1>ShareTube Libraries</h1>
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Search videos...">
+            <button id="search-btn">🔍</button>
+        </div>
+    </header>
+
+    <nav class="library-nav">
+        <button id="all-libraries-btn" class="nav-btn active">All Libraries</button>
+        <div id="library-tabs" class="library-tabs">
+            <!-- Library tabs will be populated by JavaScript -->
+        </div>
+    </nav>
+
+    <main>
+        <section id="libraries-section" class="libraries-section">
+            <h2>Libraries</h2>
+            <div id="libraries-grid" class="libraries-grid">
+                <!-- Library cards will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <section id="videos-section" class="videos-section hidden">
+            <div class="section-header">
+                <button id="back-btn" class="back-btn">← Back to Libraries</button>
+                <h2 id="current-library-title">Library Name</h2>
+            </div>
+            <div class="videos-controls">
+                <select id="sort-select">
+                    <option value="date">Sort by Date</option>
+                    <option value="title">Sort by Title</option>
+                    <option value="views">Sort by Views</option>
+                    <option value="duration">Sort by Duration</option>
+                </select>
+                <div class="view-toggles">
+                    <button id="grid-view-btn" class="view-btn active">⊞</button>
+                    <button id="list-view-btn" class="view-btn">☰</button>
+                </div>
+            </div>
+            <div id="videos-container" class="videos-grid">
+                <!-- Video items will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <section id="video-detail-section" class="video-detail-section hidden">
+            <div class="section-header">
+                <button id="back-to-videos-btn" class="back-btn">← Back to Videos</button>
+            </div>
+            <div id="video-detail" class="video-detail">
+                <!-- Video details will be populated by JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <!-- ES module entrypoint served from /libraries-browser/static/js/ -->
+    <script type="module" src="/static/libraries_browser/js/main.js"></script>
+</body>
+
+</html>

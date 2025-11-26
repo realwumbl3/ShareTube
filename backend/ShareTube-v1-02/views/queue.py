@@ -18,7 +18,10 @@ from ..utils import (
     build_watch_url,
     extract_video_id,
     fetch_video_meta,
+    check_url,
+    is_youtube_url,
 )
+
 from .decorators import require_room, require_queue_entry, ensure_queue
 from .room_timeouts import schedule_starting_to_playing_timeout
 
@@ -38,8 +41,10 @@ def register_socket_handlers():
         try:
             res, rej = Room.emit(room.code, trigger="queue.add")
             url = ((data or {}).get("url") or "").strip()
-            if not url:
-                return rej("queue.add: no url provided")
+            if not check_url(url):
+                return rej("queue.add: invalid url")
+            if not is_youtube_url(url):
+                return rej("queue.add: not a youtube url")
             vid = extract_video_id(url)
 
             if not vid:
@@ -52,7 +57,7 @@ def register_socket_handlers():
                 return rej("queue.add: no metadata found for video")
             author = YouTubeAuthor.get_or_create_from_video_meta(meta)
 
-            queue.add_entry(
+            entry = queue.add_entry(
                 user_id=user_id,
                 url=canonical_url,
                 video_id=vid,
@@ -61,7 +66,11 @@ def register_socket_handlers():
                 duration_ms=meta.get("duration_ms") or 0,
                 youtube_author=author,
             )
-            emit_queue_update_for_room(room)
+            socketio.emit(
+                "queue.added",
+                {"item": entry.to_dict()},
+                room=f"room:{room.code}",
+            )
             res("queue.add.result", {"added": True})
         except Exception:
             logging.exception("queue.add handler error")
@@ -88,7 +97,11 @@ def register_socket_handlers():
                 return rej("queue.remove: no entry found for id")
             entry.remove()
             db.session.refresh(room)
-            emit_queue_update_for_room(room)
+            socketio.emit(
+                "queue.removed",
+                {"id": id},
+                room=f"room:{room.code}",
+            )
             res("queue.remove.result", {"removed": True})
         except Exception:
             logging.exception(
@@ -142,7 +155,11 @@ def register_socket_handlers():
             db.session.commit()
             db.session.refresh(room)
             db.session.refresh(queue)
-            emit_queue_update_for_room(room)
+            socketio.emit(
+                "queue.moved",
+                {"id": entry.id, "position": entry.position, "status": entry.status},
+                room=f"room:{room.code}",
+            )
             res("queue.requeue_to_top.result", {"ok": True})
         except Exception:
             logging.exception(
@@ -199,9 +216,6 @@ def register_socket_handlers():
                     },
                 )
             db.session.commit()
-            db.session.refresh(room)
-            db.session.refresh(queue)
-            emit_queue_update_for_room(room)
         except Exception as e:
             logging.exception("queue.probe handler error: %s", e)
             rej(f"queue.probe handler error: {e}")

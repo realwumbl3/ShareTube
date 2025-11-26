@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ShareTube Mobile Remote</title>
+    <!-- Page-local stylesheet served by Nginx from /mobile-remote/static/css/ -->
+    <link rel="stylesheet" href="/static/mobile_remote/css/styles.css">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+    <header>
+        <h1>ShareTube Remote</h1>
+        <div id="current-video" class="current-video">
+            <span id="video-title">No video playing</span>
+        </div>
+    </header>
+
+    <main>
+        <section class="playback-controls">
+            <div class="time-display">
+                <span id="current-time">0:00</span>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <span id="duration">0:00</span>
+            </div>
+
+            <div class="control-buttons">
+                <button id="prev-btn" class="control-btn">⏮</button>
+                <button id="play-pause-btn" class="control-btn play-btn">▶</button>
+                <button id="next-btn" class="control-btn">⏭</button>
+            </div>
+
+            <div class="volume-control">
+                <span class="volume-icon">🔊</span>
+                <input type="range" id="volume-slider" min="0" max="100" value="75">
+                <span id="volume-value">75%</span>
+            </div>
+        </section>
+
+        <section class="queue-section">
+            <h2>Queue</h2>
+            <div id="queue-list" class="queue-list">
+                <!-- Queue items will be populated by JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <!-- ES module entrypoint served from /mobile-remote/static/js/ -->
+    <script type="module" src="/static/mobile_remote/js/main.js"></script>
+</body>
+</html>
+
+

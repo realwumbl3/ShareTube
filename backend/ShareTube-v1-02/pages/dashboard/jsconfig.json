@@ -1,0 +1,41 @@
+{
+  // JS project configuration for the dashboard page sub-codebase.
+  // This file is picked up when you open `pages/dashboard/` as a workspace.
+  "compilerOptions": {
+    // Use modern ECMAScript for type checking and IntelliSense.
+    "target": "ES6",
+    "module": "ES6",
+
+    // Treat this page directory as the base for module resolution.
+    "baseUrl": ".",
+
+    // Editor-only path aliases for nicer imports while working on this page.
+    "paths": {
+      "@js/*": ["frontend/static/js/*"],
+      "@css/*": ["frontend/static/css/*"],
+      "@templates/*": ["frontend/templates/*"]
+    },
+
+    // Keep JS checking relaxed unless you prefer stricter rules.
+    "checkJs": false
+  },
+
+  // Only index this page's own frontend code.
+  "include": [
+    "frontend/static/js/**/*.js",
+    "frontend/templates/**/*.html"
+  ],
+
+  // Explicitly exclude the rest of the monorepo when opened from above.
+  "exclude": [
+    "../../node_modules",
+    "../../static",
+    "../../templates",
+    "../../migrations",
+    "../../views",
+    "../../models",
+    "../../scripts"
+  ]
+}
+
+

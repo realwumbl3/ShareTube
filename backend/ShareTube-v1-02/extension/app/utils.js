@@ -102,62 +102,124 @@ export function msDurationTimeStamp(ms) {
  * @returns {{created:number, updated:number, total:number}}
  */
 export function syncLiveList(opts) {
-    const { localList, remoteItems, extractRemoteId, extractLocalId, createInstance, updateInstance } = opts;
+    const { localList, remoteItems = [], extractRemoteId, extractLocalId, createInstance, updateInstance } = opts;
 
-    const current =
-        localList && typeof localList.get === "function" ? localList.get() : Array.isArray(localList) ? localList : [];
-    const idToLocal = new Map();
-    for (const inst of current) {
-        try {
-            idToLocal.set(extractLocalId(inst), inst);
-        } catch (e) {
-            console.error("syncLiveList extractLocalId error", e, inst);
+    const getArray = () => {
+        if (Array.isArray(localList)) return localList;
+        if (localList && typeof localList.get === "function") return localList.get();
+        return [];
+    };
+
+    const splice = (start, deleteCount, ...items) => {
+        if (localList && typeof localList.splice === "function") {
+            return localList.splice(start, deleteCount, ...items);
+        } else if (Array.isArray(localList)) {
+            return localList.splice(start, deleteCount, ...items);
+        } else if (localList && typeof localList.set === "function") {
+            // Fallback for objects that only support set()
+            // We perform the splice on the array copy and set it back
+            const arr = getArray().slice();
+            const res = arr.splice(start, deleteCount, ...items);
+            localList.set(arr);
+            return res;
         }
-    }
+        return [];
+    };
 
-    const next = [];
     let created = 0;
     let updated = 0;
-    for (const remoteItem of remoteItems || []) {
-        let id;
+
+    // 1. Remove items that are not in remoteItems
+    const remoteIds = new Set();
+    for (const item of remoteItems) {
         try {
-            id = extractRemoteId(remoteItem);
+            remoteIds.add(extractRemoteId(item));
         } catch (e) {
-            console.error("syncLiveList extractRemoteId error", e, remoteItem);
+            console.error("syncLiveList extractRemoteId error", e, item);
+        }
+    }
+
+    let currentArr = getArray();
+    // Iterate backwards to safely remove
+    for (let i = currentArr.length - 1; i >= 0; i--) {
+        const localItem = currentArr[i];
+        try {
+            const id = extractLocalId(localItem);
+            if (!remoteIds.has(id)) {
+                splice(i, 1);
+                // Refresh array reference if needed (depends on implementation, safe to assume we might need to)
+                currentArr = getArray();
+            }
+        } catch (e) {
+            console.error("syncLiveList extractLocalId error", e, localItem);
+        }
+    }
+
+    // 2. Insert, Update, and Reorder
+    for (let i = 0; i < remoteItems.length; i++) {
+        const remoteItem = remoteItems[i];
+        let remoteId;
+        try {
+            remoteId = extractRemoteId(remoteItem);
+        } catch (e) {
+            console.error("syncLiveList extractRemoteId loop error", e);
             continue;
         }
-        const existing = idToLocal.get(id);
-        if (existing) {
-            if (typeof updateInstance === "function") {
+
+        currentArr = getArray();
+        const localItem = currentArr[i];
+        const localId = localItem ? extractLocalId(localItem) : null;
+
+        if (localItem && localId === remoteId) {
+            // Match in place
+            if (updateInstance) {
                 try {
-                    updateInstance(existing, remoteItem);
-                    updated += 1;
+                    updateInstance(localItem, remoteItem);
+                    updated++;
                 } catch (e) {
                     console.error("syncLiveList updateInstance error", e);
-                    // ignore update errors to keep sync resilient
                 }
             }
-            next.push(existing);
         } else {
-            try {
-                const createdInst = createInstance(remoteItem);
-                next.push(createdInst);
-                created += 1;
-            } catch (e) {
-                console.error("syncLiveList createInstance error", e);
-                // ignore create errors to keep sync resilient
+            // Mismatch
+            // Check if the item exists later in the list
+            let foundIndex = -1;
+            for (let j = i + 1; j < currentArr.length; j++) {
+                try {
+                    if (extractLocalId(currentArr[j]) === remoteId) {
+                        foundIndex = j;
+                        break;
+                    }
+                } catch (_) {}
+            }
+
+            if (foundIndex !== -1) {
+                // Found later, move it here
+                const foundItem = currentArr[foundIndex];
+                splice(foundIndex, 1);
+                splice(i, 0, foundItem);
+                if (updateInstance) {
+                    try {
+                        updateInstance(foundItem, remoteItem);
+                        updated++;
+                    } catch (e) {
+                        console.error("syncLiveList updateInstance move error", e);
+                    }
+                }
+            } else {
+                // Not found, create new
+                try {
+                    const newItem = createInstance(remoteItem);
+                    splice(i, 0, newItem);
+                    created++;
+                } catch (e) {
+                    console.error("syncLiveList createInstance error", e);
+                }
             }
         }
     }
 
-    // Replace the list atomically to reflect creations, updates (in-place), and removals
-    if (localList && typeof localList.set === "function") {
-        localList.set(next);
-    } else if (Array.isArray(localList)) {
-        localList.splice(0, localList.length, ...next);
-    }
-
-    return { created, updated, total: next.length };
+    return { created, updated, total: remoteItems.length };
 }
 
 /**

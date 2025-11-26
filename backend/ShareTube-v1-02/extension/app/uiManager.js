@@ -8,14 +8,31 @@ export default class UIManager {
         this.app = app;
     }
 
-    onDrop(e) {
+    async onDrop(e) {
         e.preventDefault();
         e.stopPropagation();
         this.app.sharetube_main.classList.remove("dragover");
         const urls = extractUrlsFromDataTransfer(e.dataTransfer);
         const ytUrls = urls.filter(isYouTubeUrl);
         if (ytUrls.length === 0) return;
-        ytUrls.forEach((u) => this.app.enqueueUrl(u));
+
+        if (!state.inRoom.get()) {
+            const code = await this.app.createRoom();
+            if (code) {
+                this.app.updateCodeHashInUrl(code);
+                await this.app.tryJoinRoomFromUrl();
+                // Wait for join to complete
+                const start = Date.now();
+                while (!state.inRoom.get()) {
+                    if (Date.now() - start > 5000) break;
+                    await new Promise((r) => setTimeout(r, 100));
+                }
+            }
+        }
+
+        if (state.inRoom.get()) {
+            ytUrls.forEach((u) => this.app.enqueueUrl(u));
+        }
     }
 
     onEnter(e) {

@@ -5,6 +5,7 @@ import Splash from "./components/Splash.js";
 import { getCurrentPlayingProgressMs } from "./getters.js";
 import PlaybackSyncer from "./playbackSync.js";
 import PlayerControls from "./playerControls.js";
+import PlayerExtender from "./components/playerExtender.js";
 
 import PlayerOSDDebug from "./playerosddebug.js";
 
@@ -31,6 +32,7 @@ export default class YoutubePlayerManager {
         this.pending_frame_step_position = null;
 
         this.playerControls = new PlayerControls(this);
+        this.playerExtender = new PlayerExtender(this);
 
         this.video_listener_specs = [
             ["play", this.onPlay],
@@ -134,6 +136,7 @@ export default class YoutubePlayerManager {
 
         // Initialize player controls
         this.playerControls.bindToVideo(video);
+        this.playerExtender.bind();
     }
 
     // Detach from current video element and cleanup
@@ -144,6 +147,7 @@ export default class YoutubePlayerManager {
         this.playbackSyncer.resetPlaybackRate(true);
         this.osdDebug.main.remove();
         this.playerControls.unbindFromVideo();
+        this.playerExtender.unbind();
         this.video = null;
         this.last_ad_state = false;
         this.pending_pause_after_ad = false;

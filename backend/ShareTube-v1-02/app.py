@@ -9,6 +9,7 @@ import logging
 
 # Flask primitives for creating the app and request-scoped utilities
 from flask import Flask, request, g, current_app
+from werkzeug.exceptions import HTTPException
 
 import jwt
 
@@ -269,7 +270,8 @@ def register_routes(app: Flask) -> None:
     #     # Always return the original response
     #     return resp
 
-    # Global error handler to ensure stacktraces get logged
+    # Global error handler to ensure stacktraces get logged while preserving
+    # the original HTTP status codes for Werkzeug HTTPException instances
     @app.errorhandler(Exception)
     def _log_unhandled_error(e):
         try:
@@ -278,8 +280,17 @@ def register_routes(app: Flask) -> None:
         except Exception:
             # If request context is broken, ignore
             pass
-        # Re-raise after logging to let Flask generate the default 500
-        raise e
+
+        # For HTTPException (e.g., 404 NotFound), return the original
+        # exception so Flask can generate the appropriate response instead
+        # of converting it into a 500 Internal Server Error.
+        if isinstance(e, HTTPException):
+            return e
+
+        # For all other unexpected exceptions, let Flask treat this as a 500.
+        # We return a generic 500 response here to avoid recursive error
+        # handling while still surfacing an appropriate status code.
+        return ("Internal Server Error", 500)
 
     try:
         # Auth endpoints for Google OAuth flow and JWT issuance
@@ -316,6 +327,16 @@ def register_routes(app: Flask) -> None:
     except Exception:
         logging.exception("queue socket handlers registration failed")
 
+    # Register page blueprints
+    try:
+        from .pages import dashboard_bp, mobile_remote_bp, libraries_browser_bp
+        app.register_blueprint(dashboard_bp)
+        app.register_blueprint(mobile_remote_bp)
+        app.register_blueprint(libraries_browser_bp)
+        logging.info("Successfully registered page blueprints")
+    except Exception:
+        logging.exception("page blueprints registration failed")
 
-# Instantiate the application at import time for WSGI servers
+
+# Create the Flask app instance for WSGI servers
 app = create_app()

@@ -30,3 +30,5 @@ capture_output = True
 pidfile = "$PROJECT_ROOT/instance/$VERSION/$APP_NAME.pid"
 # Additional log file (legacy compatibility)
 logfile = "$PROJECT_ROOT/instance/$VERSION/$APP_NAME.log"
+# Enable reload on code changes for development
+reload = True

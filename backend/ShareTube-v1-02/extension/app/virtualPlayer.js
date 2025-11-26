@@ -15,10 +15,69 @@ export default class VirtualPlayer {
 
     bindListeners(socket) {
         socket.on("queue.update", this.onQueueUpdate.bind(this));
+        socket.on("queue.added", this.onQueueAdded.bind(this));
+        socket.on("queue.removed", this.onQueueRemoved.bind(this));
+        socket.on("queue.moved", this.onQueueMoved.bind(this));
         socket.on("room.state.update", this.onRoomStateUpdate.bind(this));
         socket.on("user.join.result", this.onRoomJoinResult.bind(this));
         socket.on("room.playback", this.onRoomPlayback.bind(this));
         socket.on("queue.probe", this.onQueueProbe.bind(this));
+    }
+
+    async onQueueAdded(data) {
+        if (!data.item) return;
+        const item = new ShareTubeQueueItem(this.app, data.item);
+        state.queue.push(item);
+        if (item.status.get() === "queued") state.queueQueued.push(item);
+        if (item.status.get() === "played") state.queuePlayed.push(item);
+        if (item.status.get() === "skipped") state.queueSkipped.push(item);
+        if (item.status.get() === "deleted") state.queueDeleted.push(item);
+    }
+
+    async onQueueRemoved(data) {
+        if (!data.id) return;
+        const remove = (list) => {
+            const idx = list.findIndex((i) => i.id === data.id);
+            if (idx !== -1) list.splice(idx, 1);
+        };
+        remove(state.queue);
+        remove(state.queueQueued);
+        remove(state.queuePlayed);
+        remove(state.queueSkipped);
+        remove(state.queueDeleted);
+    }
+
+    async onQueueMoved(data) {
+        if (!data.id) return;
+        const item = state.queue.find((i) => i.id === data.id);
+        if (!item) return;
+
+        if (data.position !== undefined) item.position.set(data.position);
+        if (data.status !== undefined) item.status.set(data.status);
+
+        // Re-sort and re-filter lists
+        // Ideally we would move just this item, but re-syncing the specific lists is safer given status changes
+        this.refreshQueueLists();
+    }
+
+    refreshQueueLists() {
+        const all = state.queue.get().slice().sort((a, b) => (a.position.get() || 0) - (b.position.get() || 0));
+        
+        const sync = (list, filter) => {
+             syncLiveList({
+                localList: list,
+                remoteItems: filter ? all.filter(filter) : all,
+                extractRemoteId: (v) => v.id,
+                extractLocalId: (u) => u.id,
+                createInstance: (item) => item, // Should already be instances
+                updateInstance: (inst, item) => {}, // Already updated
+            });
+        };
+
+        sync(state.queueQueued, (i) => i.status.get() === "queued");
+        sync(state.queuePlayed, (i) => i.status.get() === "played");
+        sync(state.queueSkipped, (i) => i.status.get() === "skipped");
+        sync(state.queueDeleted, (i) => i.status.get() === "deleted");
     }
 
     async onQueueProbe(data) {}
