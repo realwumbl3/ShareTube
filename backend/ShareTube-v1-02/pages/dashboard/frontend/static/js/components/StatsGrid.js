@@ -55,6 +55,7 @@ export default class StatsGrid {
 }
 
 css`
+
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

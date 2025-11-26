@@ -41,47 +41,51 @@ export default class DashboardApp {
                     </div>
                     <nav class="dashboard-nav">
                         <button
-                            class="nav-btn glass-button ${this.currentView.interp(v => v === 'overview' ? 'active' : '')}"
-                            zyx-click=${() => this.setView('overview')}
+                            class="nav-btn glass-button"
+                            active=${this.currentView.interp((v) => v === "overview")}
+                            zyx-click=${() => this.setView("overview")}
                         >
                             Overview
                         </button>
                         <button
-                            class="nav-btn glass-button ${this.currentView.interp(v => v === 'users' ? 'active' : '')}"
-                            zyx-click=${() => this.setView('users')}
+                            class="nav-btn glass-button"
+                            active=${this.currentView.interp((v) => v === "users")}
+                            zyx-click=${() => this.setView("users")}
                         >
                             Users
                         </button>
                         <button
-                            class="nav-btn glass-button ${this.currentView.interp(v => v === 'rooms' ? 'active' : '')}"
-                            zyx-click=${() => this.setView('rooms')}
+                            class="nav-btn glass-button"
+                            active=${this.currentView.interp((v) => v === "rooms")}
+                            zyx-click=${() => this.setView("rooms")}
                         >
                             Rooms
                         </button>
                         <button
-                            class="nav-btn glass-button ${this.currentView.interp(v => v === 'queues' ? 'active' : '')}"
-                            zyx-click=${() => this.setView('queues')}
+                            class="nav-btn glass-button"
+                            active=${this.currentView.interp((v) => v === "queues")}
+                            zyx-click=${() => this.setView("queues")}
                         >
                             Queues
                         </button>
                     </nav>
                     <div class="dashboard-status">
                         <span class="last-update">
-                            ${this.lastUpdate.interp(v => v ? `Updated: ${v}` : 'Loading...')}
+                            ${this.lastUpdate.interp((v) => (v ? `Updated: ${v}` : "Loading..."))}
                         </span>
                         <button
                             class="refresh-btn glass-button"
                             zyx-click=${() => this.loadDashboardData()}
-                            disabled=${this.loading}
+                            disabled=${this.loading.interp((v) => v)}
                         >
-                            ${this.loading.interp(v => v ? 'Refreshing...' : 'Refresh')}
+                            ${this.loading.interp((v) => (v ? "Refreshing..." : "Refresh"))}
                         </button>
                     </div>
                 </header>
 
                 <main class="dashboard-content">
                     <!-- Overview View -->
-                    <div class="view" zyx-if=${[this.currentView, v => v === 'overview']}>
+                    <div class="view" zyx-if=${[this.currentView, (v) => v === "overview"]}>
                         ${this.statsGrid}
                         <div class="overview-grid">
                             <div class="overview-section glass-panel">
@@ -92,19 +96,19 @@ export default class DashboardApp {
                     </div>
 
                     <!-- Users View -->
-                    <div class="view" zyx-if=${[this.currentView, v => v === 'users']}>
+                    <div class="view" zyx-if=${[this.currentView, (v) => v === "users"]}>
                         <h2 class="view-title">User Management</h2>
                         ${this.userTable}
                     </div>
 
                     <!-- Rooms View -->
-                    <div class="view" zyx-if=${[this.currentView, v => v === 'rooms']}>
+                    <div class="view" zyx-if=${[this.currentView, (v) => v === "rooms"]}>
                         <h2 class="view-title">Room Management</h2>
                         ${this.roomTable}
                     </div>
 
                     <!-- Queues View -->
-                    <div class="view" zyx-if=${[this.currentView, v => v === 'queues']}>
+                    <div class="view" zyx-if=${[this.currentView, (v) => v === "queues"]}>
                         <h2 class="view-title">Queue Management</h2>
                         ${this.queueTable}
                     </div>
@@ -122,11 +126,11 @@ export default class DashboardApp {
         try {
             // Load all dashboard data in parallel
             const [statsRes, activityRes, usersRes, roomsRes, queuesRes] = await Promise.all([
-                fetch('/dashboard/api/stats'),
-                fetch('/dashboard/api/activity'),
-                fetch('/dashboard/api/users'),
-                fetch('/dashboard/api/rooms'),
-                fetch('/dashboard/api/queues')
+                fetch("/dashboard/api/stats"),
+                fetch("/dashboard/api/activity"),
+                fetch("/dashboard/api/users"),
+                fetch("/dashboard/api/rooms"),
+                fetch("/dashboard/api/queues"),
             ]);
 
             const [stats, activity, users, rooms, queues] = await Promise.all([
@@ -134,7 +138,7 @@ export default class DashboardApp {
                 activityRes.json(),
                 usersRes.json(),
                 roomsRes.json(),
-                queuesRes.json()
+                queuesRes.json(),
             ]);
 
             // Update reactive state
@@ -142,21 +146,20 @@ export default class DashboardApp {
 
             // Clear and repopulate LiveLists with model instances
             this.activity.splice(0, this.activity.length);
-            activity.forEach(item => this.activity.push(new DashboardActivity(item)));
+            activity.forEach((item) => this.activity.push(new DashboardActivity(item)));
 
             this.users.splice(0, this.users.length);
-            (users.users || []).forEach(userData => this.users.push(new DashboardUser(userData)));
+            (users.users || []).forEach((userData) => this.users.push(new DashboardUser(userData)));
 
             this.rooms.splice(0, this.rooms.length);
-            (rooms.rooms || []).forEach(roomData => this.rooms.push(new DashboardRoom(roomData)));
+            (rooms.rooms || []).forEach((roomData) => this.rooms.push(new DashboardRoom(roomData)));
 
             this.queues.splice(0, this.queues.length);
-            (queues.queues || []).forEach(queueData => this.queues.push(new DashboardQueue(queueData)));
+            (queues.queues || []).forEach((queueData) => this.queues.push(new DashboardQueue(queueData)));
 
             this.lastUpdate.set(new Date().toLocaleTimeString());
-
         } catch (error) {
-            console.error('Error loading dashboard data:', error);
+            console.error("Error loading dashboard data:", error);
         } finally {
             this.loading.set(false);
         }
@@ -164,17 +167,17 @@ export default class DashboardApp {
 
     handleRealtimeUpdate(data) {
         // Handle real-time updates from the server
-        console.log('Received real-time update:', data);
+        console.log("Received real-time update:", data);
 
-        if (data.type === 'stats') {
+        if (data.type === "stats") {
             this.stats.set(data.stats);
-        } else if (data.type === 'activity') {
+        } else if (data.type === "activity") {
             // Prepend new activity to existing activity
             this.activity.unshift(new DashboardActivity(data.activity)); // Add to beginning
             if (this.activity.length > 50) {
                 this.activity.splice(50, this.activity.length - 50); // Keep max 50 items
             }
-        } else if (data.type === 'full_update') {
+        } else if (data.type === "full_update") {
             // Full dashboard refresh
             this.loadDashboardData();
         }
@@ -200,9 +203,10 @@ css`
     .dashboard-header {
         margin: 1rem 2rem;
         padding: 1rem 1.5rem;
-        display: flex;
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
         align-items: center;
+        column-gap: 1.5rem;
         border: 1px solid var(--glass-border);
         border-radius: 100px; /* Pill shape */
         background: rgba(0, 0, 0, 0.4);
@@ -229,29 +233,51 @@ css`
         font-weight: 300;
         opacity: 0.8;
     }
-
+    /* Dashboard header navigation buttons */
     .dashboard-nav {
-        display: flex;
-        gap: 0.5rem;
-        background: rgba(255, 255, 255, 0.03);
-        padding: 0.25rem;
-        border-radius: 100px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        background: radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.08), transparent 60%),
+            rgba(255, 255, 255, 0.02);
+        padding: 1rem;
+        border-radius: 999px;
         border: 1px solid var(--glass-border);
+        box-shadow: var(--glow-primary);
+        margin: 0 auto;
     }
 
     .nav-btn {
-        padding: 0.5rem 1.25rem;
-        border: none;
-        border-radius: 100px;
-        font-size: 0.85rem;
+        position: relative;
+        padding: 0.5rem 1.4rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
         font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        outline: none;
+        border: 0;
+        -webkit-appearance: none;
+        appearance: none;
+        transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
     }
 
-    .nav-btn.active {
-        background: var(--accent-primary);
+    .nav-btn:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+        transform: translateY(-1px);
+    }
+
+    .nav-btn[active="true"] {
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
         color: #000;
         font-weight: 600;
-        box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+        box-shadow: 0 0 18px rgba(0, 243, 255, 0.6);
     }
 
     .dashboard-status {
@@ -296,8 +322,14 @@ css`
     }
 
     @keyframes slideUpFade {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .overview-grid {
@@ -323,17 +355,38 @@ css`
 
     @media (max-width: 1024px) {
         .dashboard-header {
+            margin: 0.5rem;
+            padding: 1rem;
+            display: flex;
             flex-direction: column;
             gap: 1rem;
             border-radius: var(--radius-md);
-            position: static;
-            margin: 1rem;
+            position: sticky;
+            top: 0.5rem;
         }
 
         .dashboard-nav {
             width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
+            justify-content: flex-start;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 0.5rem;
+            /* Hide scrollbar */
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .dashboard-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .dashboard-status {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .dashboard-content {
+            padding: 1rem;
         }
     }
 `;

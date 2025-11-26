@@ -11,14 +11,27 @@ class UserTableRow {
                     </div>
                 </div>
                 <div class="user-status">
+                    <span class="mobile-label">Status</span>
                     <span class="status-badge ${user.active.interp(v => v ? 'active' : 'inactive')}">
                         ${user.active.interp(v => v ? 'Active' : 'Inactive')}
                     </span>
                 </div>
-                <div class="user-stats">${user.room_count.interp(v => v || 0)} rooms</div>
-                <div class="user-stats">${user.videos_added.interp(v => v || 0)} videos</div>
-                <div class="user-date">${user.created_at.interp(v => this.formatDate(v))}</div>
-                <div class="user-date">${user.last_seen.interp(v => this.formatDate(v))}</div>
+                <div class="user-stats">
+                    <span class="mobile-label">Rooms</span>
+                    ${user.room_count.interp(v => v || 0)} rooms
+                </div>
+                <div class="user-stats">
+                    <span class="mobile-label">Videos</span>
+                    ${user.videos_added.interp(v => v || 0)} videos
+                </div>
+                <div class="user-date">
+                    <span class="mobile-label">Joined</span>
+                    ${user.created_at.interp(v => this.formatDate(v))}
+                </div>
+                <div class="user-date">
+                    <span class="mobile-label">Last Seen</span>
+                    ${user.last_seen.interp(v => this.formatDate(v))}
+                </div>
             </div>
         `.bind(this);
     }
@@ -61,7 +74,7 @@ export default class UserTable {
 
                 <div class="table-wrapper">
                     <div class="user-table">
-                        <div class="table-header-row">
+                        <div class="user-table-header">
                             <div class="header-cell">User</div>
                             <div class="header-cell">Status</div>
                             <div class="header-cell">Rooms</div>
@@ -147,7 +160,7 @@ css`
         min-width: 800px;
     }
 
-    .table-header-row {
+    .user-table-header {
         display: grid;
         grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
         background: rgba(0, 0, 0, 0.2);
@@ -240,6 +253,15 @@ css`
         font-size: 0.85rem;
     }
 
+    .mobile-label {
+        display: none;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
     @media (max-width: 768px) {
         .table-header-control {
             flex-direction: column;
@@ -249,6 +271,49 @@ css`
 
         .search-input {
             width: 100%;
+        }
+        
+        .user-table {
+            min-width: 100%;
+        }
+
+        .user-table-header {
+            display: none;
+        }
+
+        .user-row {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+        }
+
+        .user-row > div {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-row > div:last-child {
+            border-bottom: none;
+        }
+
+        .mobile-label {
+            display: block;
+        }
+        
+        .user-name {
+            background: rgba(255, 255, 255, 0.02);
+            margin: -1rem -1rem 0.5rem -1rem;
+            padding: 1rem !important;
+            border-bottom: 1px solid var(--glass-border) !important;
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
         }
     }
 `;

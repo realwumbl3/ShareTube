@@ -5,19 +5,39 @@ class RoomTableRow {
         html`
             <div class="room-row">
                 <div class="room-code">
+                    <span class="mobile-label">Code</span>
                     <span class="room-code-text">${room.code.interp((v) => v)}</span>
                 </div>
-                <div class="room-name">${room.name.interp((v) => v)}</div>
-                <div class="room-owner">${room.owner.interp((v) => v)}</div>
+                <div class="room-name">
+                    <span class="mobile-label">Name</span>
+                    ${room.name.interp((v) => v)}
+                </div>
+                <div class="room-owner">
+                    <span class="mobile-label">Owner</span>
+                    ${room.owner.interp((v) => v)}
+                </div>
                 <div class="room-status">
+                    <span class="mobile-label">Status</span>
                     <span class="status-badge ${room.is_active.interp((v) => (v ? "active" : "inactive"))}">
                         ${room.is_active.interp((v) => (v ? "Active" : "Inactive"))}
                     </span>
                 </div>
-                <div class="room-stats">${room.member_count.interp((v) => v || 0)} members</div>
-                <div class="room-stats">${room.queue_count.interp((v) => v || 0)} videos</div>
-                <div class="room-stats">${room.recent_activity.interp((v) => v || 0)} events</div>
-                <div class="room-date">${room.created_at.interp((v) => this.formatDate(v))}</div>
+                <div class="room-stats">
+                    <span class="mobile-label">Members</span>
+                    ${room.member_count.interp((v) => v || 0)} members
+                </div>
+                <div class="room-stats">
+                    <span class="mobile-label">Queue</span>
+                    ${room.queue_count.interp((v) => v || 0)} videos
+                </div>
+                <div class="room-stats">
+                    <span class="mobile-label">Activity</span>
+                    ${room.recent_activity.interp((v) => v || 0)} events
+                </div>
+                <div class="room-date">
+                    <span class="mobile-label">Created</span>
+                    ${room.created_at.interp((v) => this.formatDate(v))}
+                </div>
             </div>
         `.bind(this);
     }
@@ -66,7 +86,7 @@ export default class RoomTable {
 
                 <div class="table-wrapper">
                     <div class="room-table">
-                        <div class="table-header-row">
+                        <div class="room-table-header">
                             <div class="header-cell">Code</div>
                             <div class="header-cell">Name</div>
                             <div class="header-cell">Owner</div>
@@ -118,6 +138,7 @@ export default class RoomTable {
 }
 
 css`
+
     .room-table-container {
         overflow: hidden;
     }
@@ -187,7 +208,7 @@ css`
         min-width: 1000px;
     }
 
-    .table-header-row {
+    .room-table-header {
         display: grid;
         grid-template-columns: 1fr 1.5fr 1fr 1fr 0.8fr 0.8fr 0.8fr 1fr;
         background: rgba(0, 0, 0, 0.2);
@@ -281,6 +302,15 @@ css`
         font-size: 0.85rem;
     }
 
+    .mobile-label {
+        display: none;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
     @media (max-width: 1024px) {
         .table-header-control {
             flex-direction: column;
@@ -296,6 +326,52 @@ css`
 
         .search-input {
             width: 100%;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .room-table {
+            min-width: 100%;
+        }
+
+        .room-table-header {
+            display: none;
+        }
+
+        .room-row {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+        }
+
+        .room-row > div {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .room-row > div:last-child {
+            border-bottom: none;
+        }
+
+        .mobile-label {
+            display: block;
+        }
+        
+        .room-code {
+            background: rgba(0, 243, 255, 0.05);
+            margin: -1rem -1rem 0.5rem -1rem;
+            padding: 0.75rem 1rem !important;
+            border-bottom: 1px solid var(--glass-border) !important;
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
         }
     }
 `;

@@ -8,6 +8,7 @@ class QueueTableRow {
         html`
             <div class="queue-row">
                 <div class="queue-room">
+                    <span class="mobile-label">Room</span>
                     <div class="room-info">
                         <span class="room-code">${queue.room_code.interp(v => v)}</span>
                         <button
@@ -18,8 +19,12 @@ class QueueTableRow {
                         </button>
                     </div>
                 </div>
-                <div class="queue-count">${queue.entry_count.interp(v => v)} videos</div>
+                <div class="queue-count">
+                    <span class="mobile-label">Count</span>
+                    ${queue.entry_count.interp(v => v)} videos
+                </div>
                 <div class="queue-preview">
+                    <span class="mobile-label">Content</span>
                     <!-- Collapsed view -->
                     <div zyx-if=${[this.expanded, e => !e]}>
                         ${this.renderCollapsedContent()}
@@ -106,7 +111,7 @@ export default class QueueTable {
 
                 <div class="table-wrapper">
                     <div class="queue-table">
-                        <div class="table-header-row">
+                        <div class="queue-table-header">
                             <div class="header-cell">Room</div>
                             <div class="header-cell">Count</div>
                             <div class="header-cell">Queue Contents</div>
@@ -189,7 +194,7 @@ css`
         min-width: 800px;
     }
 
-    .table-header-row {
+    .queue-table-header {
         display: grid;
         grid-template-columns: 2fr 1fr 3fr;
         background: rgba(0, 0, 0, 0.2);
@@ -345,6 +350,15 @@ css`
         font-style: italic;
     }
 
+    .mobile-label {
+        display: none;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
     @media (max-width: 768px) {
         .table-header-control {
             flex-direction: column;
@@ -357,13 +371,48 @@ css`
             width: 100%;
         }
 
-        .queue-table th,
-        .queue-table td {
-            padding: 0.5rem;
+        .queue-table {
+            min-width: 100%;
+        }
+        
+        .queue-table-header {
+            display: none;
         }
 
+        .queue-row {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+        }
+
+        .queue-row > div {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; /* Changed from center for preview content */
+            width: 100%;
+        }
+        
+        .queue-row > div:last-child {
+            border-bottom: none;
+            flex-direction: column; /* Stack label and content for preview */
+            gap: 0.5rem;
+        }
+
+        .mobile-label {
+            display: block;
+            flex-shrink: 0;
+        }
+        
         .queue-preview {
             max-width: none;
+            width: 100%;
         }
 
         .queue-entries {
