@@ -4,49 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShareTube Dashboard</title>
-    <!-- Page-local stylesheet served by Nginx from /dashboard/static/css/ -->
-    <link rel="stylesheet" href="/static/dashboard/css/styles.css">
 </head>
 <body>
-    <header>
-        <h1>ShareTube Dashboard</h1>
-        <nav>
-            <a href="#stats">Statistics</a>
-            <a href="#activity">Recent Activity</a>
-            <a href="#settings">Settings</a>
-        </nav>
-    </header>
-
-    <main>
-        <section id="stats" class="stats-section">
-            <h2>Statistics</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Total Users</h3>
-                    <span id="total-users" class="stat-number">0</span>
-                </div>
-                <div class="stat-card">
-                    <h3>Active Sessions</h3>
-                    <span id="active-sessions" class="stat-number">0</span>
-                </div>
-                <div class="stat-card">
-                    <h3>Videos Shared</h3>
-                    <span id="videos-shared" class="stat-number">0</span>
-                </div>
-                <div class="stat-card">
-                    <h3>Storage Used</h3>
-                    <span id="storage-used" class="stat-number">0 GB</span>
-                </div>
-            </div>
-        </section>
-
-        <section id="activity" class="activity-section">
-            <h2>Recent Activity</h2>
-            <div id="activity-list" class="activity-list">
-                <!-- Activity items will be populated by JavaScript -->
-            </div>
-        </section>
-    </main>
 
     <!-- ES module entrypoint served from /dashboard/static/js/ -->
     <script type="module" src="/static/dashboard/js/main.js"></script>

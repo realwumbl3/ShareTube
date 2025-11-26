@@ -75,6 +75,8 @@ class Room(db.Model):
     operators: Mapped[list["RoomOperator"]] = db.relationship(
         "RoomOperator", backref="room", lazy=True, cascade="all, delete-orphan"
     )
+    # ORM relationship to owner user
+    owner: Mapped[Optional["User"]] = db.relationship("User", foreign_keys=[owner_id], lazy=True)
 
     @staticmethod
     def emit(code: str, trigger: str) -> tuple[Callable, Callable]:

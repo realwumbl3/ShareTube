@@ -330,10 +330,14 @@ def register_routes(app: Flask) -> None:
     # Register page blueprints
     try:
         from .pages import dashboard_bp, mobile_remote_bp, libraries_browser_bp
+        from .pages.dashboard.backend import register_socket_handlers as register_dashboard_socket_handlers
+
         app.register_blueprint(dashboard_bp)
         app.register_blueprint(mobile_remote_bp)
         app.register_blueprint(libraries_browser_bp)
-        logging.info("Successfully registered page blueprints")
+        # Register dashboard socket handlers
+        register_dashboard_socket_handlers()
+        logging.info("Successfully registered page blueprints and dashboard socket handlers")
     except Exception:
         logging.exception("page blueprints registration failed")
 

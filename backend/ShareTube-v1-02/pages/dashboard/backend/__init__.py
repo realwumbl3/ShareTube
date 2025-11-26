@@ -1,16 +1,48 @@
 # Import `Blueprint` to group related routes, `jsonify` for JSON responses,
 # and `render_template` to render Jinja HTML templates.
+import logging
+logger = logging.getLogger(__name__)
 
 from flask import Blueprint, jsonify, render_template
 
-# Import the core database handle and models directly from the main app package
-# instead of via the local package. Importing from "." caused a circular import
-# when `pages.dashboard` imported this backend module to access `dashboard_bp`,
-# because the symbols were expected to exist in the partially initialised
-# `pages.dashboard.backend` package. By importing from the root application
-# modules, we avoid that cycle entirely.
-from ....extensions import db
-from ....models import User, Room, RoomMembership, Queue
+# Import dependencies directly from the main app
+# from ....extensions import db
+from ..shared_imports import db, now_ms, User, Room, RoomMembership, Queue, RoomOperator, QueueEntry, RoomAudit, ChatMessage
+
+
+# Import our dashboard modules
+from ..analytics import DashboardAnalytics
+from ..data import DashboardData
+
+# Socket.IO event handlers for real-time dashboard updates
+def register_socket_handlers():
+    """Register Socket.IO event handlers for dashboard real-time updates."""
+    # Import socketio directly from extensions to avoid import issues
+    from ....extensions import socketio
+
+    @socketio.on('dashboard.connect')
+    def handle_dashboard_connect():
+        """Handle dashboard client connection."""
+        logger.info("Dashboard client connected")
+
+    @socketio.on('dashboard.disconnect')
+    def handle_dashboard_disconnect():
+        """Handle dashboard client disconnection."""
+        logger.info("Dashboard client disconnected")
+
+# Helper function to emit real-time dashboard updates
+def emit_dashboard_update(update_type, data):
+    """Emit a real-time update to connected dashboard clients."""
+    try:
+        # Import socketio directly from extensions to avoid import issues
+        from ....extensions import socketio
+        socketio.emit('dashboard.update', {
+            'type': update_type,
+            'data': data,
+            'timestamp': now_ms()
+        })
+    except Exception as e:
+        logger.exception(f"Failed to emit dashboard update: {e}")
 
 
 
@@ -55,51 +87,59 @@ def dashboard_home():
 @dashboard_bp.route("/api/stats")
 def get_stats():
     """
-    Return basic dashboard statistics as JSON.
-
-    This is currently placeholder data; the structure is kept simple so
-    frontend code can easily bind these values into the UI.
+    Return comprehensive dashboard statistics as JSON.
     """
-
-    total_users = User.query.count()
-    active_sessions = RoomMembership.query.count()
-
-    # Assemble a minimal stats dict; later this can read from the database.
-    stats = {
-        "total_users": total_users,  # Total number of known users.
-        "active_sessions": active_sessions,  # Number of currently active sessions.
-        "videos_shared": 0,  # Total count of shared videos.
-        "storage_used": 0,  # Human-readable storage usage.
-    }
-
-    # Serialize the stats dict as a JSON HTTP response.
-    return jsonify(stats)
+    try:
+        stats = DashboardAnalytics.get_all_stats()
+        # Emit real-time update to all connected dashboard clients
+        emit_dashboard_update('stats', stats)
+        return jsonify(stats)
+    except Exception as e:
+        logger.exception("Error getting dashboard stats")
+        return jsonify({"error": str(e)}), 500
 
 
 @dashboard_bp.route("/api/activity")
 def get_activity():
     """
-    Return a list of recent activity rows as JSON.
-
-    The response is a list of objects with basic activity metadata that
-    the frontend can render into the "Recent Activity" section.
+    Return recent activity from RoomAudit logs.
     """
-
-    # Placeholder activity events; these will eventually be loaded from the DB.
-    activity = [
-        {
-            "type": "video_shared",  # Event type identifier.
-            "user": "User1",  # Which user triggered the event.
-            "timestamp": "2024-01-01",  # ISO-ish timestamp for when it happened.
-        },
-        {
-            "type": "session_started",
-            "user": "User2",
-            "timestamp": "2024-01-01",
-        },
-    ]
-
-    # Serialize the list of events as JSON for the frontend.
+    activity = DashboardData.get_recent_activity()
+    # Emit real-time update to all connected dashboard clients
+    if activity:
+        emit_dashboard_update('activity', activity[0])  # Send latest activity item
     return jsonify(activity)
+
+
+@dashboard_bp.route("/api/users")
+def get_users():
+    """
+    Return user data for the dashboard.
+    """
+    return jsonify({"users": DashboardData.get_users_data()})
+
+
+@dashboard_bp.route("/api/rooms")
+def get_rooms():
+    """
+    Return room data for the dashboard.
+    """
+    return jsonify({"rooms": DashboardData.get_rooms_data()})
+
+
+@dashboard_bp.route("/api/queues")
+def get_queues():
+    """
+    Return queue data for the dashboard.
+    """
+    return jsonify({"queues": DashboardData.get_queues_data()})
+
+
+@dashboard_bp.route("/api/health")
+def get_health():
+    """
+    Return system health information.
+    """
+    return jsonify(DashboardData.get_system_health())
 
 

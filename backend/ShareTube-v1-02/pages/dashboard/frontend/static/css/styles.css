@@ -1,10 +1,42 @@
-/* Dashboard Styles
- *
- * This stylesheet is served by Nginx from:
- *   /static/dashboard/css/styles.css
- * and lives alongside the dashboard page code under:
- *   pages/dashboard/frontend/static/css/styles.css
- */
+/* ShareTube Dashboard - Epic Future Theme */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+    /* Color Palette - Deep Space & Neon */
+    --bg-app: #050507;
+    --bg-panel: rgba(20, 20, 25, 0.6);
+    --bg-panel-hover: rgba(30, 30, 40, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shine: rgba(255, 255, 255, 0.03);
+    
+    /* Accents */
+    --accent-primary: #00f3ff; /* Cyber Cyan */
+    --accent-secondary: #bc13fe; /* Neon Purple */
+    --accent-success: #00ff9d; /* Matrix Green */
+    --accent-danger: #ff0055; /* Laser Red */
+    --accent-warning: #ffb800; /* Solar Yellow */
+    
+    /* Text */
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b0;
+    --text-muted: #606070;
+    
+    /* Shadows & Glows */
+    --glow-primary: 0 0 20px rgba(0, 243, 255, 0.15);
+    --glow-secondary: 0 0 20px rgba(188, 19, 254, 0.15);
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+    
+    /* Typography */
+    --font-main: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+    
+    /* Spacing */
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+}
 
 * {
     margin: 0;
@@ -13,115 +45,98 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-body);
+    background-color: var(--bg-app);
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(188, 19, 254, 0.08), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.08), transparent 25%);
+    color: var(--text-primary);
     line-height: 1.6;
-    color: #333;
-    background-color: #f5f5f5;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
 }
 
-header {
-    background-color: #2c3e50;
-    color: white;
-    padding: 1rem 0;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-main);
 }
 
-header h1 {
-    text-align: center;
-    margin-bottom: 1rem;
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-nav {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
 }
 
-nav a {
-    color: white;
-    text-decoration: none;
-    padding: 0.5rem 1rem;
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
-    transition: background-color 0.3s;
 }
 
-nav a:hover {
-    background-color: #34495e;
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
-main {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+/* Utility Classes for Glassmorphism */
+.glass-panel {
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
 }
 
-section {
-    background: white;
-    margin-bottom: 2rem;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+.glass-button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
 }
 
-h2 {
-    color: #2c3e50;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 0.5rem;
+.glass-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-primary);
+    box-shadow: var(--glow-primary);
+    transform: translateY(-1px);
 }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
+.glass-input {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    transition: all 0.3s ease;
 }
 
-.stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+.glass-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.1);
+    outline: none;
 }
 
-.stat-card h3 {
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    opacity: 0.9;
+/* Text Gradients */
+.text-gradient {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-.stat-number {
-    font-size: 2.5rem;
-    font-weight: bold;
-    display: block;
+/* Card Glow Effect */
+.card-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at top right, var(--glass-shine), transparent 60%);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 0;
 }
-
-.activity-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.activity-item {
-    padding: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #fafafa;
-}
-
-.activity-item .type {
-    font-weight: bold;
-    color: #3498db;
-}
-
-.activity-item .user {
-    color: #2c3e50;
-}
-
-.activity-item .timestamp {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-
