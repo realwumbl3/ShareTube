@@ -1,0 +1,124 @@
+---
+alwaysApply: true
+---
+
+This is a rule for the Zyx Framework. If making UI components in the frontend, use this rule to help you.
+
+# Zyx Framework Rules
+
+## Imports
+
+```javascript
+import { html, css, LiveVar, LiveList } from "./dep/zyx.js"; // Adjust path as needed
+```
+
+## Component Structure
+
+Components are classes. The HTML template is defined in the constructor and **must** be bound to `this`.
+
+```javascript
+export default class MyComponent {
+    constructor() {
+        this.count = new LiveVar(0);
+
+        this.subComponent = new SubComponent();
+
+        html`
+            <div class="my-component">
+                <span>Count: ${this.count.interp((v) => v)}</span>
+                <button zyx-click=${() => this.increment()}>Increment</button>
+                ${this.subComponent}
+            </div>
+        `.bind(this);
+    }
+
+    increment() {
+        this.count.set(this.count.get() + 1);
+    }
+}
+
+class SubComponent {
+    constructor() {
+        this.message = new LiveVar("Hello from subclass!");
+
+        html`
+            <div class="sub-component">
+                <p>${this.message.interp((v) => v)}</p>
+                <button zyx-click=${() => this.updateMessage()}>Update Message</button>
+            </div>
+        `.bind(this);
+    }
+
+    updateMessage() {
+        this.message.set("Message updated at " + new Date().toLocaleTimeString());
+    }
+}
+```
+
+## HTML Directives & Attributes
+
+### Element Binding
+
+Bind a DOM element to a class property using `this="propertyName"`.
+
+```html
+<div this="myElement"></div>
+<!-- Access via this.myElement -->
+```
+
+### Events
+
+Use `zyx-eventname`.
+
+-   `zyx-click=${(e) => ...}`
+-   `zyx-miceenter=${(e) => ...}`
+-   `zyx-miceleave=${(e) => ...}`
+-   `zyx-input=${(e) => ...}`
+
+### Conditionals (Reactive)
+
+Use `zyx-if`, `zyx-elif`, `zyx-else`.
+
+-   If using a predicate: `zyx-if=${[liveVar, (val) => val === true]}`
+-   If boolean LiveVar: `zyx-if=${liveVar}`
+
+```html
+<div zyx-if=${[this.count, v => v > 5]}>High count!</div>
+<div zyx-else>Low count</div>
+```
+
+### Lists (Reactive)
+
+Use `zyx-live-list` with an object config.
+
+```html
+<div zyx-live-list=${{
+    list: this.myLiveList,       // LiveList instance
+    compose: ItemComponent,      // Class or function returning html`...`
+    filter: (item) => item.visible // Optional filter
+}}></div>
+```
+
+### Radio Views (Tabs)
+
+-   Content: `zyx-radioview="namespace.viewName"`
+-   Controller/Button: `zyx-radioview="namespace.viewName.open"`
+
+## CSS
+
+Use the `css` tagged template.
+
+```javascript
+css`
+    .my-component {
+        color: red;
+    }
+`;
+```
+
+## Reactivity (LiveVar/LiveList)
+
+-   **Get**: `liveVar.get()` or `liveVar.value`
+-   **Set**: `liveVar.set(newValue)`
+-   **Interpolate in HTML**: `${liveVar.interp(val => transformedVal)}`
+-   **LiveList**: Use standard array methods (`push`, `remove`, `splice`). They are reactive.

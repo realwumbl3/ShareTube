@@ -1,15 +1,11 @@
 // Log module load for diagnostics in the page console
 console.log("cs/socket.js loaded");
 
-import ShareTubeApp from "./app.js";
 import state from "./state.js";
 import { io } from "./dep/socket.io.min.esm.js";
 
 // Ensure a single connected Socket.IO client on the provided app instance
 export default class SocketManager {
-    /**
-     * @param {ShareTubeApp} app
-     */
     constructor(app) {
         this.app = app;
         this.binds = {};

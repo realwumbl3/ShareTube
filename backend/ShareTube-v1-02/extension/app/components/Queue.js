@@ -1,13 +1,14 @@
 import { html, LiveVar, css } from "../dep/zyx.js";
-import { zyxInput } from "../app.js";
 import state from "../state.js";
 import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } from "../getters.js";
 
 import { msDurationTimeStamp } from "../utils.js";
 
 export default class ShareTubeQueue {
-    constructor(app) {
+    constructor(app, { isMobileRemote = false } = {}) {
         this.app = app;
+
+        this.isMobileRemote = isMobileRemote;
 
         html`
             <div
@@ -21,6 +22,7 @@ export default class ShareTubeQueue {
                     <span class="queue-title">Queue (${state.queue.interp((v) => v.length)})</span>
                     <button
                         class="rounded_btn"
+                        ${this.isMobileRemote ? "style='display: none;'" : ""}
                         aria-label="Toggle queue visibility"
                         title="Toggle queue visibility"
                         zyx-click=${() => state.queueVisible.set(!state.queueVisible.get())}
@@ -179,8 +181,6 @@ export default class ShareTubeQueue {
         this.current_playing;
         /** zyx-sense @type {HTMLDivElement} */
         this.current_playing_progress;
-
-        zyxInput.bindMomentumScroll(this.sharetube_queue_list, { direction: "y" });
 
         this.secondTimerInterval = null;
         this.startSecondTimer();

@@ -16,6 +16,7 @@ from ..models import Room, RoomMembership, User
 from .room_timeouts import cancel_starting_timeout
 
 from .decorators import require_room_by_code, require_room
+from ..sockets import is_mobile_remote_socket, get_mobile_remote_room_code
 
 rooms_bp = Blueprint("rooms", __name__, url_prefix="/api")
 
@@ -57,9 +58,56 @@ def room_create():
 
 def register_socket_handlers() -> None:
     @socketio.on("room.join")
-    @require_room_by_code
-    def _on_join_room(room: Room, user_id: int, data: dict):
+    def _on_join_room(data: dict):
         try:
+            logging.debug(f"room.join: data={data}, is_mobile_remote={is_mobile_remote_socket()}")
+
+            # Handle mobile remote connections differently
+            if is_mobile_remote_socket():
+                logging.debug("room.join: handling as mobile remote")
+                room_code = get_mobile_remote_room_code()
+                logging.debug(f"room.join: mobile remote room_code={room_code}")
+                if not room_code:
+                    socketio.emit("room.error", {"error": "Invalid mobile remote token"})
+                    return
+
+                room = Room.query.filter_by(code=room_code).first()
+                if not room:
+                    socketio.emit("room.error", {"error": "Room not found"})
+                    return
+
+                # For mobile remotes, just join the Socket.IO room without creating membership
+                join_room(f"room:{room.code}")
+                socketio.emit(
+                    "room.joined",
+                    {
+                        "ok": True,
+                        "code": room.code,
+                        "snapshot": room.to_dict(),
+                        "serverNowMs": now_ms(),
+                    },
+                    room=f"room:{room.code}",
+                )
+                return
+
+            # Normal user room join
+            logging.debug("room.join: handling as normal user")
+            user_id = get_user_id_from_socket()
+            logging.debug(f"room.join: user_id={user_id}")
+            if not user_id:
+                socketio.emit("room.error", {"error": "Authentication required"})
+                return
+
+            code = (data or {}).get("code")
+            if not code:
+                socketio.emit("room.error", {"error": "Room code required"})
+                return
+
+            room = Room.query.filter_by(code=code).first()
+            if not room:
+                socketio.emit("room.error", {"error": "Room not found"})
+                return
+
             # Join room using model method
             RoomMembership.join_room(room, user_id)
 
@@ -80,6 +128,7 @@ def register_socket_handlers() -> None:
             )
         except Exception:
             logging.exception("room.join handler error")
+            socketio.emit("room.error", {"error": "Failed to join room"})
 
     @socketio.on("room.leave")
     @require_room_by_code

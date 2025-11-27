@@ -8,29 +8,32 @@ css`
 `;
 
 // Initialize the mobile remote when DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     // Create and mount the main mobile remote app
     const mobileRemote = new MobileRemoteApp();
     document.body.appendChild(mobileRemote.main);
 
-    // Initialize Socket.IO for real-time updates (if needed)
-    const socket = io({
-        path: "/socket.io",
-        transports: ["websocket", "polling"],
+    // Get room code and error from config (passed from backend)
+    const roomCode = window.mobileRemoteConfig?.roomCode;
+    const token = window.mobileRemoteConfig?.token;
+    const error = window.mobileRemoteConfig?.error;
+
+    console.log('Mobile Remote: Config loaded:', {
+        roomCode: roomCode ? `'${roomCode}'` : 'none',
+        token: token ? `'${token.substring(0, 20)}...'` : 'none',
+        error: error || 'none'
     });
 
-    // Listen for real-time mobile remote updates
-    socket.on("mobile-remote.update", (data) => {
-        mobileRemote.handleRealtimeUpdate(data);
-    });
-
-    socket.on("connect", () => {
-        console.log("Mobile Remote connected to server");
-    });
-
-    socket.on("disconnect", () => {
-        console.log("Mobile Remote disconnected from server");
-    });
+    if (error) {
+        console.log(`Mobile Remote: Error from backend: ${error}`);
+        mobileRemote.showError(error);
+    } else if (roomCode) {
+        console.log(`Mobile Remote: Connecting to room ${roomCode}`);
+        mobileRemote.connectToRoom(roomCode);
+    } else {
+        console.log("Mobile Remote: No room code provided");
+        mobileRemote.showError("No room code provided. Please scan a QR code from the ShareTube extension.");
+    }
 });
 
 // Prevent zoom on double tap for a more native-app-like feel.

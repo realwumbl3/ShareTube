@@ -8,6 +8,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
 </head>
 <body>
+    <!-- Pass room code, token, and error from URL to JavaScript -->
+    <script>
+        window.mobileRemoteConfig = {
+            roomCode: "{{ room_code if room_code else '' }}",
+            token: "{{ token if token else '' }}",
+            error: "{{ error if error else '' }}"
+        };
+    </script>
     <!-- ES module entrypoint served from /mobile-remote/static/js/ -->
     <script type="module" src="/static/mobile_remote/js/main.js"></script>
 </body>

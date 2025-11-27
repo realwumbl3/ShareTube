@@ -14,10 +14,10 @@ import logging
 def require_room_by_code(handler: Callable) -> Callable:
     """
     Decorator for socket handlers that require a room identified by code from data.
-    
+
     Extracts code from data, validates it, queries the room, and passes
     (room, user_id, data) to the handler. Returns early if code is missing or room not found.
-    
+
     Usage:
         @socketio.on("room.control.pause")
         @require_room_by_code

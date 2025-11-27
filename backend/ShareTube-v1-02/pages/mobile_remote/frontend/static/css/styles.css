@@ -2,13 +2,25 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* Import extension CSS files */
+@import "/extension/app/css/queue-header.css";
+@import "/extension/app/css/queue-current-playing.css";
+@import "/extension/app/css/queue-list.css";
+@import "/extension/app/css/queue-footer.css";
+@import "/extension/app/css/queue-selector.css";
+@import "/extension/app/css/queue-container.css";
+@import "/extension/app/css/splash.css";
+
 :root {
     /* Color Palette - Deep Space & Neon */
     --bg-app: #050507;
-    --bg-panel: rgba(20, 20, 25, 0.6);
-    --bg-panel-hover: rgba(30, 30, 40, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shine: rgba(255, 255, 255, 0.03);
+
+    /* Queue-like Theme Variables */
+    --bg-queue-panel: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
+    --bg-queue-header: linear-gradient(to bottom, rgba(18, 18, 18, 0.98), rgba(18, 18, 18, 0.9));
+    --border-queue: 1px solid rgba(255, 255, 255, 0.18);
+    --border-queue-light: 1px solid rgba(255, 255, 255, 0.22);
+    --border-queue-dim: 1px solid rgba(255, 255, 255, 0.12);
 
     /* Accents */
     --accent-primary: #00f3ff;
@@ -30,7 +42,7 @@
     /* Shadows & Glows */
     --glow-primary: 0 0 20px rgba(0, 243, 255, 0.15);
     --glow-secondary: 0 0 20px rgba(188, 19, 254, 0.15);
-    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.45);
 
     /* Typography */
     --font-main: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -39,7 +51,8 @@
 
     /* Spacing */
     --radius-sm: 8px;
-    --radius-md: 16px;
+    --radius-md: 14px;
+    /* Matched to queue */
     --radius-lg: 24px;
 }
 
@@ -57,7 +70,7 @@ body {
         radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.08), transparent 25%);
     color: var(--text-primary);
     line-height: 1.6;
-    min-height: 100vh;
+    max-height: 100dvh;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     touch-action: manipulation;
@@ -93,28 +106,30 @@ h6 {
 
 /* Utility Classes for Glassmorphism */
 .glass-panel {
-    background: var(--bg-panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    outline: 1px solid var(--glass-border);
+    background: var(--bg-queue-panel);
+    backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
+    -webkit-backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
+    border: var(--border-queue);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
 }
 
 .glass-button {
-    background: rgba(255, 255, 255, 0.05);
-    outline: 1px solid var(--glass-border);
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(54, 54, 54, 0.9));
+    border: var(--border-queue-light);
+    outline: none;
     color: var(--text-primary);
     border-radius: var(--radius-sm);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background 140ms ease, border-color 140ms ease, transform 80ms ease;
     cursor: pointer;
 }
 
 .glass-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    outline-color: var(--accent-primary);
-    box-shadow: var(--glow-primary);
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.18), rgba(68, 68, 68, 0.95));
+    border-color: rgba(255, 255, 255, 0.32);
     transform: translateY(-1px);
+    box-shadow: none;
+    /* Reset glow */
 }
 
 .glass-input {
@@ -151,325 +166,3 @@ h6 {
     pointer-events: none;
     z-index: 0;
 }
-
-/* Mobile Remote Specific Styles */
-header {
-    background: var(--bg-panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    outline: 1px solid var(--glass-border);
-    padding: 1rem;
-    text-align: center;
-    position: relative;
-}
-
-header h1 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.current-video {
-    font-size: 1.1rem;
-    opacity: 0.9;
-}
-
-main {
-    padding: 1rem;
-}
-
-section {
-    background: var(--bg-panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    outline: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--shadow-card);
-    position: relative;
-    overflow: hidden;
-}
-
-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at top right, var(--glass-shine), transparent 60%);
-    opacity: 0.5;
-    pointer-events: none;
-    z-index: 0;
-}
-
-section > * {
-    position: relative;
-    z-index: 1;
-}
-
-h2 {
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
-    color: var(--text-primary);
-}
-
-/* Playback Controls */
-.time-display {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.progress-bar {
-    flex: 1;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.progress-bar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-    opacity: 0.3;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-    border-radius: 3px;
-    width: 0%;
-    transition: width 0.3s;
-    position: relative;
-    z-index: 1;
-}
-
-.control-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    margin-bottom: 2rem;
-}
-
-.control-btn {
-    background: rgba(255, 255, 255, 0.05);
-    outline: 1px solid var(--glass-border);
-    color: var(--text-primary);
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    font-size: 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.control-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at center, rgba(0, 243, 255, 0.1), transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.control-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    outline-color: var(--accent-primary);
-    box-shadow: var(--glow-primary);
-    transform: translateY(-1px);
-}
-
-.control-btn:hover::before {
-    opacity: 1;
-}
-
-.control-btn:active {
-    transform: scale(0.95);
-}
-
-.play-btn {
-    width: 80px;
-    height: 80px;
-    font-size: 2rem;
-}
-
-/* Volume Control */
-.volume-control {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.volume-icon {
-    font-size: 1.2rem;
-}
-
-#volume-slider {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-    outline: none;
-    cursor: pointer;
-}
-
-#volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-    transition: all 0.3s;
-}
-
-#volume-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
-}
-
-#volume-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-    transition: all 0.3s;
-}
-
-#volume-slider::-moz-range-thumb:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
-}
-
-/* Queue */
-.queue-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.queue-item {
-    padding: 1rem;
-    background: var(--bg-panel);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    outline: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.queue-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at top right, var(--glass-shine), transparent 60%);
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.queue-item:hover {
-    background: var(--bg-panel-hover);
-    outline-color: var(--accent-primary);
-    box-shadow: var(--glow-primary);
-    transform: translateY(-1px);
-}
-
-.queue-item:hover::before {
-    opacity: 0.7;
-}
-
-.queue-item.active {
-    background: linear-gradient(135deg, rgba(0, 243, 255, 0.1), rgba(188, 19, 254, 0.1));
-    outline-color: var(--accent-primary);
-    box-shadow: var(--glow-primary);
-}
-
-.queue-item.active::before {
-    opacity: 0.8;
-}
-
-.queue-item .title {
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-    color: var(--text-primary);
-}
-
-.queue-item .duration {
-    opacity: 0.7;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-/* Time displays */
-#current-time,
-#duration {
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
-    font-size: 0.9rem;
-    min-width: 45px;
-    text-align: center;
-}
-
-#volume-value {
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
-    font-size: 0.9rem;
-    min-width: 35px;
-    text-align: center;
-}
-
-/* Mobile optimizations */
-@media (max-width: 480px) {
-    .control-buttons {
-        gap: 1rem;
-    }
-
-    .control-btn {
-        width: 50px;
-        height: 50px;
-        font-size: 1.2rem;
-    }
-
-    .play-btn {
-        width: 65px;
-        height: 65px;
-        font-size: 1.5rem;
-    }
-
-    section {
-        padding: 1rem;
-    }
-}
-

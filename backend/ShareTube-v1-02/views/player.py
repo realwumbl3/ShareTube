@@ -5,6 +5,7 @@ from ..extensions import db, socketio
 from .room_timeouts import schedule_starting_to_playing_timeout, cancel_starting_timeout
 from .decorators import require_room_by_code
 from ..utils import now_ms
+from ..sockets import is_mobile_remote_socket, get_mobile_remote_session_id
 
 from ..models import Room
 
@@ -22,13 +23,19 @@ def register_socket_handlers():
                 return
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
+
+            # Check if this is a mobile remote action
+            is_remote = is_mobile_remote_socket()
+            actor_id = get_mobile_remote_session_id() if is_remote else user_id
+
             res(
                 "room.playback",
                 {
                     "state": "paused",
                     "playing_since_ms": None,
                     "progress_ms": paused_progress_ms,
-                    "actor_user_id": user_id,
+                    "actor_user_id": actor_id,
+                    "is_remote": is_remote,
                 },
             )
         except Exception as e:
@@ -50,7 +57,12 @@ def register_socket_handlers():
             if result["state"] == "starting":
                 # Fallback: if clients don't all report ready, auto-transition after 30s
                 schedule_starting_to_playing_timeout(room.code, delay_seconds=30)
-            res("room.playback", {"actor_user_id": user_id, **result})
+
+            # Check if this is a mobile remote action
+            is_remote = is_mobile_remote_socket()
+            actor_id = get_mobile_remote_session_id() if is_remote else user_id
+
+            res("room.playback", {"actor_user_id": actor_id, "is_remote": is_remote, **result})
         except Exception as e:
             logging.exception("room.control.play handler error")
             rej(f"room.control.play handler error: {e}")
@@ -67,6 +79,11 @@ def register_socket_handlers():
                 return
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
+
+            # Check if this is a mobile remote action
+            is_remote = is_mobile_remote_socket()
+            actor_id = get_mobile_remote_session_id() if is_remote else user_id
+
             res(
                 "room.playback",
                 {
@@ -74,7 +91,8 @@ def register_socket_handlers():
                     "progress_ms": 0,
                     "playing_since_ms": _now_ms,
                     "paused_at": None,
-                    "actor_user_id": user_id,
+                    "actor_user_id": actor_id,
+                    "is_remote": is_remote,
                 },
             )
         except Exception as e:
@@ -100,6 +118,10 @@ def register_socket_handlers():
             if room.current_queue and room.current_queue.current_entry:
                 db.session.refresh(room.current_queue.current_entry)
                 current_entry = room.current_queue.current_entry
+            # Check if this is a mobile remote action
+            is_remote = is_mobile_remote_socket()
+            actor_id = get_mobile_remote_session_id() if is_remote else user_id
+
             res(
                 "room.playback",
                 {
@@ -110,7 +132,8 @@ def register_socket_handlers():
                     "playing_since_ms": (
                         current_entry.playing_since_ms if current_entry else None
                     ),
-                    "actor_user_id": user_id,
+                    "actor_user_id": actor_id,
+                    "is_remote": is_remote,
                 },
             )
         except Exception:
@@ -128,6 +151,10 @@ def register_socket_handlers():
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
             db.session.refresh(room)
+            # Check if this is a mobile remote action
+            is_remote = is_mobile_remote_socket()
+            actor_id = get_mobile_remote_session_id() if is_remote else user_id
+
             if next_entry:
                 db.session.refresh(next_entry)
                 res(
@@ -137,7 +164,8 @@ def register_socket_handlers():
                         "playing_since_ms": None,
                         "progress_ms": next_entry.progress_ms,
                         "current_entry": next_entry.to_dict(),
-                        "actor_user_id": user_id,
+                        "actor_user_id": actor_id,
+                        "is_remote": is_remote,
                     },
                 )
                 # Fallback: if clients don't all report ready, auto-transition after 30s
@@ -150,7 +178,8 @@ def register_socket_handlers():
                         "playing_since_ms": None,
                         "progress_ms": 0,
                         "current_entry": None,
-                        "actor_user_id": user_id,
+                        "actor_user_id": actor_id,
+                        "is_remote": is_remote,
                     },
                 )
         except Exception:

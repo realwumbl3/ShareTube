@@ -1,14 +1,8 @@
 import { html, css } from "../dep/zyx.js";
 import state from "../state.js";
-
 import ShareTubeUser from "../models/user.js";
 
-import ShareTubeApp from "../app.js";
-
 export default class UserIcons {
-    /**
-     * @param {ShareTubeApp} app
-     */
     constructor(app) {
         this.app = app;
 

@@ -17,6 +17,7 @@ import UserIcons from "./components/UserIcons.js";
 import Controls from "./components/Controls.js";
 import Logo from "./components/Logo.js";
 import SearchBox from "./components/SearchBox.js";
+import QRCodeComponent from "./components/QRCode.js";
 
 export const zyxInput = new ZyXInput();
 
@@ -82,6 +83,7 @@ export default class ShareTubeApp {
         this.debugMenu = new DebugMenu(this);
         this.controls = new Controls(this);
         this.logo = new Logo(this);
+        this.qrCode = new QRCodeComponent(this);
 
         this.storageManager.getLocalStorage("locked", false).then((locked) => state.pillLocked.set(locked));
 
@@ -125,6 +127,7 @@ export default class ShareTubeApp {
                     </button>
                 </div>
             </div>
+            ${this.qrCode}
         `.bind(this);
 
         this.setupKeypressListeners();

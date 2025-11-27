@@ -2,7 +2,7 @@ import { html, css, LiveVar, throttle } from "../dep/zyx.js";
 
 import state from "../state.js";
 
-import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG } from "../assets/svgs.js";
+import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "../assets/svgs.js";
 
 export default class Controls {
     constructor(app) {
@@ -19,11 +19,17 @@ export default class Controls {
                         <img src=${skipSVG} alt="Skip" />
                     </button>
                 </div>
+                <div class="control">
+                    <button class="main_btn qr_btn" zyx-click=${(e) => this.onQRButtonClick(e)}>
+                        <img src=${remoteSVG} alt="Remote" />
+                    </button>
+                </div>
             </div>
         `.bind(this);
     }
 
     stateToButtonLabel(state) {
+        console.log("stateToButtonLabel() called with state:", state);
         switch (state) {
             case "playing":
                 return pauseSVG;
@@ -33,6 +39,8 @@ export default class Controls {
                 return startingSVG;
             case "idle":
                 return idleSVG;
+            default:
+                return errorSVG;
         }
     }
 
@@ -58,6 +66,10 @@ export default class Controls {
             },
             10000
         );
+    }
+
+    onQRButtonClick() {
+        this.app.qrCode.show();
     }
 }
 
@@ -100,5 +112,19 @@ css`
         width: 16px;
         height: 16px;
         display: block;
+    }
+
+    #sharetube_controls .control .main_btn span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+    }
+
+    #sharetube_controls .control .main_btn span svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
     }
 `;
