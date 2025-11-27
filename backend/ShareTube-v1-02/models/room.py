@@ -246,12 +246,13 @@ class Room(db.Model):
         self.current_queue.current_entry.restart(now_ms)
         self.state = "playing"
         commit_with_retry(db.session)
-        return None, None
+        return True, None
 
     def seek_video(
         self, progress_ms: int, now_ms: int, play: bool
     ) -> tuple[Optional[dict], Optional[str]]:
         """Seek to a specific position in the current video."""
+        print(f"room.seek_video: progress_ms={progress_ms}, now_ms={now_ms}, play={play}")
         if not self.current_queue:
             return None, "room.seek_video: no current queue"
         if not self.current_queue.current_entry:
@@ -259,7 +260,19 @@ class Room(db.Model):
         self.current_queue.current_entry.seek(progress_ms, now_ms, play)
         self.state = "playing" if play else "paused"
         commit_with_retry(db.session)
-        return None, None
+        return True, None
+
+    def relative_seek(self, delta_ms: int, now_ms: int, play: bool) -> tuple[Optional[dict], Optional[str]]:
+        print(f"room.relative_seek: delta_ms={delta_ms}, now_ms={now_ms}, play={play}")
+        """Seek relative to the current position."""
+        if not self.current_queue:
+            return None, "room.relative_seek: no current queue"
+        if not self.current_queue.current_entry:
+            return None, "room.relative_seek: no current entry"
+        self.current_queue.current_entry.relative_seek(delta_ms, now_ms, play)
+        self.state = "playing" if play else "paused"
+        commit_with_retry(db.session)
+        return True, None
 
     def skip_to_next(self) -> tuple[Optional[QueueEntry], Optional[str]]:
         """Skip current entry and advance to next."""

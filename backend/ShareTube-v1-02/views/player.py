@@ -109,7 +109,13 @@ def register_socket_handlers():
             play = (data or {}).get("play")
             frame_step = (data or {}).get("frame_step")
             _now_ms = now_ms()
-            _, error = room.seek_video(progress_ms, _now_ms, play)
+            if delta_ms is not None:
+                _, error = room.relative_seek(delta_ms, _now_ms, play)
+            elif progress_ms is not None:   
+                _, error = room.seek_video(progress_ms, _now_ms, play)
+            else:
+                rej("room.control.seek: no progress_ms or delta_ms")
+                return
             if error:
                 rej(error)
                 return
@@ -122,12 +128,17 @@ def register_socket_handlers():
             is_remote = is_mobile_remote_socket()
             actor_id = get_mobile_remote_session_id() if is_remote else user_id
 
+            # Get the actual progress after the seek operation
+            actual_progress_ms = None
+            if current_entry:
+                actual_progress_ms = current_entry.progress_ms
+
             res(
                 "room.playback",
                 {
                     "state": room.state,
                     "delta_ms": delta_ms,
-                    "progress_ms": progress_ms,
+                    "progress_ms": actual_progress_ms,
                     "frame_step": frame_step,
                     "playing_since_ms": (
                         current_entry.playing_since_ms if current_entry else None

@@ -116,7 +116,7 @@ export default class MobileRemoteApp {
         const token = await this.authToken();
 
         if (!token || token.trim() === "") {
-            console.error("Mobile Remote: No valid authentication token found");
+            // console.error("Mobile Remote: No valid authentication token found");
             this.showError("No authentication token found. Please scan the QR code again.");
             return;
         }
@@ -132,7 +132,7 @@ export default class MobileRemoteApp {
                 await this.socket.emit("room.join", { code: roomCode });
             }
         } catch (err) {
-            console.error("Mobile Remote: Failed to initialize socket connection", err);
+            // console.error("Mobile Remote: Failed to initialize socket connection", err);
             this.showError("Failed to initialize socket connection. Please retry.");
         }
     }
@@ -157,7 +157,7 @@ export default class MobileRemoteApp {
     }
 
     handleRoomError(data = {}) {
-        console.error("Mobile Remote: Room error", data);
+        // console.error("Mobile Remote: Room error", data);
         this.showError(data.error || "Room connection error");
     }
 
@@ -168,8 +168,11 @@ export default class MobileRemoteApp {
     }
 
     showError(message) {
+        clearTimeout(this.errorClearedTimeout);
         this.error.set(message);
-        state.inRoom.set(false);
+        this.errorClearedTimeout = setTimeout(() => {
+            this.error.set("");
+        }, 5000);
     }
 
     cleanAuthFromUrl() {
@@ -210,6 +213,18 @@ export default class MobileRemoteApp {
         }
 
         this.socket.emit("room.control.restartvideo", {});
+    }
+
+    relativeSeek(delta) {
+        if (!this.socket || !state.inRoom.get()) {
+            console.warn("Mobile Remote: Not connected to room");
+            return;
+        }
+
+        this.socket.emit("room.control.seek", {
+            delta_ms: delta * 1000,
+            play: state.roomState.get() === "playing",
+        });
     }
 
     seekToPosition(positionInSeconds) {

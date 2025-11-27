@@ -412,16 +412,41 @@ class QueueEntry(db.Model):
         self.paused_at = None
         commit_with_retry(db.session)
 
-    def seek(self, progress_ms: int, now_ms: int, play: bool) -> None:
+    def seek(self, progress_ms: int, _now_ms: Optional[int], play: bool) -> None:
         """Seek to a specific progress position."""
+        if _now_ms is None:
+            _now_ms = now_ms()
         self.progress_ms = progress_ms
         if play:
-            self.playing_since_ms = now_ms
+            self.playing_since_ms = _now_ms
         else:
             self.playing_since_ms = None
         commit_with_retry(db.session)
 
-    def check_completion(self, _now_ms: int = None) -> bool:
+    def relative_seek(self, delta_ms: int, _now_ms: Optional[int], play: bool) -> None:
+        """Seek relative to the current position."""
+        if _now_ms is None:
+            _now_ms = now_ms()
+        effective_progress_ms = self.calculate_effective_progress_ms(_now_ms)
+        new_progress_ms = effective_progress_ms + delta_ms
+        # Clamp to valid bounds (0 to duration_ms)
+        self.progress_ms = max(0, min(new_progress_ms, self.duration_ms or 0))
+        if play:
+            self.playing_since_ms = _now_ms
+        else:
+            self.playing_since_ms = None
+        commit_with_retry(db.session)
+
+    def calculate_effective_progress_ms(self, _now_ms: Optional[int]) -> int:
+        """Calculate the effective progress in milliseconds."""
+        base_progress_ms = self.progress_ms or 0
+        playing_since_ms = self.playing_since_ms or 0
+        elapsed_ms = (
+            max(0, _now_ms - playing_since_ms) if playing_since_ms else 0
+        )
+        return base_progress_ms + elapsed_ms
+
+    def check_completion(self, _now_ms: Optional[int] = None) -> bool:
         """Check if this entry has reached completion (within 2 seconds of end).
 
         Args:
@@ -432,22 +457,11 @@ class QueueEntry(db.Model):
         """
         if _now_ms is None:
             _now_ms = now_ms()
-        base_progress_ms = self.progress_ms or 0
-        elapsed_ms = (
-            max(0, _now_ms - int(self.playing_since_ms)) if self.playing_since_ms else 0
-        )
-        effective_progress_ms = base_progress_ms + elapsed_ms
+        effective_progress_ms = self.calculate_effective_progress_ms(_now_ms)
         duration_ms = max(0, int(self.duration_ms or 0))
-
         if duration_ms <= 0:
             return False
-
         near_end = max(0, duration_ms - 6000)
-        logging.info(
-            "queue.check_completion: effective_progress_ms=%s, near_end=%s",
-            effective_progress_ms,
-            near_end,
-        )
         return effective_progress_ms >= near_end
 
     def complete_and_rotate(self) -> None:

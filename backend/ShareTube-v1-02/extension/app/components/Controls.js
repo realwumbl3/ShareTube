@@ -10,17 +10,28 @@ export default class Controls {
         html`
             <div id="sharetube_controls" zyx-if=${state.roomCode}>
                 <div class="control">
-                    <button class="main_btn" zyx-click=${(e) => this.onMainButtonClick(e)}>
-                        <img src=${state.roomState.interp((v) => this.stateToButtonLabel(v))} alt="Play" />
+                    <button
+                        title=${state.roomState.interp((v) => this.stateToButtonTitle(v))}
+                        class="main_btn"
+                        zyx-click=${(e) => this.onMainButtonClick(e)}
+                    >
+                        <img
+                            src=${state.roomState.interp((v) => this.stateToButtonLabel(v))}
+                            alt=${this.stateToButtonTitle(state.roomState.get())}
+                        />
                     </button>
                 </div>
                 <div class="control">
-                    <button class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>
+                    <button title="Skip to next video" class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>
                         <img src=${skipSVG} alt="Skip" />
                     </button>
                 </div>
                 <div class="control">
-                    <button class="main_btn qr_btn" zyx-click=${(e) => this.onQRButtonClick(e)}>
+                    <button
+                        title="Open remote control"
+                        class="main_btn qr_btn"
+                        zyx-click=${(e) => this.onQRButtonClick(e)}
+                    >
                         <img src=${remoteSVG} alt="Remote" />
                     </button>
                 </div>
@@ -41,6 +52,21 @@ export default class Controls {
                 return idleSVG;
             default:
                 return errorSVG;
+        }
+    }
+
+    stateToButtonTitle(state) {
+        switch (state) {
+            case "playing":
+                return "Pause playback";
+            case "paused":
+                return "Play playback";
+            case "starting":
+                return "Starting playback, please wait...";
+            case "idle":
+                return "Idle, no playback is currently playing";
+            default:
+                return "Error, unknown playback state";
         }
     }
 

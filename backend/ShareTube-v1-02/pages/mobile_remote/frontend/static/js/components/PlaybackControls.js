@@ -2,6 +2,7 @@ import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
 import state from "/extension/app/state.js";
 
 import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "/extension/app/assets/svgs.js";
+import { seekRewindPath, seekRewindArrow, seekForwardPath, seekForwardArrow } from "/extension/app/assets/svgs.js";
 
 export default class PlaybackControls {
     constructor(app) {
@@ -11,12 +12,85 @@ export default class PlaybackControls {
             <div class="playback-controls">
                 <div class="control-buttons">
                     <button class="control-btn" zyx-click=${() => this.handlePrevious()}>
-                        <img src=${skipSVG} alt="Previous" style="transform: rotate(180deg);" />
+                        <img
+                            title="Restart Video"
+                            src=${skipSVG}
+                            alt="Restart Video"
+                            style="transform: rotate(180deg);"
+                        />
                     </button>
-                    <button class="control-btn play-btn" zyx-click=${() => this.handleTogglePlayPause()}>
+                    <button title="Seek -5 seconds" class="control-btn" zyx-click=${() => this.handleSeek(-5)}>
+                        <svg height="70%" version="1.1" viewBox="0 0 24 24" width="70%">
+                            <path
+                                d="${seekRewindPath}"
+                                fill="none"
+                                stroke="#fff"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="${seekRewindArrow}"
+                                fill="none"
+                                stroke="#fff"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <text
+                                x="12"
+                                y="14"
+                                text-anchor="middle"
+                                dominant-baseline="middle"
+                                font-size="10px"
+                                font-weight="bold"
+                                fill="#fff"
+                                stroke="none"
+                            >
+                                5
+                            </text>
+                        </svg>
+                    </button>
+                    <button
+                        title="Toggle Play/Pause"
+                        class="control-btn play-btn"
+                        zyx-click=${() => this.handleTogglePlayPause()}
+                    >
                         <img src=${state.roomState.interp((status) => this.stateToButtonLabel(status))} />
                     </button>
-                    <button class="control-btn" zyx-click=${() => this.handleNext()}>
+                    <button title="Seek +5 seconds" class="control-btn" zyx-click=${() => this.handleSeek(5)}>
+                        <svg height="70%" version="1.1" viewBox="0 0 24 24" width="70%">
+                            <path
+                                d="${seekForwardPath}"
+                                fill="none"
+                                stroke="#fff"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="${seekForwardArrow}"
+                                fill="none"
+                                stroke="#fff"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <text
+                                x="12"
+                                y="14"
+                                text-anchor="middle"
+                                dominant-baseline="middle"
+                                font-size="10px"
+                                font-weight="bold"
+                                fill="#fff"
+                                stroke="none"
+                            >
+                                5
+                            </text>
+                        </svg>
+                    </button>
+                    <button title="Skip to Next" class="control-btn" zyx-click=${() => this.handleNext()}>
                         <img src=${skipSVG} alt="Next" />
                     </button>
                 </div>
@@ -51,6 +125,10 @@ export default class PlaybackControls {
         this.app.skipToNext();
     }
 
+    handleSeek(delta) {
+        this.app.relativeSeek(delta);
+    }
+
     handleVolumeChange(e) {
         // Volume control not implemented in main app yet
         const value = Number(e.target.value);
@@ -83,10 +161,10 @@ css`
         background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(54, 54, 54, 0.9));
         border: 1px solid rgba(255, 255, 255, 0.22);
         color: var(--text-primary);
-        width: 60px;
-        height: 60px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
-        font-size: 1.5rem;
+        font-size: 1.3rem;
         cursor: pointer;
         transition: background 140ms ease, border-color 140ms ease, transform 80ms ease;
         display: flex;
