@@ -44,9 +44,7 @@ export default class PlaybackControls {
     }
 
     handlePrevious() {
-        // Previous video not implemented in main app yet
-        console.log("Mobile Remote: Previous video not implemented");
-        this.app.virtualPlayer.emitRestartVideo();
+        this.app.restartVideo();
     }
 
     handleNext() {

@@ -8,42 +8,6 @@ import state from "/extension/app/state.js";
 
 const noop = () => {};
 
-/**
- * Adapter that mimics enough of the extension's ShareTubeApp surface for the
- * VirtualPlayer + SocketManager to operate inside the standalone mobile page.
- */
-class MobileRemoteExtensionAppAdapter {
-    constructor(remoteApp) {
-        this.remoteApp = remoteApp;
-
-        this.socket = new SocketManager(this);
-
-        this.youtubePlayer = {
-            setDesiredState: noop,
-            setDesiredProgressMs: noop,
-            onRoomStateChange: noop,
-            splash: { call: noop },
-        };
-
-        this.roomManager = {
-            updateCodeHashInUrl: (code) => this.remoteApp.updateRoomCodeInUrl(code),
-            stHash: () => "",
-        };
-    }
-
-    async backEndUrl() {
-        return this.remoteApp.getBackendUrl();
-    }
-
-    async authToken() {
-        return this.remoteApp.getAuthToken();
-    }
-
-    stHash() {
-        return "";
-    }
-}
-
 class MobileRemoteAppVirtualPlayer extends VirtualPlayer {
     gotoVideoIfNotOnVideoPage() {
         // Override navigation when running outside YouTube.
@@ -58,10 +22,22 @@ export default class MobileRemoteApp {
         this.pendingRoomCode = "";
         this.socketHandlersInitialized = false;
 
+        this.socket = new SocketManager(this);
+
+        this.youtubePlayer = {
+            setDesiredState: noop,
+            setDesiredProgressMs: noop,
+            onRoomStateChange: noop,
+            splash: { call: noop },
+        };
+
+        this.roomManager = {
+            updateCodeHashInUrl: (code) => this.updateRoomCodeInUrl(code),
+            stHash: () => "",
+        };
+
         // Extension compatibility layer
-        this.extensionApp = new MobileRemoteExtensionAppAdapter(this);
-        this.socket = this.extensionApp.socket;
-        this.virtualPlayer = new MobileRemoteAppVirtualPlayer(this.extensionApp);
+        this.virtualPlayer = new MobileRemoteAppVirtualPlayer(this);
         this.virtualPlayer.bindListeners(this.socket);
         this.setupSocketHandlers();
 
@@ -102,6 +78,16 @@ export default class MobileRemoteApp {
         `.bind(this);
     }
 
+    async backEndUrl() {
+        const configured = (window.mobileRemoteConfig?.backendUrl || "").trim();
+        const base = configured || window.location.origin;
+        return base.replace(/\/$/, "");
+    }
+
+    async authToken() {
+        return (window.mobileRemoteConfig?.token || "").trim();
+    }
+
     setupSocketHandlers() {
         if (this.socketHandlersInitialized) return;
         this.socketHandlersInitialized = true;
@@ -127,8 +113,7 @@ export default class MobileRemoteApp {
         this.pendingRoomCode = roomCode;
         this.error.set("");
 
-        const token = this.getAuthToken();
-        console.log("Mobile Remote: Token from config:", token ? `'${token.substring(0, 20)}...'` : "missing/empty");
+        const token = await this.authToken();
 
         if (!token || token.trim() === "") {
             console.error("Mobile Remote: No valid authentication token found");
@@ -176,16 +161,6 @@ export default class MobileRemoteApp {
         this.showError(data.error || "Room connection error");
     }
 
-    getAuthToken() {
-        return (window.mobileRemoteConfig?.token || "").trim();
-    }
-
-    getBackendUrl() {
-        const configured = (window.mobileRemoteConfig?.backendUrl || "").trim();
-        const base = configured || window.location.origin;
-        return base.replace(/\/$/, "");
-    }
-
     updateRoomCodeInUrl(code) {
         if (!code) return;
         state.roomCode.set(code);
@@ -228,6 +203,15 @@ export default class MobileRemoteApp {
         this.socket.emit("room.control.skip", {});
     }
 
+    restartVideo() {
+        if (!this.socket || !state.inRoom.get()) {
+            console.warn("Mobile Remote: Not connected to room");
+            return;
+        }
+
+        this.socket.emit("room.control.restartvideo", {});
+    }
+
     seekToPosition(positionInSeconds) {
         if (!this.socket || !state.inRoom.get()) {
             console.warn("Mobile Remote: Not connected to room");
@@ -265,7 +249,7 @@ css`
         position: relative;
         overflow: hidden;
         text-align: left;
-        
+
         /* Overrides to standard glass panel */
         background: var(--bg-queue-header);
         border-bottom: var(--border-queue-dim);
