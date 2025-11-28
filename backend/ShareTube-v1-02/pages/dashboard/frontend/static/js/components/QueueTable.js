@@ -255,13 +255,14 @@ css`
 
     .expand-btn {
         background: none;
-        border: none;
+        outline: none;
         color: var(--text-secondary);
         cursor: pointer;
         font-size: 0.8rem;
         padding: 0.2rem;
         border-radius: 3px;
         transition: all 0.2s;
+        border: none;
     }
 
     .expand-btn:hover {
@@ -386,7 +387,7 @@ css`
             padding: 1rem;
             margin-bottom: 1rem;
             background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--glass-border);
+            outline: 1px solid var(--glass-border);
             border-radius: var(--radius-md);
         }
 

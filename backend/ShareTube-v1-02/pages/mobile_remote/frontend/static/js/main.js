@@ -34,6 +34,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.log("Mobile Remote: No room code provided");
         mobileRemote.showError("No room code provided. Please scan a QR code from the ShareTube extension.");
     }
+
+    // Reveal the app after initialization
+    mobileRemote.revealApp();
 });
 
 // Prevent zoom on double tap for a more native-app-like feel.

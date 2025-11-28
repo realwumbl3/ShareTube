@@ -4,6 +4,7 @@ import DashboardUser from "../models/User.js";
 import DashboardRoom from "../models/Room.js";
 import DashboardQueue from "../models/Queue.js";
 import DashboardActivity from "../models/Activity.js";
+import AuthManager from "../models/AuthManager.js";
 import StatsGrid from "./StatsGrid.js";
 import ActivityFeed from "./ActivityFeed.js";
 import UserTable from "./UserTable.js";
@@ -21,10 +22,14 @@ export default class DashboardApp {
         this.queues = new LiveList([]);
         this.loading = new LiveVar(false);
         this.lastUpdate = new LiveVar(null);
+        this.isReady = new LiveVar(false);
 
-        // Initialize data loading
-        this.loadDashboardData();
-        this.startAutoRefresh();
+        // Authentication
+        this.authManager = new AuthManager();
+        this.userInfo = new LiveVar(null);
+
+        // Initialize user info and data loading
+        this.init();
 
         // Create sub-components
         this.statsGrid = new StatsGrid(this.stats);
@@ -33,11 +38,31 @@ export default class DashboardApp {
         this.roomTable = new RoomTable(this.rooms);
         this.queueTable = new QueueTable(this.queues);
 
+        // Bind methods
+        this.handleLogout = this.handleLogout.bind(this);
+
         html`
-            <div class="dashboard-app">
+            <div class=${this.isReady.interp((r) => (r ? "dashboard-app visible" : "dashboard-app"))}>
                 <header class="dashboard-header glass-panel">
                     <div class="header-brand">
                         <h1>ShareTube <span class="brand-accent">/ Dashboard</span></h1>
+                    </div>
+                    <div class="user-info">
+                        ${this.userInfo.contentInterp((user) =>
+                            user
+                                ? html`
+                                      <div class="user-profile">
+                                          ${user.picture
+                                              ? html`<img src="${user.picture}" alt="Avatar" class="user-avatar" />`
+                                              : ""}
+                                          <span class="user-name">${user.name}</span>
+                                          <button class="logout-btn glass-button" zyx-click=${this.handleLogout}>
+                                              Sign Out
+                                          </button>
+                                      </div>
+                                  `
+                                : ""
+                        )}
                     </div>
                     <nav class="dashboard-nav">
                         <button
@@ -76,7 +101,7 @@ export default class DashboardApp {
                         <button
                             class="refresh-btn glass-button"
                             zyx-click=${() => this.loadDashboardData()}
-                            disabled=${this.loading.interp((v) => v)}
+                            disabled=${this.loading.interp((v) => v || null)}
                         >
                             ${this.loading.interp((v) => (v ? "Refreshing..." : "Refresh"))}
                         </button>
@@ -119,6 +144,27 @@ export default class DashboardApp {
 
     setView(view) {
         this.currentView.set(view);
+    }
+
+    async init() {
+        try {
+            await this.loadUserInfo();
+            await this.loadDashboardData();
+        } catch (e) {
+            console.error("Init failed", e);
+        }
+        this.startAutoRefresh();
+
+        // Reveal app
+        this.isReady.set(true);
+        const loader = document.getElementById("app-loader");
+        if (loader) {
+            loader.classList.add("hidden");
+            // Remove loader from DOM after transition
+            setTimeout(() => {
+                if (loader.parentNode) loader.parentNode.removeChild(loader);
+            }, 500);
+        }
     }
 
     async loadDashboardData() {
@@ -191,6 +237,27 @@ export default class DashboardApp {
             }
         }, 30000);
     }
+
+    async loadUserInfo() {
+        try {
+            const userInfo = await this.authManager.getUserInfo();
+            this.userInfo.set(userInfo);
+        } catch (error) {
+            console.error("Failed to load user info:", error);
+        }
+    }
+
+    async handleLogout() {
+        try {
+            const success = await this.authManager.logout();
+            if (success) {
+                // Reload the page to show login screen
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    }
 }
 
 css`
@@ -207,7 +274,7 @@ css`
         grid-template-columns: auto 1fr auto;
         align-items: center;
         column-gap: 1.5rem;
-        border: 1px solid var(--glass-border);
+        outline: 1px solid var(--glass-border);
         border-radius: 100px; /* Pill shape */
         background: rgba(0, 0, 0, 0.4);
         backdrop-filter: blur(20px);
@@ -243,7 +310,7 @@ css`
             rgba(255, 255, 255, 0.02);
         padding: 1rem;
         border-radius: 999px;
-        border: 1px solid var(--glass-border);
+        outline: 1px solid var(--glass-border);
         box-shadow: var(--glow-primary);
         margin: 0 auto;
     }
@@ -260,7 +327,7 @@ css`
         color: var(--text-secondary);
         cursor: pointer;
         outline: none;
-        border: 0;
+        outline: 0;
         -webkit-appearance: none;
         appearance: none;
         transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
@@ -375,7 +442,7 @@ css`
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
-        
+
         .dashboard-nav::-webkit-scrollbar {
             display: none;
         }
@@ -388,5 +455,48 @@ css`
         .dashboard-content {
             padding: 1rem;
         }
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        outline: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        outline: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .user-name {
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .logout-btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.8rem;
+        border-radius: 20px;
+        background: rgba(239, 68, 68, 0.1);
+        outline: 1px solid rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+    }
+
+    .logout-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fecaca;
     }
 `;

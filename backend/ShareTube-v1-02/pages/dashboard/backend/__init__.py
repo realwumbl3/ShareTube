@@ -1,9 +1,11 @@
 # Import `Blueprint` to group related routes, `jsonify` for JSON responses,
 # and `render_template` to render Jinja HTML templates.
 import logging
+import jwt
+from functools import wraps
 logger = logging.getLogger(__name__)
 
-from flask import Blueprint, jsonify, render_template
+from flask import Blueprint, current_app, jsonify, render_template, request, make_response, redirect
 
 # Import dependencies directly from the main app
 # from ....extensions import db
@@ -13,6 +15,47 @@ from ..shared_imports import db, now_ms, User, Room, RoomMembership, Queue, Room
 # Import our dashboard modules
 from ..analytics import DashboardAnalytics
 from ..data import DashboardData
+
+# Whitelist of user IDs allowed to access the dashboard
+# ALLOWED_USER_IDS is deprecated; use database roles instead
+
+# Authentication middleware for dashboard routes
+def require_auth(f):
+    """Decorator to require authentication for dashboard routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check for auth token in cookies (set by frontend)
+        auth_token = request.cookies.get('auth_token')
+        if not auth_token:
+            return jsonify({"error": "Authentication required"}), 401
+
+        try:
+            # Decode and validate JWT token
+            payload = jwt.decode(
+                auth_token, current_app.config["JWT_SECRET"], algorithms=["HS256"]
+            )
+            # Store user info in request context for use in handlers
+            user_id = int(payload.get("sub"))
+            
+            # Check if user is authorized via database role
+            user = User.query.get(user_id)
+            if not user or user.role != 'super_admin':
+                logger.warning(f"Unauthorized access attempt by user_id={user_id} role={getattr(user, 'role', 'none')}")
+                return jsonify({"error": "Unauthorized"}), 403
+                
+            request.user_id = user_id
+            request.user_name = payload.get("name")
+            request.user_picture = payload.get("picture")
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+        except Exception as e:
+            logger.exception(f"Auth token validation failed: {e}")
+            return jsonify({"error": "Authentication failed"}), 401
+
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Socket.IO event handlers for real-time dashboard updates
 def register_socket_handlers():
@@ -84,7 +127,51 @@ def dashboard_home():
     return render_template("dashboard.html")
 
 
+@dashboard_bp.route("/api/auth/status")
+def auth_status():
+    """
+    Check authentication status and return user info if authenticated.
+    """
+    auth_token = request.cookies.get('auth_token')
+    if not auth_token:
+        return jsonify({"authenticated": False})
+
+    try:
+        payload = jwt.decode(
+            auth_token, current_app.config["JWT_SECRET"], algorithms=["HS256"]
+        )
+        
+        # Check role for authenticated user
+        user_id = int(payload.get("sub"))
+        user = User.query.get(user_id)
+        role = getattr(user, 'role', 'user') if user else 'user'
+        
+        return jsonify({
+            "authenticated": True,
+            "user": {
+                "id": user_id,
+                "name": payload.get("name"),
+                "picture": payload.get("picture"),
+                "role": role
+            }
+        })
+    except Exception as e:
+        logger.exception(f"Auth status check failed: {e}")
+        return jsonify({"authenticated": False})
+
+
+@dashboard_bp.route("/api/auth/logout")
+def auth_logout():
+    """
+    Handle logout by clearing auth token cookie.
+    """
+    resp = jsonify({"success": True})
+    resp.delete_cookie('auth_token')
+    return resp
+
+
 @dashboard_bp.route("/api/stats")
+@require_auth
 def get_stats():
     """
     Return comprehensive dashboard statistics as JSON.
@@ -100,6 +187,7 @@ def get_stats():
 
 
 @dashboard_bp.route("/api/activity")
+@require_auth
 def get_activity():
     """
     Return recent activity from RoomAudit logs.
@@ -112,6 +200,7 @@ def get_activity():
 
 
 @dashboard_bp.route("/api/users")
+@require_auth
 def get_users():
     """
     Return user data for the dashboard.
@@ -120,6 +209,7 @@ def get_users():
 
 
 @dashboard_bp.route("/api/rooms")
+@require_auth
 def get_rooms():
     """
     Return room data for the dashboard.
@@ -128,6 +218,7 @@ def get_rooms():
 
 
 @dashboard_bp.route("/api/queues")
+@require_auth
 def get_queues():
     """
     Return queue data for the dashboard.

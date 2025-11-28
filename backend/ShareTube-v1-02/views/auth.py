@@ -56,6 +56,12 @@ def google_start():
     )
     # Store the state in a cookie briefly to validate on callback
     resp.set_cookie("oauth_state", state, max_age=300, httponly=True, samesite="Lax")
+    
+    # Store the redirect target in a cookie if provided
+    redirect_target = request.args.get('redirect')
+    if redirect_target:
+        resp.set_cookie("auth_redirect_target", redirect_target, max_age=300, httponly=True, samesite="Lax")
+        
     return resp
 
 
@@ -67,6 +73,10 @@ def google_callback():
     state = request.args.get("state")
     if not state_cookie or state_cookie != state:
         return jsonify({"error": "invalid_state"}), 400
+        
+    # Get the redirect target if any
+    redirect_target = request.cookies.get("auth_redirect_target")
+    
     # Extract one-time authorization code
     code = request.args.get("code")
     if not code:
@@ -118,11 +128,28 @@ def google_callback():
         user.picture = picture
     db.session.commit()
 
-    # Issue an application JWT and deliver to the opener window then close popup
+    # Issue an application JWT
     jwt_token = _issue_jwt(user)
-    return (
-        "<script>window.opener && window.opener.postMessage({type:'newapp_auth', token:'%s'}, '*');window.close();</script>"
-        % jwt_token
-    )
+
+    # Check if this is a dashboard login (redirect flow) or extension login (popup flow)
+    if redirect_target == 'dashboard':
+        # Dashboard flow: redirect back with token as cookie
+        resp = make_response(redirect('/dashboard/'))
+        resp.set_cookie(
+            'auth_token',
+            jwt_token,
+            max_age=30*24*60*60,  # 30 days
+            httponly=False,  # Allow JavaScript access
+            samesite="Lax"
+        )
+        # Clean up the redirect cookie
+        resp.delete_cookie('auth_redirect_target')
+        return resp
+    else:
+        # Extension flow: use postMessage for popup
+        return (
+            "<script>window.opener && window.opener.postMessage({type:'newapp_auth', token:'%s'}, '*');window.close();</script>"
+            % jwt_token
+        )
 
 

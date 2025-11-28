@@ -5,8 +5,8 @@ import DashboardApp from "./components/DashboardApp.js";
 css`
     @import "/static/dashboard/css/styles.css";
 `;
-// Initialize the dashboard when DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
+
+function initDashboard() {
     // Create and mount the main dashboard app
     const dashboard = new DashboardApp();
     document.body.appendChild(dashboard.main);
@@ -29,6 +29,12 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.on("disconnect", () => {
         console.log("Dashboard disconnected from server");
     });
+}
 
-    // Global styles are handled in styles.css
-});
+// Initialize the dashboard
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDashboard);
+} else {
+    initDashboard();
+}
+

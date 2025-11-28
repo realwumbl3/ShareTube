@@ -12,10 +12,5 @@ from .extensions import db
 def run_all_migrations(app: Flask) -> None:
     # Ensure we have an application context so SQLAlchemy metadata is bound
     with app.app_context():
-        # Currently, there are no explicit migrations beyond create_all at startup.
-        # This function exists as an extension point to add SQL DDL or data migrations
-        # in the future without changing the application startup sequence.
-        # Example (pseudocode):
-        # if not column_exists('room', 'new_col'): alter table to add column
-        # For now, we intentionally do nothing.
-        pass
+        with db.engine.begin() as conn:
+            pass

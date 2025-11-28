@@ -274,20 +274,20 @@ css`
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        border: 1px solid transparent;
+        outline: 1px solid transparent;
     }
 
     .status-badge.active {
         background: rgba(0, 255, 157, 0.1);
         color: var(--accent-success);
-        border-color: rgba(0, 255, 157, 0.2);
+        outline-color: rgba(0, 255, 157, 0.2);
         box-shadow: 0 0 10px rgba(0, 255, 157, 0.1);
     }
 
     .status-badge.inactive {
         background: rgba(255, 255, 255, 0.05);
         color: var(--text-muted);
-        border-color: var(--glass-border);
+        outline-color: var(--glass-border);
     }
 
     .room-stats {
@@ -345,7 +345,7 @@ css`
             padding: 1rem;
             margin-bottom: 1rem;
             background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--glass-border);
+            outline: 1px solid var(--glass-border);
             border-radius: var(--radius-md);
         }
 
@@ -368,7 +368,6 @@ css`
         
         .room-code {
             background: rgba(0, 243, 255, 0.05);
-            margin: -1rem -1rem 0.5rem -1rem;
             padding: 0.75rem 1rem !important;
             border-bottom: 1px solid var(--glass-border) !important;
             border-radius: var(--radius-md) var(--radius-md) 0 0;

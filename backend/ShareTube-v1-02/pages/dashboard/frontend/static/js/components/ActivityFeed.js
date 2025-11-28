@@ -150,7 +150,7 @@ css`
         align-items: center;
         justify-content: center;
         background: rgba(0, 0, 0, 0.3);
-        border: 1px solid var(--glass-border);
+        outline: 1px solid var(--glass-border);
         box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
         transition: all 0.3s ease;
     }
@@ -175,19 +175,19 @@ css`
         flex: 1;
         padding: 1rem;
         background: rgba(255, 255, 255, 0.02);
-        border: 1px solid var(--glass-border);
+        outline: 1px solid var(--glass-border);
         transition: all 0.2s;
     }
 
     .activity-item:hover .activity-content {
         background: rgba(255, 255, 255, 0.05);
-        border-color: rgba(255, 255, 255, 0.1);
+        outline-color: rgba(255, 255, 255, 0.1);
         transform: translateX(4px);
     }
 
     .activity-item:hover .activity-icon {
         transform: scale(1.1);
-        border-color: currentColor;
+        outline-color: currentColor;
     }
 
     .activity-header {

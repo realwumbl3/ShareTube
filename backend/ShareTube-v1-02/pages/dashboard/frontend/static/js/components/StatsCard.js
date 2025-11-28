@@ -30,12 +30,12 @@ css`
         position: relative;
         overflow: hidden;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid var(--glass-border);
+        outline: 1px solid var(--glass-border);
     }
 
     .stats-card:hover {
         transform: translateY(-4px);
-        border-color: var(--card-accent);
+        outline-color: var(--card-accent);
         box-shadow: 0 10px 40px -10px var(--card-accent);
     }
 
@@ -57,7 +57,7 @@ css`
         color: var(--text-secondary);
         font-size: 1.5rem;
         transition: all 0.3s ease;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        outline: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .stats-card-content {

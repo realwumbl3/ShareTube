@@ -1,11 +1,28 @@
-/* ShareTube Dashboard - Epic Future Theme */
+/* ShareTube Dashboard - Queue Theme */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* Import extension styles */
+@import "/extension/app/css/styles-base.css";
+@import "/extension/app/css/styles-components.css";
+@import "/extension/app/css/styles-forms.css";
+@import "/extension/app/css/queue-container.css";
+@import "/extension/app/css/queue-header.css";
+@import "/extension/app/css/queue-list.css";
+
 :root {
-    /* Color Palette - Deep Space & Neon */
+    /* Color Palette - Queue Theme (matching extension) */
     --bg-app: #050507;
-    --bg-panel: rgba(20, 20, 25, 0.6);
+
+    /* Queue-like Theme Variables */
+    --bg-queue-panel: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
+    --bg-queue-header: linear-gradient(to bottom, rgba(18, 18, 18, 0.98), rgba(18, 18, 18, 0.9));
+    --outline-queue: 1px solid rgba(255, 255, 255, 0.18);
+    --outline-queue-light: 1px solid rgba(255, 255, 255, 0.22);
+    --outline-queue-dim: 1px solid rgba(255, 255, 255, 0.12);
+
+    /* Legacy variables for compatibility */
+    --bg-panel: var(--bg-queue-panel);
     --bg-panel-hover: rgba(30, 30, 40, 0.7);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-shine: rgba(255, 255, 255, 0.03);
@@ -30,7 +47,7 @@
     /* Shadows & Glows */
     --glow-primary: 0 0 20px rgba(0, 243, 255, 0.15);
     --glow-secondary: 0 0 20px rgba(188, 19, 254, 0.15);
-    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.45);
 
     /* Typography */
     --font-main: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -39,7 +56,8 @@
 
     /* Spacing */
     --radius-sm: 8px;
-    --radius-md: 16px;
+    --radius-md: 14px;
+    /* Matched to queue */
     --radius-lg: 24px;
 }
 
@@ -90,30 +108,32 @@ h6 {
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* Utility Classes for Glassmorphism */
+/* Utility Classes for Queue Theme */
 .glass-panel {
-    background: var(--bg-panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    outline: 1px solid var(--glass-border);
+    background: var(--bg-queue-panel);
+    backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
+    -webkit-backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
+    outline: var(--outline-queue);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
 }
 
 .glass-button {
-    background: rgba(255, 255, 255, 0.05);
-    outline: 1px solid var(--glass-border);
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(54, 54, 54, 0.9));
+    outline: var(--outline-queue-light);
+    border: none;
     color: var(--text-primary);
     border-radius: var(--radius-sm);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background 140ms ease, outline-color 140ms ease, transform 80ms ease;
     cursor: pointer;
 }
 
 .glass-button:hover {
-    background: rgba(255, 255, 255, 0.1);
-    outline-color: var(--accent-primary);
-    box-shadow: var(--glow-primary);
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.18), rgba(68, 68, 68, 0.95));
+    outline-color: rgba(255, 255, 255, 0.32);
     transform: translateY(-1px);
+    box-shadow: none;
+    /* Reset glow */
 }
 
 .glass-input {

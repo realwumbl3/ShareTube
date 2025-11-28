@@ -1,15 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShareTube Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #080808;
+            color: #eee;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: transparent;
+        }
+
+        #app-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #080808;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-out;
+        }
+
+        #app-loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: #00f3ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Hide app content initially */
+        .dashboard-app,
+        .login-container {
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+
+        .dashboard-app.visible,
+        .login-container.visible {
+            opacity: 1;
+        }
+    </style>
 </head>
+
 <body>
+    <div id="app-loader">
+        <div class="loader-spinner"></div>
+    </div>
 
-    <!-- ES module entrypoint served from /dashboard/static/js/ -->
-    <script type="module" src="/static/dashboard/js/main.js"></script>
+    <!-- Authentication check and app initialization -->
+    <script type="module">
+        // Check authentication status first
+        try {
+            const response = await fetch('/dashboard/api/auth/status');
+            const authData = await response.json();
+
+            if (authData.authenticated) {
+                // User is authenticated, load the main dashboard
+                import('/static/dashboard/js/main.js');
+            } else {
+                // User is not authenticated, show login component
+                const { default: LoginComponent } = await import('/static/dashboard/js/components/LoginComponent.js');
+                const loginComponent = new LoginComponent();
+                document.body.appendChild(loginComponent.main);
+            }
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            // On error, show login component
+            const { default: LoginComponent } = await import('/static/dashboard/js/components/LoginComponent.js');
+            const loginComponent = new LoginComponent();
+            document.body.appendChild(loginComponent.main);
+        }
+    </script>
 </body>
+
 </html>
-
-

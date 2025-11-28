@@ -18,6 +18,7 @@ export default class MobileRemoteApp {
     constructor() {
         // Local-only status
         this.error = new LiveVar("");
+        this.isReady = new LiveVar(false);
 
         this.pendingRoomCode = "";
         this.socketHandlersInitialized = false;
@@ -46,7 +47,7 @@ export default class MobileRemoteApp {
         this.queueList = new QueueList(this);
 
         html`
-            <div class="mobile-remote-app">
+            <div class=${this.isReady.interp((r) => (r ? "mobile-remote-app visible" : "mobile-remote-app"))}>
                 <header class="remote-header glass-panel">
                     <div class="header-row">
                         <h1>ShareTube</h1>
@@ -55,7 +56,7 @@ export default class MobileRemoteApp {
                             <span class="connection-status" zyx-if=${state.inRoom}>
                                 <span class="status-dot connected"></span>
                             </span>
-                            <span class="connection-status" zyx-if=${[state.inRoom, (c) => !c]}>
+                            <span class="connection-status" zyx-else>
                                 <span class="status-dot disconnected"></span>
                             </span>
                         </div>
@@ -239,6 +240,18 @@ export default class MobileRemoteApp {
 
     selectQueueItem(videoId) {
         console.log("Mobile Remote: Queue item selection not implemented", videoId);
+    }
+
+    revealApp() {
+        this.isReady.set(true);
+        const loader = document.getElementById("app-loader");
+        if (loader) {
+            loader.classList.add("hidden");
+            // Remove loader from DOM after transition
+            setTimeout(() => {
+                if (loader.parentNode) loader.parentNode.removeChild(loader);
+            }, 500);
+        }
     }
 }
 

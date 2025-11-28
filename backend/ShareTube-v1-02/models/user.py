@@ -29,6 +29,8 @@ class User(db.Model):
     last_seen: Mapped[int] = db.Column(db.Integer, default=lambda: int(time.time()), index=True)
     # Whether the user is currently active (has at least one active room membership)
     active: Mapped[bool] = db.Column(db.Boolean, default=True, index=True)
+    # User role: 'user', 'admin', 'super_admin'
+    role: Mapped[str] = db.Column(db.String(32), default="user", server_default="user")
 
     def to_dict(self):
         return {
