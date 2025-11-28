@@ -174,15 +174,67 @@ def register_socket_handlers() -> None:
 
             ready = bool((data or {}).get("ready"))
 
+            previous_ready = bool(membership.ready)
             membership.set_ready(ready)
             db.session.flush()
-
 
             socketio.emit(
                 "user.ready.update",
                 {"user_id": user_id, "ready": ready},
                 room=f"room:{room.code}",
             )
+
+            midroll_payload = None
+
+            def _is_operator(user_id_to_check: int) -> bool:
+                if room.owner_id and room.owner_id == user_id_to_check:
+                    return True
+                return any(operator.user_id == user_id_to_check for operator in room.operators)
+
+            def _should_consider_midroll(mode: str) -> bool:
+                if mode == "pause_all":
+                    return room.state in ("playing", "starting")
+                if mode == "operators_only":
+                    return room.state == "playing" and _is_operator(user_id)
+                if mode == "starting_only":
+                    return room.state == "starting"
+                return False
+
+            should_eval_midroll = (
+                previous_ready
+                and not ready
+                and room.state != "midroll"
+                and room.current_queue
+                and room.current_queue.current_entry
+            )
+
+            if should_eval_midroll and _should_consider_midroll(room.ad_sync_mode):
+                paused_progress, pause_error = room.pause_playback(now_ms())
+                if pause_error:
+                    logging.warning(
+                        "user.ready: failed to pause playback for midroll (room=%s, user_id=%s, error=%s)",
+                        room.code,
+                        user_id,
+                        pause_error,
+                    )
+                else:
+                    current_entry = room.current_queue.current_entry
+                    if current_entry:
+                        room.state = "midroll"
+                        room.reset_ready_flags()
+                        emit_function_after_delay(emit_presence, room, 0.1)
+                        progress_ms = (
+                            paused_progress
+                            if paused_progress is not None
+                            else current_entry.progress_ms or 0
+                        )
+                        midroll_payload = {
+                            "state": "midroll",
+                            "playing_since_ms": None,
+                            "progress_ms": progress_ms,
+                            "current_entry": current_entry.to_dict(),
+                            "actor_user_id": user_id,
+                        }
 
             current_entry = (
                 room.current_queue.current_entry
@@ -201,7 +253,7 @@ def register_socket_handlers() -> None:
 
             should_transition = (
                 ready
-                and room.state == "starting"
+                and room.state in ("starting", "midroll")
                 and current_entry is not None
                 and all_users_ready
             )
@@ -224,7 +276,9 @@ def register_socket_handlers() -> None:
 
             db.session.commit()
 
-            if playback_payload:
+            if midroll_payload:
+                res("room.playback", midroll_payload)
+            elif playback_payload:
                 res("room.playback", playback_payload)
         except Exception:
             logging.exception("user.ready handler error")

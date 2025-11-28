@@ -5,7 +5,8 @@
   "description": "Synchronize YouTube playback with friends. Watch videos together in real-time with shared play, pause, and queue controls.",
   "permissions": [
     "storage",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "host_permissions": [
     "http://*/",
@@ -26,9 +27,6 @@
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
     }
-  },
-  "background": {
-    "service_worker": "background.js"
   },
   "content_scripts": [
     {

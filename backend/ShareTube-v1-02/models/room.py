@@ -43,10 +43,10 @@ class Room(db.Model):
     control_mode: Mapped[str] = db.Column(db.String(16), default="operators")
     # Current controller baton holder identifier (user id or client id string)
     controller_id: Mapped[str] = db.Column(db.String(64), default="")
-    # Ad sync policy: off | pause_all | trigger_and_pause
-    ad_sync_mode: Mapped[str] = db.Column(db.String(24), default="off")
+    # Ad sync policy: off | pause_all | operators_only | starting_only
+    ad_sync_mode: Mapped[str] = db.Column(db.String(24), default="pause_all")
     # Current playback/state machine status for the room
-    # idle | starting | playing | paused
+    # idle | starting | playing | paused | midroll
     state: Mapped[str] = db.Column(db.String(16), default="idle")
     # Current queue being played
     current_queue_id: Mapped[Optional[int]] = db.Column(
@@ -124,6 +124,7 @@ class Room(db.Model):
             "created_at": self.created_at,
             "is_private": self.is_private,
             "control_mode": self.control_mode,
+            "ad_sync_mode": self.ad_sync_mode,
             "state": self.state,
             "current_queue_id": self.current_queue_id,
             "current_queue": (
@@ -200,7 +201,7 @@ class Room(db.Model):
             return {"state": "starting", "current_entry": entry.to_dict()}, None
 
         # If already in starting state, transition to playing
-        if self.state == "starting":
+        if self.state in ("starting", "midroll"):
             self.state = "playing"
             commit_with_retry(db.session)
             current_entry = self.current_queue.current_entry
@@ -208,9 +209,9 @@ class Room(db.Model):
                 current_entry.start(now_ms)
             return {
                 "state": "playing",
-                "playing_since_ms": now_ms,
-                "progress_ms": current_entry.progress_ms,
-                "current_entry": current_entry.to_dict(),
+                "playing_since_ms": now_ms if current_entry else None,
+                "progress_ms": current_entry.progress_ms if current_entry else 0,
+                "current_entry": current_entry.to_dict() if current_entry else None,
             }, None
 
         # If paused with an active entry, resume playback from stored progress
@@ -455,7 +456,7 @@ class RoomMembership(db.Model):
         from .user import User
         membership = cls.query.filter_by(room_id=room.id, user_id=user_id).first()
         now = int(time.time())
-        room_in_starting = room.state == "starting"
+        room_in_starting = room.state in ("starting", "midroll")
         
         # Update user's last_seen timestamp and mark as active
         user = db.session.get(User, user_id)

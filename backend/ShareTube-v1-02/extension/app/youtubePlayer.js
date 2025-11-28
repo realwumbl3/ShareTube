@@ -443,12 +443,15 @@ export default class YoutubePlayerManager {
     }
 
     onRoomStateChange(newState) {
-        if (newState === "starting") {
+        if (newState === "starting" || newState === "midroll") {
             this.last_reported_ready_state = null;
             this.reportReadyState(true);
+            if (newState === "midroll") {
+                this.setDesiredState("paused");
+            }
             return;
         }
-        // Leaving starting state, clear cached ready status so next cycle re-sends.
+        // Leaving starting/midroll state, clear cached ready status so next cycle re-sends.
         this.last_reported_ready_state = null;
     }
 

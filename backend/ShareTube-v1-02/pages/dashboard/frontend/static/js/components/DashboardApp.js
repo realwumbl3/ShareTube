@@ -11,6 +11,8 @@ import UserTable from "./UserTable.js";
 import RoomTable from "./RoomTable.js";
 import QueueTable from "./QueueTable.js";
 
+const API_BASE = window.__DASHBOARD_API_BASE__ || "/dashboard";
+
 export default class DashboardApp {
     constructor() {
         // Dashboard state
@@ -172,11 +174,11 @@ export default class DashboardApp {
         try {
             // Load all dashboard data in parallel
             const [statsRes, activityRes, usersRes, roomsRes, queuesRes] = await Promise.all([
-                fetch("/dashboard/api/stats"),
-                fetch("/dashboard/api/activity"),
-                fetch("/dashboard/api/users"),
-                fetch("/dashboard/api/rooms"),
-                fetch("/dashboard/api/queues"),
+                fetch(`${API_BASE}/api/stats`),
+                fetch(`${API_BASE}/api/activity`),
+                fetch(`${API_BASE}/api/users`),
+                fetch(`${API_BASE}/api/rooms`),
+                fetch(`${API_BASE}/api/queues`),
             ]);
 
             const [stats, activity, users, rooms, queues] = await Promise.all([

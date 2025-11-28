@@ -105,6 +105,7 @@ export default class PlaybackControls {
             case "paused":
                 return playSVG;
             case "starting":
+            case "midroll":
                 return startingSVG;
             case "idle":
                 return idleSVG;

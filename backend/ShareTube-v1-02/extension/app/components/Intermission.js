@@ -4,8 +4,13 @@ import state from "../state.js";
 export default class Intermission {
     constructor() {
         html`
-            <div class="intermission_overlay st_reset" zyx-if=${[state.roomState, (v) => v === "starting"]}>
-                <div class="intermission_message">Starting... please wait</div>
+            <div
+                class="intermission_overlay st_reset"
+                zyx-if=${[state.roomState, (v) => v === "starting" || v === "midroll"]}
+            >
+                <div class="intermission_message">
+                    ${state.roomState.interp((v) => (v === "midroll" ? "Ad playing... waiting for everyone" : "Starting... please wait"))}
+                </div>
             </div>
         `.bind(this);
     }

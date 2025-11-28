@@ -47,6 +47,7 @@ export default class Controls {
             case "paused":
                 return playSVG;
             case "starting":
+            case "midroll":
                 return startingSVG;
             case "idle":
                 return idleSVG;
@@ -62,6 +63,7 @@ export default class Controls {
             case "paused":
                 return "Play playback";
             case "starting":
+            case "midroll":
                 return "Starting playback, please wait...";
             case "idle":
                 return "Idle, no playback is currently playing";

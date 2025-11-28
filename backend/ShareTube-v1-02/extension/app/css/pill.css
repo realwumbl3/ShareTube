@@ -7,7 +7,7 @@
         transform 80ms ease,
         background 160ms ease,
         border-color 160ms ease;
-    gap: 8px;
+    gap: 6px;
     padding: 3px 6px;
     border-radius: 21px;
     background: rgba(255, 255, 255, 0.18);
@@ -22,7 +22,11 @@
     margin-bottom: 12px;
     min-height: 2.5em;
 
-
+    >span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
 
     &:before {
         content: "";
@@ -35,6 +39,18 @@
         pointer-events: auto;
         z-index: -1;
     }
+}
+
+#sharetube_pill .sign_in_button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+}
+
+#sharetube_pill .sign_in_button>img {
+    width: 20px;
+    height: 20px;
 }
 
 #sharetube_pill:hover {

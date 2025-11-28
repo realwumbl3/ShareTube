@@ -180,8 +180,8 @@ def register_socket_handlers():
         try:
             logging.info("[[[[[[queue.probe]]]]]]")
 
-            if room.state == "starting":
-                return rej("queue.probe: room.state is starting")
+            if room.state in ("starting", "midroll"):
+                return rej("queue.probe: room.state is starting or midroll")
 
             if not current_entry.check_completion():
                 return rej("queue.probe: video not completed")

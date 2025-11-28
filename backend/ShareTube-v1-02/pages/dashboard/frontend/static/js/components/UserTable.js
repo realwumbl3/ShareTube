@@ -6,43 +6,43 @@ class UserTableRow {
             <div class="user-row">
                 <div class="user-name">
                     <div class="user-info">
-                        <span class="user-display-name">${user.name.interp(v => v)}</span>
-                        <span class="user-email">${user.email.interp(v => v)}</span>
+                        <span class="user-display-name">${user.name.interp((v) => v)}</span>
+                        <span class="user-email">${user.email.interp((v) => v)}</span>
                     </div>
                 </div>
                 <div class="user-status">
                     <span class="mobile-label">Status</span>
-                    <span class="status-badge ${user.active.interp(v => v ? 'active' : 'inactive')}">
-                        ${user.active.interp(v => v ? 'Active' : 'Inactive')}
+                    <span class="status-badge ${user.active.interp((v) => (v ? "active" : "inactive"))}">
+                        ${user.active.interp((v) => (v ? "Active" : "Inactive"))}
                     </span>
                 </div>
                 <div class="user-stats">
                     <span class="mobile-label">Rooms</span>
-                    ${user.room_count.interp(v => v || 0)} rooms
+                    ${user.room_count.interp((v) => v || 0)} rooms
                 </div>
                 <div class="user-stats">
                     <span class="mobile-label">Videos</span>
-                    ${user.videos_added.interp(v => v || 0)} videos
+                    ${user.videos_added.interp((v) => v || 0)} videos
                 </div>
                 <div class="user-date">
                     <span class="mobile-label">Joined</span>
-                    ${user.created_at.interp(v => this.formatDate(v))}
+                    ${user.created_at.interp((v) => this.formatDate(v))}
                 </div>
                 <div class="user-date">
                     <span class="mobile-label">Last Seen</span>
-                    ${user.last_seen.interp(v => this.formatDate(v))}
+                    ${user.last_seen.interp((v) => this.formatDate(v))}
                 </div>
             </div>
         `.bind(this);
     }
 
     formatDate(dateString) {
-        if (!dateString) return '-';
+        if (!dateString) return "-";
         try {
             const date = new Date(dateString);
             return date.toLocaleDateString();
         } catch (e) {
-            return '-';
+            return "-";
         }
     }
 }
@@ -50,7 +50,7 @@ class UserTableRow {
 export default class UserTable {
     constructor(users) {
         this.users = users;
-        this.searchTerm = new LiveVar('');
+        this.searchTerm = new LiveVar("");
         this.filteredUsers = new LiveList([]);
 
         // Update filtered users when search term or users change
@@ -61,7 +61,7 @@ export default class UserTable {
         html`
             <div class="user-table-container glass-panel">
                 <div class="table-header-control">
-                    <h3>Users <span class="count-badge">${this.users.interp(u => u.length)}</span></h3>
+                    <h3>Users <span class="count-badge">${this.users.interp((u) => u.length)}</span></h3>
                     <div class="table-controls">
                         <input
                             type="text"
@@ -82,11 +82,13 @@ export default class UserTable {
                             <div class="header-cell">Joined</div>
                             <div class="header-cell">Last Seen</div>
                         </div>
-                        <div class="table-body" zyx-live-list=${{
-                            list: this.filteredUsers,
-                            compose: UserTableRow,
-                        }}>
-                        </div>
+                        <div
+                            class="table-body"
+                            zyx-live-list=${{
+                                list: this.filteredUsers,
+                                compose: UserTableRow,
+                            }}
+                        ></div>
                     </div>
                 </div>
             </div>
@@ -101,14 +103,14 @@ export default class UserTable {
         this.filteredUsers.splice(0, this.filteredUsers.length);
 
         // Add filtered users
-        const filtered = term ?
-            allUsers.filter(user =>
-                user.name.toLowerCase().includes(term) ||
-                user.email.toLowerCase().includes(term)
-            ) : allUsers;
+        const filtered = term
+            ? allUsers.filter(
+                  (user) => user.name.toLowerCase().includes(term) || user.email.toLowerCase().includes(term)
+              )
+            : allUsers;
 
         // Add all filtered users to the LiveList
-        filtered.forEach(user => this.filteredUsers.push(user));
+        filtered.forEach((user) => this.filteredUsers.push(user));
     }
 }
 
@@ -272,7 +274,7 @@ css`
         .search-input {
             width: 100%;
         }
-        
+
         .user-table {
             min-width: 100%;
         }
@@ -307,8 +309,8 @@ css`
         .mobile-label {
             display: block;
         }
-        
-        .user-name {
+
+        .user-table-container .user-name {
             background: rgba(255, 255, 255, 0.02);
             margin: -1rem -1rem 0.5rem -1rem;
             padding: 1rem !important;

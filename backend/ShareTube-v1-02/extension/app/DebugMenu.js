@@ -45,6 +45,17 @@ export default class DebugMenu {
                     </div>
                     <div class="debug-section">
                         <div class="debug-section-header">
+                            <span class="debug-section-title">User</span>
+                        </div>
+                        <div class="debug-section-table">
+                            <div class="debug-row">
+                                <span class="debug-label">User ID:</span>
+                                <span class="debug-value">${state.userId.interp((v) => v)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="debug-section">
+                        <div class="debug-section-header">
                             <span class="debug-section-title">Room</span>
                         </div>
                         <div class="debug-section-table">

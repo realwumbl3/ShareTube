@@ -7,7 +7,7 @@ export default class UserIcons {
         this.app = app;
 
         html`
-            <div class="room_presence">
+            <div class="room_presence" zyx-if=${state.userId}>
                 <div class="presence_group" zyx-if=${[state.users, (v) => v.length > 0]}>
                     <div
                         class="presence"

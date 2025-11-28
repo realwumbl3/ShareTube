@@ -3,6 +3,7 @@
 export default class AuthManager {
     constructor() {
         this.baseUrl = window.location.origin;
+        this.apiBase = window.__DASHBOARD_API_BASE__ || "/dashboard";
     }
 
     async authToken() {
@@ -44,7 +45,7 @@ export default class AuthManager {
 
     async logout() {
         try {
-            const response = await fetch('/dashboard/api/auth/logout');
+            const response = await fetch(`${this.apiBase}/api/auth/logout`);
             if (response.ok) {
                 // Clear any local state if needed
                 return true;
@@ -58,7 +59,7 @@ export default class AuthManager {
 
     async checkAuthStatus() {
         try {
-            const response = await fetch('/dashboard/api/auth/status');
+            const response = await fetch(`${this.apiBase}/api/auth/status`);
             if (!response.ok) {
                 return { authenticated: false };
             }

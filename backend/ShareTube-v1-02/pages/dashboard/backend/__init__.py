@@ -12,6 +12,11 @@ from flask import Blueprint, current_app, jsonify, render_template, request, mak
 from ..shared_imports import db, now_ms, User, Room, RoomMembership, Queue, RoomOperator, QueueEntry, RoomAudit, ChatMessage
 
 
+SECURE_DASHBOARD_UUID = "f4c6c472-3a2b-446e-a9a0-9e3a9f3ebf9e"
+SECURE_DASHBOARD_PREFIX = f"/dashboard-{SECURE_DASHBOARD_UUID}"
+PUBLIC_DASHBOARD_PREFIX = "/dashboard"
+
+
 # Import our dashboard modules
 from ..analytics import DashboardAnalytics
 from ..data import DashboardData
@@ -19,42 +24,51 @@ from ..data import DashboardData
 # Whitelist of user IDs allowed to access the dashboard
 # ALLOWED_USER_IDS is deprecated; use database roles instead
 
-# Authentication middleware for dashboard routes
+# Authentication helpers for dashboard routes
+def _get_super_admin_from_request(log_failures=True):
+    """Return (user, error_response) based on the caller's auth token."""
+    auth_token = request.cookies.get('auth_token')
+    if not auth_token:
+        return None, ("Authentication required", 401)
+
+    try:
+        payload = jwt.decode(
+            auth_token, current_app.config["JWT_SECRET"], algorithms=["HS256"]
+        )
+        user_id = int(payload.get("sub"))
+        user = User.query.get(user_id)
+        if not user or user.role != 'super_admin':
+            if log_failures:
+                logger.warning(
+                    "Unauthorized dashboard access attempt user_id=%s role=%s",
+                    user_id,
+                    getattr(user, "role", "none"),
+                )
+            return None, ("Unauthorized", 403)
+
+        request.user_id = user_id
+        request.user_name = payload.get("name")
+        request.user_picture = payload.get("picture")
+        return user, None
+    except jwt.ExpiredSignatureError:
+        return None, ("Token expired", 401)
+    except jwt.InvalidTokenError:
+        return None, ("Invalid token", 401)
+    except Exception as e:
+        logger.exception(f"Auth token validation failed: {e}")
+        return None, ("Authentication failed", 401)
+
+
 def require_auth(f):
     """Decorator to require authentication for dashboard routes."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Check for auth token in cookies (set by frontend)
-        auth_token = request.cookies.get('auth_token')
-        if not auth_token:
-            return jsonify({"error": "Authentication required"}), 401
-
-        try:
-            # Decode and validate JWT token
-            payload = jwt.decode(
-                auth_token, current_app.config["JWT_SECRET"], algorithms=["HS256"]
-            )
-            # Store user info in request context for use in handlers
-            user_id = int(payload.get("sub"))
-            
-            # Check if user is authorized via database role
-            user = User.query.get(user_id)
-            if not user or user.role != 'super_admin':
-                logger.warning(f"Unauthorized access attempt by user_id={user_id} role={getattr(user, 'role', 'none')}")
-                return jsonify({"error": "Unauthorized"}), 403
-                
-            request.user_id = user_id
-            request.user_name = payload.get("name")
-            request.user_picture = payload.get("picture")
-        except jwt.ExpiredSignatureError:
-            return jsonify({"error": "Token expired"}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({"error": "Invalid token"}), 401
-        except Exception as e:
-            logger.exception(f"Auth token validation failed: {e}")
-            return jsonify({"error": "Authentication failed"}), 401
-
+        user, error = _get_super_admin_from_request()
+        if not user:
+            message, status = error
+            return jsonify({"error": message}), status
         return f(*args, **kwargs)
+
     return decorated_function
 
 # Socket.IO event handlers for real-time dashboard updates
@@ -102,15 +116,20 @@ its own `static_folder` or `static_url_path`.
 """
 
 
-# Create the dashboard blueprint that represents the entire dashboard "page".
+# Create the hidden dashboard blueprint that represents the secured dashboard page.
 dashboard_bp = Blueprint(
     "dashboard",  # Blueprint name used for `url_for("dashboard.*")` lookups.
     __name__,  # Module name; Flask uses this to locate templates and static files.
-    url_prefix="/dashboard",  # URL prefix for all routes in this blueprint.
-    # The template folder path is resolved relative to this package's root path.
-    # `../frontend/templates` -> `pages/dashboard/frontend/templates`
+    url_prefix=SECURE_DASHBOARD_PREFIX,  # Hidden URL prefix for secured routes.
     template_folder="../frontend/templates",
+)
 
+# Public landing blueprint that only exposes the login experience.
+dashboard_entry_bp = Blueprint(
+    "dashboard_entry",
+    __name__,
+    url_prefix=PUBLIC_DASHBOARD_PREFIX,
+    template_folder="../frontend/templates",
 )
 
 
@@ -122,9 +141,39 @@ def dashboard_home():
     The `render_template` call will look for `dashboard.html` inside this
     blueprint's `template_folder`, i.e. `pages/dashboard/frontend/templates/`.
     """
+    user, error = _get_super_admin_from_request()
+    if not user:
+        return redirect(PUBLIC_DASHBOARD_PREFIX)
 
-    # Render the main dashboard template for the browser.
-    return render_template("dashboard.html")
+    response = make_response(
+        render_template(
+            "dashboard.html",
+            secure_prefix=SECURE_DASHBOARD_PREFIX,
+        )
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@dashboard_entry_bp.route("/")
+def dashboard_entry_home():
+    """Public landing page that only performs sign-in checks."""
+    response = make_response(
+        render_template(
+            "dashboard_entry.html",
+        )
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@dashboard_entry_bp.route("/api/entry/check")
+def dashboard_entry_check():
+    """Endpoint used by the landing page to decide whether to redirect."""
+    user, _ = _get_super_admin_from_request(log_failures=False)
+    if user:
+        return jsonify({"redirect": f"{SECURE_DASHBOARD_PREFIX}/"})
+    return jsonify({"authenticated": False})
 
 
 @dashboard_bp.route("/api/auth/status")
@@ -132,32 +181,19 @@ def auth_status():
     """
     Check authentication status and return user info if authenticated.
     """
-    auth_token = request.cookies.get('auth_token')
-    if not auth_token:
-        return jsonify({"authenticated": False})
+    user, error = _get_super_admin_from_request()
+    if not user:
+        return jsonify({"authenticated": False}), error[1]
 
-    try:
-        payload = jwt.decode(
-            auth_token, current_app.config["JWT_SECRET"], algorithms=["HS256"]
-        )
-        
-        # Check role for authenticated user
-        user_id = int(payload.get("sub"))
-        user = User.query.get(user_id)
-        role = getattr(user, 'role', 'user') if user else 'user'
-        
-        return jsonify({
-            "authenticated": True,
-            "user": {
-                "id": user_id,
-                "name": payload.get("name"),
-                "picture": payload.get("picture"),
-                "role": role
-            }
-        })
-    except Exception as e:
-        logger.exception(f"Auth status check failed: {e}")
-        return jsonify({"authenticated": False})
+    return jsonify({
+        "authenticated": True,
+        "user": {
+            "id": request.user_id,
+            "name": request.user_name,
+            "picture": request.user_picture,
+            "role": "super_admin"
+        }
+    })
 
 
 @dashboard_bp.route("/api/auth/logout")

@@ -1,10 +1,18 @@
 import { html, css, LiveVar } from "../dep/zyx.js";
 
+import state from "../state.js";
+
 export default class Logo {
     constructor(app) {
         this.app = app;
+        this.expanded = new LiveVar(false);
         html`
-            <div id="sharetube_logo" zyx-miceenter=${(e) => this.expand()} zyx-miceleave=${(e) => this.collapse()}>
+            <div
+                id="sharetube_logo"
+                expanded=${this.expanded.interp()}
+                zyx-miceenter=${(e) => this.expanded.set(true)}
+                zyx-miceleave=${(e) => this.expanded.set(false)}
+            >
                 <span>S</span>
                 <span>hare</span>
                 <span>T</span>
@@ -14,11 +22,11 @@ export default class Logo {
     }
 
     expand() {
-        this.main.classList.add("expanded");
+        this.expanded.set(true);
     }
 
     collapse() {
-        this.main.classList.remove("expanded");
+        this.expanded.set(false);
     }
 }
 
@@ -29,7 +37,7 @@ css`
         align-items: baseline;
         transition: gap 200ms ease;
         /*transform: translateY(-0.05em);*/
-        font-family: 'Roboto', sans-serif;
+        font-family: "Roboto", sans-serif;
     }
 
     /*Default (expanded) typography */
@@ -55,16 +63,16 @@ css`
     }
 
     /* Expanded state - final sizes with slight delay for rest to appear after S/T scale */
-    #sharetube_logo.expanded > span:nth-child(1),
-    #sharetube_logo.expanded > span:nth-child(3) {
+    #sharetube_logo[expanded="true"] > span:nth-child(1),
+    #sharetube_logo[expanded="true"] > span:nth-child(3) {
         transform: scale(1);
     }
-    #sharetube_logo.expanded > span:nth-child(2) {
+    #sharetube_logo[expanded="true"] > span:nth-child(2) {
         max-width: 4ch; /* 'hare' */
         opacity: 1;
         transition-delay: 120ms, 120ms;
     }
-    #sharetube_logo.expanded > span:nth-child(4) {
+    #sharetube_logo[expanded="true"] > span:nth-child(4) {
         max-width: 3.3ch; /* 'ube' */
         opacity: 1;
         transition-delay: 120ms, 120ms;
@@ -72,12 +80,12 @@ css`
 
     /* Collapsed state - only S and T remain, gap tightens */
 
-    #sharetube_logo:not(.expanded) > span:nth-child(2) {
+    #sharetube_logo:not([expanded="true"]) > span:nth-child(2) {
         max-width: 0ch;
         opacity: 0;
         transition-delay: 0ms, 120ms; /* fade first, then width closes to shrink container */
     }
-    #sharetube_logo:not(.expanded) > span:nth-child(4) {
+    #sharetube_logo:not([expanded="true"]) > span:nth-child(4) {
         max-width: 0ch;
         opacity: 0;
         transition-delay: 0ms, 120ms;

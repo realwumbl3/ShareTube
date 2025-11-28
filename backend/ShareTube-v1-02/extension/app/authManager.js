@@ -40,23 +40,56 @@ export default class AuthManager {
     }
 
     async applyAvatarFromToken() {
+        console.log("ShareTube: applyAvatarFromToken");
         try {
             const auth_token = await this.authToken();
             if (!auth_token) {
+                state.userId.set(0);
                 state.avatarUrl.set("");
-                state.userId.set(null);
                 return;
             }
+            console.log("ShareTube: applyAvatarFromToken", auth_token);
             const claims = decodeJwt(auth_token);
             const picture = claims && claims.picture;
             state.avatarUrl.set(picture || "");
             try {
-                state.userId.set(claims && (claims.sub != null ? Number(claims.sub) : null));
+                state.userId.set(claims && (claims.sub != null ? Number(claims.sub) : 0));
             } catch {
-                state.userId.set(null);
+                state.userId.set(0);
             }
         } catch (e) {
             console.warn("ShareTube applyAvatarFromToken failed", e);
         }
+    }
+
+    async openSignInWithGooglePopup() {
+        const backendUrl = await this.backEndUrl();
+
+        // Helper to open a centered popup window for OAuth flows
+        const openCentered = (url, w, h) => {
+            const left = Math.max(0, (screen.width - w) / 2);
+            const top = Math.max(0, (screen.height - h) / 2);
+            return window.open(url, "sharetube_login", `width=${w},height=${h},left=${left},top=${top}`);
+        };
+
+        // Open the OAuth popup
+        openCentered(`${backendUrl}/auth/google/start`, 480, 640);
+
+        // Listen for the OAuth callback message
+        const handleMessage = async (evt) => {
+            const data = evt.data || {};
+            if (data.type === "newapp_auth" && data.token) {
+                // Store the token
+                await chrome.storage.local.set({ auth_token: data.token });
+
+                // Apply avatar from the new token
+                await this.applyAvatarFromToken();
+                // Remove the message listener
+                window.removeEventListener("message", handleMessage);
+            }
+        };
+
+        // Add the message listener
+        window.addEventListener("message", handleMessage);
     }
 }

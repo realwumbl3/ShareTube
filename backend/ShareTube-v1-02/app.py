@@ -329,11 +329,14 @@ def register_routes(app: Flask) -> None:
 
     # Register page blueprints
     try:
-        from .pages import dashboard_bp, mobile_remote_bp
+        from .pages import dashboard_bp, dashboard_entry_bp, mobile_remote_bp, homepage_bp
         from .pages.dashboard.backend import register_socket_handlers as register_dashboard_socket_handlers
 
+        app.register_blueprint(dashboard_entry_bp)
         app.register_blueprint(dashboard_bp)
         app.register_blueprint(mobile_remote_bp)
+        # Register homepage last (root route) to avoid conflicts with API routes
+        app.register_blueprint(homepage_bp)
         # Register dashboard socket handlers
         register_dashboard_socket_handlers()
         logging.info("Successfully registered page blueprints and dashboard socket handlers")

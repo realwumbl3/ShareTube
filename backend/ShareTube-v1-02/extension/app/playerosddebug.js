@@ -18,6 +18,9 @@ export default class PlayerOSDDebug {
         html`<div class="player_osd_debug" zyx-if=${state.debug_mode}>
             Video Observed.
             <div class="debug-list">
+                <span>ad_sync_mode: ${state.adSyncMode.interp()}</span>
+                <span>in_room: ${state.inRoom.interp()}</span>
+                <span>room_state: ${state.roomState.interp()}</span>
                 <span>desired_state: ${this.youtubePlayer.desired_state.interp()}</span>
                 <span>ad_playing: ${this.youtubePlayer.ad_playing.interp()}</span>
                 <span>is_enforcing: ${this.youtubePlayer.is_enforcing.interp()}</span>

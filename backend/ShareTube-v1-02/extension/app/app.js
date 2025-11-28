@@ -21,7 +21,7 @@ import QRCodeComponent from "./components/QRCode.js";
 
 export const zyxInput = new ZyXInput();
 
-const lockSVG = chrome.runtime.getURL("app/assets/lock.svg");
+import { googleSVG, lockSVG } from "./assets/svgs.js";
 
 css`
     @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap");
@@ -86,7 +86,6 @@ export default class ShareTubeApp {
         this.qrCode = new QRCodeComponent(this);
 
         this.storageManager.getLocalStorage("locked", false).then((locked) => state.pillLocked.set(locked));
-
         this.storageManager.getLocalStorage("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
 
         html`
@@ -94,33 +93,44 @@ export default class ShareTubeApp {
                 ${this.queue} ${this.debugMenu}
                 <div id="sharetube_pill">
                     <button
+                        zyx-if=${state.pillLocked}
                         id="sharetube_lock_btn"
                         class="lock_btn"
                         zyx-click=${() => this.uiManager.setLock(false)}
-                        zyx-if=${state.pillLocked}
                     >
                         <img src=${lockSVG} alt="Lock" />
                     </button>
                     <img
-                        user-ready=${state.userReady.interp()}
+                        zyx-if=${state.userId}
                         class="user_icon_avatar"
                         draggable="false"
                         alt="Profile"
                         src=${state.avatarUrl.interp((v) => v || "")}
+                        user-ready=${state.userReady.interp()}
                     />
-                    ${this.logo} ${this.userIcons}
                     <div
-                        id="sharetube_toggle_queue"
-                        class="rounded_btn"
-                        zyx-click=${() => this.queue.toggleQueueVisibility()}
-                        zyx-if=${state.roomCode}
+                        zyx-else
+                        class="sign_in_button rounded_btn"
+                        zyx-click=${() => this.authManager.openSignInWithGooglePopup()}
                     >
-                        ${state.queueQueued.interp((v) => (v.length > 0 ? `Queue (${v.length})` : "Queue empty."))}
+                        Sign in with <img src=${googleSVG} alt="Google" />
                     </div>
-                    ${this.controls}
+                    ${this.logo}
+                    <span zyx-if=${state.userId}>
+                        ${this.userIcons}
+                        <div
+                            zyx-if=${state.roomCode}
+                            id="sharetube_toggle_queue"
+                            class="rounded_btn"
+                            zyx-click=${() => this.queue.toggleQueueVisibility()}
+                        >
+                            ${state.queueQueued.interp((v) => (v.length > 0 ? `Queue (${v.length})` : "Queue empty."))}
+                        </div>
+                        ${this.controls}
+                    </span>
                     <button
-                        class="rounded_btn"
                         zyx-if=${state.debug_mode}
+                        class="rounded_btn"
                         zyx-click=${() => this.debugMenu.toggleVisibility()}
                     >
                         dbg

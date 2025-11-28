@@ -88,6 +88,7 @@ export default class VirtualPlayer {
         this.updateServerClock(result);
         state.roomCode.set(result.code);
         state.inRoom.set(true);
+        state.adSyncMode.set(result.snapshot.ad_sync_mode);
 
         const currentQueue = result.snapshot.current_queue;
         this.updateCurrentPlayingFromEntry(currentQueue?.current_entry);
@@ -168,7 +169,8 @@ export default class VirtualPlayer {
         if (priorState === "playing" && newState === "paused") return this.app.youtubePlayer.setDesiredState("paused");
         if (priorState === "paused" && newState === "playing") return this.app.youtubePlayer.setDesiredState("playing");
         if (newState === "playing") return this.app.youtubePlayer.setDesiredState("playing");
-        if (newState === "starting" || newState === "paused") return this.app.youtubePlayer.setDesiredState("paused");
+        if (newState === "starting" || newState === "paused" || newState === "midroll")
+            return this.app.youtubePlayer.setDesiredState("paused");
         console.warn(`playerStateChange: no transition implemented. ${priorState} -> ${newState}`);
         return;
     }
