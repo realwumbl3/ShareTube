@@ -7,21 +7,16 @@
 }
 
 #sharetube_queue .queue_selector .queue_selector_item {
-    border-radius: 8px;
     cursor: pointer;
     text-align: center;
     user-select: none;
-    padding: 5px 10px;
-}
+    padding: 10px 5px;
 
-#sharetube_queue .queue_selector .queue_selector_item:hover {
-    text-decoration: underline;
-}
+    &.zyx-radioview-active {
+        border-top: 2px solid var(--accent-primary);
+    }
 
-#sharetube_queue .queue_selector .queue_selector_item:active {
-    text-decoration: underline;
-}
-
-#sharetube_queue .queue_selector .queue_selector_item.active {
-    text-decoration: underline;
+    #sharetube_main & {
+        padding: 12px 5px;
+    }
 }

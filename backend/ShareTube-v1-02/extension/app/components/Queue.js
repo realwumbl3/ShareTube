@@ -62,18 +62,19 @@ export default class ShareTubeQueue {
                             <span class="timestamp-current"
                                 >${state.currentPlaying.timestamp.interp((v) => msDurationTimeStamp(v || 0))}</span
                             >
-                            <span class="timestamp-progress"
+                            <span class="timestamp-progress" title="Progress since last pause/start" 
                                 >${state.currentPlaying.progress_ms.interp(
                                     (v) => `PROGRESS: ${msDurationTimeStamp(v) || "00:00:00"}`
                                 )}</span
                             >
-                            <span></span>
+                            <span title="Progress since last pause/start">
                             <span class="timestamp-duration"
                                 >${state.currentPlaying.item.interp((v) =>
                                     msDurationTimeStamp(v?.duration_ms || 0)
                                 )}</span
                             >
                             <span class="timestamp-playing-since"
+                            title="Time when the video started/resumed playing"
                                 >${state.currentPlaying.playing_since_ms.interp(
                                     (v) => `PLAYING SINCE: ${msDurationTimeStamp(v) || "Paused..."}`
                                 )}</span

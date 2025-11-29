@@ -29,6 +29,8 @@ export const remoteSVG = resolveAssetUrl("app/assets/remote.svg");
 export const errorSVG = resolveAssetUrl("app/assets/error.svg");
 export const googleSVG = resolveAssetUrl("app/assets/google.svg");
 export const lockSVG = resolveAssetUrl("app/assets/lock.svg");
+export const fullscreenSVG = resolveAssetUrl("app/assets/fullscreen.svg");
+export const exitFullscreenSVG = resolveAssetUrl("app/assets/exit-fullscreen.svg");
 
 // Stroke-based paths for smoother look
 export const seekRewindPath = "M 3 12 a 9 9 0 1 0 9 -9 9.75 9.75 0 0 0 -6.74 2.74 L 3 8";

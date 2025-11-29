@@ -5,6 +5,7 @@ import QueueList from "./QueueList.js";
 import SocketManager from "/extension/app/socket.js";
 import VirtualPlayer from "/extension/app/virtualPlayer.js";
 import state from "/extension/app/state.js";
+import { fullscreenSVG, exitFullscreenSVG } from "/extension/app/assets/svgs.js";
 
 const noop = () => {};
 
@@ -19,6 +20,7 @@ export default class MobileRemoteApp {
         // Local-only status
         this.error = new LiveVar("");
         this.isReady = new LiveVar(false);
+        this.isFullscreen = new LiveVar(false);
 
         this.pendingRoomCode = "";
         this.socketHandlersInitialized = false;
@@ -47,18 +49,31 @@ export default class MobileRemoteApp {
         this.queueList = new QueueList(this);
 
         html`
-            <div class=${this.isReady.interp((r) => (r ? "mobile-remote-app visible" : "mobile-remote-app"))}>
+            <div this="appElement" class=${this.isReady.interp((r) => (r ? "mobile-remote-app visible" : "mobile-remote-app"))}>
                 <header class="remote-header glass-panel">
                     <div class="header-row">
                         <h1>ShareTube</h1>
-                        <div class="room-status" zyx-if=${state.roomCode}>
-                            <span class="room-code">${state.roomCode.interp()}</span>
-                            <span class="connection-status" zyx-if=${state.inRoom}>
-                                <span class="status-dot connected"></span>
-                            </span>
-                            <span class="connection-status" zyx-else>
-                                <span class="status-dot disconnected"></span>
-                            </span>
+                        <div class="header-actions">
+                            <div class="room-status" zyx-if=${state.roomCode}>
+                                <span class="room-code">${state.roomCode.interp()}</span>
+                                <span class="connection-status" zyx-if=${state.inRoom}>
+                                    <span class="status-dot connected"></span>
+                                </span>
+                                <span class="connection-status" zyx-else>
+                                    <span class="status-dot disconnected"></span>
+                                </span>
+                            </div>
+                            <button 
+                                class="fullscreen-toggle glass-button" 
+                                zyx-click=${() => this.toggleFullscreen()}
+                                title=${this.isFullscreen.interp((fs) => fs ? "Exit Fullscreen" : "Enter Fullscreen")}
+                            >
+                                <img 
+                                    class="fullscreen-icon" 
+                                    src=${this.isFullscreen.interp((fs) => fs ? exitFullscreenSVG : fullscreenSVG)} 
+                                    alt=${this.isFullscreen.interp((fs) => fs ? "Exit Fullscreen" : "Enter Fullscreen")}
+                                />
+                            </button>
                         </div>
                     </div>
                     <div class="error-message" zyx-if=${this.error}>
@@ -82,6 +97,9 @@ export default class MobileRemoteApp {
                 </main>
             </div>
         `.bind(this);
+    /** zyXSense @type {HTMLDivElement} */
+    this.appElement;
+
     }
 
     async backEndUrl() {
@@ -257,25 +275,63 @@ export default class MobileRemoteApp {
                 if (loader.parentNode) loader.parentNode.removeChild(loader);
             }, 500);
         }
+        
+        // Set up fullscreen change listeners
+        this.setupFullscreenListeners();
+    }
+
+    setupFullscreenListeners() {
+        const handleFullscreenChange = () => {
+            this.isFullscreen.set(!!document.fullscreenElement);
+        };
+
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+    }
+
+    async toggleFullscreen() {
+        const appElement = this.appElement;
+        if (!appElement) return;
+
+        try {
+            if (document.fullscreenElement) {
+                await document.exitFullscreen();
+            } else {
+                await appElement.requestFullscreen();
+            }
+        } catch (err) {
+            console.error("Fullscreen toggle error:", err);
+            this.showError("Fullscreen not supported or blocked");
+        }
     }
 }
 
 css`
     /* Mobile Remote Specific Styles */
 
-    /* Main Container */
+    /* Main Container - Mobile Layout (Vertical Stack) */
     .mobile-remote-app {
         padding: 1rem;
         display: grid;
-        grid-template-rows: max-content 1fr;
+        grid-template-areas:
+            "header"
+            "controls"
+            "queue";
+        grid-template-rows: max-content max-content 1fr;
         gap: 10px;
         max-width: 100%;
         height: 100dvh;
         min-height: 100dvh;
     }
 
+    /* Fullscreen styles */
+    .mobile-remote-app:fullscreen {
+        padding: 1rem;
+        background-color: var(--bg-app);
+    }
+
     /* Header */
     .remote-header {
+        grid-area: header;
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
@@ -283,7 +339,7 @@ css`
         position: relative;
         overflow: hidden;
         text-align: left;
-
+        max-width: 800px;
         /* Overrides to standard glass panel */
         background: var(--bg-queue-header);
         border-bottom: var(--border-queue-dim);
@@ -293,6 +349,12 @@ css`
         display: flex;
         justify-content: space-between;
         align-items: center;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .remote-header h1 {
@@ -346,6 +408,31 @@ css`
         box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
     }
 
+    /* Fullscreen Toggle Button */
+    .fullscreen-toggle {
+        padding: 0.5rem 0.75rem;
+        font-size: 1.2rem;
+        line-height: 1;
+        min-width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .fullscreen-icon {
+        display: inline-block;
+        width: 1.2rem;
+        height: 1.2rem;
+        transition: transform 0.2s ease;
+    }
+
+    .fullscreen-toggle:hover .fullscreen-icon {
+        transform: scale(1.1);
+    }
+
     /* Error Handling */
     .error-message {
         position: relative;
@@ -380,32 +467,29 @@ css`
 
     /* Layout Sections */
     .remote-content {
-        flex: 1;
-        display: grid;
-        grid-template-rows: max-content 1fr;
-        gap: 10px;
-        min-height: 0;
-    }
-
-    .playback-section,
-    .queue-section {
-        position: relative;
-        /* .glass-panel provides background */
+        display: contents;
     }
 
     .playback-section {
+        grid-area: controls;
+        max-width: 800px;
+        position: relative;
         padding: 1rem;
+        /* .glass-panel provides background */
     }
 
     .queue-section {
+        grid-area: queue;
+        position: relative;
         padding: 0;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        position: relative;
+        /* .glass-panel provides background */
     }
 
     .playback-section-unavailable {
+        grid-area: controls;
         padding: 1rem;
         text-align: center;
         display: grid;
@@ -427,6 +511,36 @@ css`
         color: var(--text-primary);
         font-size: 1.2rem;
         font-weight: 600;
+    }
+
+    /* Desktop Layout - Header and Controls Side by Side */
+    @media (min-aspect-ratio: 1/1) and (min-width: 600px) {
+        .mobile-remote-app {
+            grid-template-areas:
+                "header controls"
+                "queue queue";
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: max-content 1fr;
+        }
+
+        .playback-section {
+            height: 100%;
+        }
+    }
+
+    /* Large Desktop Layout - Header and Controls Vertical on Left, Queue on Right */
+    @media (min-width: 900px), (min-aspect-ratio: 16/9) {
+        .mobile-remote-app {
+            grid-template-areas:
+                "header queue"
+                "controls queue";
+            grid-template-columns: minmax(300px, 1fr) 1fr;
+            grid-template-rows: max-content 1fr;
+        }
+
+        .playback-section {
+            height: max-content;
+        }
     }
 
     /* Responsive Adjustments */

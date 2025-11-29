@@ -63,6 +63,10 @@ for _noisy_name in (
         pass
 
 
+# Import and apply websocket patches
+from .websocket_patch import *  # noqa: F401,F403
+
+
 # SQLite pragmas
 # - This is only used for SQLite, and is not needed for other databases
 # - We need this to ensure that the database is always in a consistent state

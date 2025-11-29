@@ -10,16 +10,20 @@
     flex-direction: column;
     position: absolute;
     inset: 0;
-    overflow-y: scroll;
 }
 
 #sharetube_queue .queue-list {
     display: flex;
+    position: absolute;
+    inset: 0;
     flex-direction: column;
+    overflow-y: scroll;
     gap: 2px;
     padding: 6px 8px 8px;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 1em), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 1em), transparent 100%);
 }
 
 #sharetube_queue .queue-list::-webkit-scrollbar {

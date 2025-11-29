@@ -12,54 +12,10 @@ from urllib.parse import urlparse
 from flask import Flask, current_app
 
 from ..extensions import db, socketio
+from ..utils import get_redis_client
 from ..models import Room
 from ..utils import now_ms
 
-
-def _get_redis_client():
-    """
-    Get a Redis client using the same connection as SocketIO message queue.
-    Returns None if Redis is not configured.
-    """
-    try:
-        import redis
-    except ImportError:
-        logging.warning("redis module not available, timeout tracking will not work across processes")
-        return None
-    
-    message_queue_url = current_app.config.get("SOCKETIO_MESSAGE_QUEUE", "")
-    if not message_queue_url:
-        logging.warning("SOCKETIO_MESSAGE_QUEUE not configured, timeout tracking will not work across processes")
-        return None
-    
-    try:
-        # Parse Redis URL (format: redis://host:port/db or redis://:password@host:port/db)
-        parsed = urlparse(message_queue_url)
-        host = parsed.hostname or "localhost"
-        port = parsed.port or 6379
-        db_num = 0
-        if parsed.path:
-            try:
-                db_num = int(parsed.path.lstrip("/"))
-            except ValueError:
-                pass
-        
-        password = parsed.password if parsed.password else None
-        
-        redis_client = redis.Redis(
-            host=host,
-            port=port,
-            db=db_num,
-            password=password,
-            decode_responses=True,
-            socket_connect_timeout=2,
-        )
-        # Test connection
-        redis_client.ping()
-        return redis_client
-    except Exception as e:
-        logging.warning(f"Failed to connect to Redis for timeout tracking: {e}")
-        return None
 
 
 def _get_timeout_key(room_code: str) -> str:
@@ -77,7 +33,7 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
     cancel_starting_timeout(room_code)
     
     # Set Redis key to track this timeout (with expiration slightly longer than delay)
-    redis_client = _get_redis_client()
+    redis_client = get_redis_client()
     timeout_key = _get_timeout_key(room_code)
     if redis_client:
         try:
@@ -194,7 +150,7 @@ def cancel_starting_timeout(room_code: str) -> None:
     Cancel any pending timeout for the given room.
     Deletes the Redis key so the timeout task will skip execution.
     """
-    redis_client = _get_redis_client()
+    redis_client = get_redis_client()
     timeout_key = _get_timeout_key(room_code)
     if redis_client:
         try:

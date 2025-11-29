@@ -1,97 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShareTube Mobile Remote</title>
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <style>
-        body {
-            margin: 0;
-            background-color: #080808;
-            color: #eee;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: transparent;
-        }
-
-        #app-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: #080808;
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease-out;
-        }
-
-        #app-loader.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .loader-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border-top-color: #00f3ff;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <title>ShareTube Mobile Remote</title>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <link rel="icon" href="/extension/app/assets/remote.svg" />
+        <style>
+            body {
+                margin: 0;
+                background-color: #080808;
+                color: #eee;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
-        }
 
-        /* Hide app content initially */
-        .mobile-remote-app {
-            opacity: 0;
-            transition: opacity 0.5s ease-in;
-        }
+            /* Scrollbar */
+            ::-webkit-scrollbar {
+                width: 0;
+                height: 0;
+            }
 
-        .mobile-remote-app.visible {
-            opacity: 1;
-        }
-    </style>
-</head>
-<body>
-    <div id="app-loader">
-        <div class="loader-spinner"></div>
-    </div>
-    <!-- Pass room code, token, and error from URL to JavaScript -->
-    <script>
-        window.mobileRemoteConfig = {
-            roomCode: "{{ room_code if room_code else '' }}",
-            token: "{{ token if token else '' }}",
-            error: "{{ error if error else '' }}"
-        };
-    </script>
-    <!-- ES module entrypoint served from /mobile-remote/static/js/ -->
-    <script type="module" src="/static/mobile_remote/js/main.js"></script>
-</body>
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: transparent;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: transparent;
+            }
+
+            #app-loader {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background-color: #080808;
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: opacity 0.5s ease-out;
+            }
+
+            #app-loader.hidden {
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .loader-spinner {
+                width: 40px;
+                height: 40px;
+                border: 3px solid rgba(255, 255, 255, 0.1);
+                border-radius: 50%;
+                border-top-color: #00f3ff;
+                animation: spin 1s ease-in-out infinite;
+            }
+
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Hide app content initially */
+            .mobile-remote-app {
+                opacity: 0;
+                transition: opacity 0.5s ease-in;
+            }
+
+            .mobile-remote-app.visible {
+                opacity: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app-loader">
+            <div class="loader-spinner"></div>
+        </div>
+        <!-- Pass room code, token, and error from URL to JavaScript -->
+        <script>
+            window.mobileRemoteConfig = {
+                roomCode: "{{ room_code if room_code else '' }}",
+                token: "{{ token if token else '' }}",
+                error: "{{ error if error else '' }}",
+            };
+        </script>
+        <!-- ES module entrypoint served from /mobile-remote/static/js/ -->
+        <script type="module" src="/static/mobile_remote/js/main.js"></script>
+    </body>
 </html>
-
-

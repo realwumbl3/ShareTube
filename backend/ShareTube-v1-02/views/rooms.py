@@ -4,11 +4,22 @@ import time
 import logging
 from typing import Optional    
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_socketio import join_room, leave_room
 
 from ..utils import now_ms
-from ..sockets import emit_function_after_delay, get_user_id_from_socket
+from ..sockets import (
+    emit_function_after_delay,
+    get_user_id_from_socket,
+    track_socket_connection,
+    remove_socket_connection,
+    emit_to_user_sockets,
+    check_user_other_connections,
+    get_user_socket_connections,
+    set_user_verification_received,
+    clear_user_verification,
+    has_user_been_verified
+)
 
 from ..app import get_user_id_from_auth_header
 from ..extensions import db, socketio
@@ -108,6 +119,12 @@ def register_socket_handlers() -> None:
                 socketio.emit("room.error", {"error": "Room not found"})
                 return
 
+            # Track socket connection for this user
+            track_socket_connection(user_id, request.sid)
+
+            # Clear any stale verification status from previous disconnects
+            clear_user_verification(user_id)
+
             # Join room using model method
             RoomMembership.join_room(room, user_id)
 
@@ -135,6 +152,18 @@ def register_socket_handlers() -> None:
     def _on_leave_room(room: Room, user_id: int, data: dict):
         try:
             logging.info("room.leave: code=%s user_id=%s", room.code, user_id)
+            
+            # Remove this socket connection from tracking immediately
+            remove_socket_connection(user_id, request.sid)
+            
+            # Check if user has other active connections
+            has_other_connections = check_user_other_connections(user_id, request.sid)
+            if has_other_connections:
+                logging.info("room.leave: user %s has other active connections, keeping membership", user_id)
+                # Don't remove membership, just leave the socket room
+                leave_room(f"room:{room.code}")
+                return
+
             membership = RoomMembership.query.filter_by(
                 room_id=room.id, user_id=user_id
             ).first()
@@ -283,11 +312,30 @@ def register_socket_handlers() -> None:
         except Exception:
             logging.exception("user.ready handler error")
 
+    @socketio.on("client.verification_response")
+    def _on_client_verification_response(data: Optional[dict]):
+        """Handle client verification responses to prevent user removal from room."""
+        try:
+            logging.info("client.verification_response: received payload=%s", data)
+            user_id = get_user_id_from_socket()
+            logging.info("client.verification_response: extracted user_id=%s", user_id)
+            if not user_id:
+                logging.warning("client.verification_response: no user_id found")
+                return
+
+            logging.info("client.verification_response: VERIFICATION RESPONSE from user %s for disconnected socket %s",
+                       user_id, data.get("disconnected_socket_id") if data else "unknown")
+            # Mark user as verified to prevent delayed removal from room
+            set_user_verification_received(user_id)
+            logging.info("client.verification_response: verification flag set for user %s", user_id)
+        except Exception:
+            logging.exception("client.verification_response handler error")
+
     @socketio.on("client.pong")
     def _on_client_pong(data: Optional[dict]):
         """Handle client heartbeat events to update user last_seen timestamp for health checks."""
         try:
-            logging.debug("client.pong: received heartbeat payload=%s", data)
+            logging.debug("client.pong: received pong payload=%s", data)
             user_id = get_user_id_from_socket()
             if not user_id:
                 return
@@ -300,3 +348,108 @@ def register_socket_handlers() -> None:
                 logging.debug("client.pong: updated last_seen for user %s", user_id)
         except Exception:
             logging.exception("client.pong handler error")
+
+    @socketio.on("disconnect")
+    def _on_disconnect():
+        """Handle client disconnection and check for other active connections."""
+        try:
+            logging.debug("disconnect: client disconnected, sid=%s", request.sid)
+            user_id = get_user_id_from_socket()
+
+            if not user_id:
+                logging.debug("disconnect: no user_id found for disconnected socket")
+                return
+
+            # Remove this socket connection from tracking
+            remove_socket_connection(user_id, request.sid)
+
+            # Check if user has other active connections
+            has_other_connections = check_user_other_connections(user_id, request.sid)
+
+            if has_other_connections:
+                logging.info("disconnect: user %s has other active connections (%d total), sending verification",
+                           user_id, len(get_user_socket_connections(user_id)))
+                # Clear any previous verification status and send verification message to other connections
+                clear_user_verification(user_id)
+                emit_to_user_sockets(user_id, "client.verify_connection", {
+                    "disconnected_socket_id": request.sid,
+                    "timestamp": int(time.time())
+                })
+                logging.info("disconnect: verification message sent to user %s, scheduling delayed check", user_id)
+                # Schedule delayed removal - if other connections respond with verification,
+                # they will prevent this removal
+                emit_function_after_delay(
+                    lambda room=None: _handle_user_disconnect_delayed(user_id),
+                    None,  # No room needed for this
+                    delay_seconds=5.0  # Wait 5 seconds for verification responses
+                )
+            else:
+                logging.info("disconnect: user %s has no other connections, removing immediately", user_id)
+                # No other connections, proceed with normal room leave logic immediately
+                _handle_user_disconnect(user_id)
+
+        except Exception:
+            logging.exception("disconnect handler error")
+
+    def _handle_user_disconnect(user_id: int) -> None:
+        """Handle user disconnection when no other connections exist."""
+        try:
+            # Find the user's active room membership
+            membership = RoomMembership.query.filter_by(user_id=user_id).first()
+            if not membership:
+                logging.debug("_handle_user_disconnect: no active membership for user %s", user_id)
+                return
+
+            room = membership.room
+            logging.info("_handle_user_disconnect: removing user %s from room %s", user_id, room.code)
+
+            # Remove membership
+            membership.leave()
+            db.session.commit()
+
+            # Update presence
+            emit_function_after_delay(emit_presence, room, 0.1)
+
+        except Exception:
+            logging.exception("_handle_user_disconnect error")
+
+    def _handle_user_disconnect_delayed(user_id: int) -> None:
+        """Handle delayed user disconnection after verification period."""
+        try:
+            logging.debug("_handle_user_disconnect_delayed: checking user %s after verification delay", user_id)
+
+            # Check if user has been verified (other connections responded)
+            is_verified = has_user_been_verified(user_id)
+            logging.info("_handle_user_disconnect_delayed: user %s verification check: %s", user_id, is_verified)
+            if is_verified:
+                logging.info("_handle_user_disconnect_delayed: user %s was verified by other connections, keeping in room",
+                           user_id)
+                return
+
+            # Double-check that user still has no active connections
+            # (in case new connections were established during the delay)
+            active_connections = get_user_socket_connections(user_id)
+            if active_connections:
+                logging.info("_handle_user_disconnect_delayed: user %s now has %d active connections, skipping removal",
+                           user_id, len(active_connections))
+                return
+
+            # Find the user's active room membership
+            membership = RoomMembership.query.filter_by(user_id=user_id).first()
+            if not membership:
+                logging.debug("_handle_user_disconnect_delayed: no active membership for user %s", user_id)
+                return
+
+            room = membership.room
+            logging.info("_handle_user_disconnect_delayed: removing user %s from room %s after verification timeout",
+                        user_id, room.code)
+
+            # Remove membership
+            membership.leave()
+            db.session.commit()
+
+            # Update presence
+            emit_function_after_delay(emit_presence, room, 0.1)
+
+        except Exception:
+            logging.exception("_handle_user_disconnect_delayed error")

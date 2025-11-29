@@ -17,12 +17,7 @@ export default class HeroSection {
                             and enjoy synchronized playback in real-time.
                         </p>
                         <div class="hero-actions">
-                            <a href="/auth/google" class="cta-button glass-button">
-                                <span>🚀</span> Get Started
-                            </a>
-                            <a href="/dashboard" class="secondary-button glass-button">
-                                <span>📊</span> Dashboard
-                            </a>
+                            
                         </div>
                     </div>
                     <div class="hero-stats glass-panel">

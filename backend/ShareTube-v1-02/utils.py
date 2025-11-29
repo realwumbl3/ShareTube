@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 # Regular expressions for parsing, time utility alias, sqlite error class, HTTP requests, and Flask app access
+import logging
 import re
 import sqlite3
 import requests
@@ -294,3 +295,50 @@ def commit_with_retry(
     # If we exhausted retries, re-raise the last lock error to the caller
     if last_exc:
         raise last_exc
+
+
+def get_redis_client():
+    """
+    Get a Redis client using the same connection as SocketIO message queue.
+    Returns None if Redis is not configured.
+    """
+    try:
+        import redis
+    except ImportError:
+        logging.warning("redis module not available, Redis-based features will not work across processes")
+        return None
+
+    message_queue_url = current_app.config.get("SOCKETIO_MESSAGE_QUEUE", "")
+    if not message_queue_url:
+        logging.warning("SOCKETIO_MESSAGE_QUEUE not configured, Redis-based features will not work across processes")
+        return None
+
+    try:
+        # Parse Redis URL (format: redis://host:port/db or redis://:password@host:port/db)
+        from urllib.parse import urlparse
+        parsed = urlparse(message_queue_url)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 6379
+        db_num = 0
+        if parsed.path:
+            try:
+                db_num = int(parsed.path.lstrip("/"))
+            except ValueError:
+                pass
+
+        password = parsed.password if parsed.password else None
+
+        redis_client = redis.Redis(
+            host=host,
+            port=port,
+            db=db_num,
+            password=password,
+            decode_responses=True,
+            socket_connect_timeout=2,
+        )
+        # Test connection
+        redis_client.ping()
+        return redis_client
+    except Exception as e:
+        logging.warning(f"Failed to connect to Redis: {e}")
+        return None
