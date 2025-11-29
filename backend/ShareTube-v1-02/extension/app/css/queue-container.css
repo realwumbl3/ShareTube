@@ -10,9 +10,13 @@
     backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
     border-radius: 14px;
     pointer-events: auto;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: max-content max-content auto max-content max-content;
     font-size: 12px;
     min-width: min(95vw, 550px);
-}
 
+    #sharetube_main & {
+        aspect-ratio: 1 / 1;
+    }
+
+}

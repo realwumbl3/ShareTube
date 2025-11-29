@@ -71,9 +71,14 @@ export default class MobileRemoteApp {
                     </div>
                 </header>
 
-                <main class="remote-content">
+                <main class="remote-content" zyx-if=${state.inRoom}>
                     <section class="playback-section glass-panel">${this.playbackControls}</section>
                     <section class="queue-section glass-panel">${this.queueList}</section>
+                </main>
+                <main class="remote-content" zyx-else>
+                    <section class="playback-section-unavailable glass-panel">
+                        <p>Not connected to a room. Please scan the QR code again.</p>
+                    </section>
                 </main>
             </div>
         `.bind(this);
@@ -260,12 +265,13 @@ css`
 
     /* Main Container */
     .mobile-remote-app {
-        min-height: 100dvh;
         padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
+        display: grid;
+        grid-template-rows: max-content 1fr;
+        gap: 10px;
         max-width: 100%;
+        height: 100dvh;
+        min-height: 100dvh;
     }
 
     /* Header */
@@ -376,8 +382,8 @@ css`
     .remote-content {
         flex: 1;
         display: grid;
-        grid-template-rows: max-content minmax(0, 1fr);
-        gap: 1rem;
+        grid-template-rows: max-content 1fr;
+        gap: 10px;
         min-height: 0;
     }
 
@@ -396,6 +402,17 @@ css`
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        position: relative;
+    }
+
+    .playback-section-unavailable {
+        padding: 1rem;
+        text-align: center;
+        display: grid;
+        place-items: center;
+        place-content: center;
+        height: 100%;
+        width: 100%;
     }
 
     .playback-section > *,

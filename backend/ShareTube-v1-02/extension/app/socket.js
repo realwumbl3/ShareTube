@@ -43,12 +43,9 @@ export default class SocketManager {
                 // extension stops emitting user.ready for a room the backend
                 // has already torn down.
                 try {
-                    state.inRoom.set(false);
-                    state.roomCode.set("");
-                    state.roomState.set("");
-                    this.app.youtubePlayer.onRoomStateChange("");
+                    this.app.resetRoomState();
                 } catch (e) {
-                    console.warn("ShareTube: failed to clear room state on disconnect", e);
+                    console.warn("ShareTube: failed to reset room state on disconnect", e);
                 }
             });
             // Low-level channel diagnostics/ping
@@ -112,9 +109,7 @@ export default class SocketManager {
             // that any late user.ready emissions (e.g. from video events
             // during navigation) are suppressed client‑side.
             try {
-                state.inRoom.set(false);
-                state.roomCode.set("");
-                state.roomState.set("");
+                this.app.resetRoomState();
             } catch (e) {
                 console.warn("ShareTube: failed to clear room state on beforeunload", e);
             }

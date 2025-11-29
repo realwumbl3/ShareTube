@@ -68,6 +68,11 @@ export default class ShareTubeApp {
         return this.roomManager.updateCodeHashInUrl(code);
     }
 
+    resetRoomState() {
+        state.resetRoomState();
+        this.youtubePlayer.onRoomStateChange("");
+    }
+
     constructor() {
         this.socket = new SocketManager(this);
         this.youtubePlayer = new YoutubePlayerManager(this);

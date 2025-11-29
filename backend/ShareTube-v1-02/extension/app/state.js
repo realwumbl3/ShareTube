@@ -47,6 +47,13 @@ class ShareTubeState {
         this.pillLocked = new LiveVar(false);
     }
 
+    resetRoomState() {
+        this.inRoom.set(false);
+        this.roomCode.set("");
+        this.roomState.set("");
+        this.adSyncMode.set("");
+    }
+
     serverDateNow() {
         return Date.now() + this.serverMsOffset.get() + this.fakeTimeOffset.get();
     }
