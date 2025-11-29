@@ -10,6 +10,7 @@ import ActivityFeed from "./ActivityFeed.js";
 import UserTable from "./UserTable.js";
 import RoomTable from "./RoomTable.js";
 import QueueTable from "./QueueTable.js";
+import AmbientBackground from "/extension/app/background/AmbientBackground.js";
 
 const API_BASE = window.__DASHBOARD_API_BASE__ || "/dashboard";
 
@@ -45,6 +46,12 @@ export default class DashboardApp {
 
         html`
             <div class=${this.isReady.interp((r) => (r ? "dashboard-app visible" : "dashboard-app"))}>
+                ${new AmbientBackground({
+                    fragmentShader: "/extension/app/background/shaders/ps3LiquidGlassFragment.glsl",
+                    skipFrame: true,
+                    maxResolution: 1080,
+                })}
+
                 <header class="dashboard-header glass-panel">
                     <div class="header-brand">
                         <h1>ShareTube <span class="brand-accent">/ Dashboard</span></h1>

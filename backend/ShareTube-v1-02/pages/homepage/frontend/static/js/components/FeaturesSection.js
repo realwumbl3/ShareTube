@@ -16,9 +16,9 @@ export default class FeaturesSection {
                             <div class="feature-details">
                                 <h2>Synchronized Playback</h2>
                                 <p>
-                                    ShareTube ensures all participants watch videos in perfect synchronization.
-                                    When one person pauses, everyone pauses. When someone seeks, everyone seeks.
-                                    Experience true synchronized viewing across all devices.
+                                    ShareTube ensures all participants watch videos in perfect synchronization. When one
+                                    person pauses, everyone pauses. When someone seeks, everyone seeks. Experience true
+                                    synchronized viewing across all devices.
                                 </p>
                                 <ul class="feature-list">
                                     <li>Real-time sync across all devices</li>
@@ -35,9 +35,9 @@ export default class FeaturesSection {
                             <div class="feature-details">
                                 <h2>Mobile Remote Control</h2>
                                 <p>
-                                    Use your smartphone as a remote control for any ShareTube room.
-                                    Perfect for presentations, group viewing sessions, or when you want
-                                    to control playback from across the room.
+                                    Use your smartphone as a remote control for any ShareTube room. Perfect for
+                                    presentations, group viewing sessions, or when you want to control playback from
+                                    across the room.
                                 </p>
                                 <ul class="feature-list">
                                     <li>QR code quick access</li>
@@ -54,8 +54,8 @@ export default class FeaturesSection {
                             <div class="feature-details">
                                 <h2>Real-time Chat</h2>
                                 <p>
-                                    Chat with friends while watching videos together. Share reactions,
-                                    comments, and thoughts in real-time without interrupting playback.
+                                    Chat with friends while watching videos together. Share reactions, comments, and
+                                    thoughts in real-time without interrupting playback.
                                 </p>
                                 <ul class="feature-list">
                                     <li>Instant messaging</li>
@@ -72,8 +72,8 @@ export default class FeaturesSection {
                             <div class="feature-details">
                                 <h2>Queue Management</h2>
                                 <p>
-                                    Build playlists together. Everyone in the room can add videos to the queue,
-                                    vote on what to watch next, and manage the playlist collaboratively.
+                                    Build playlists together. Everyone in the room can add videos to the queue, vote on
+                                    what to watch next, and manage the playlist collaboratively.
                                 </p>
                                 <ul class="feature-list">
                                     <li>Collaborative queue building</li>
@@ -90,8 +90,8 @@ export default class FeaturesSection {
                             <div class="feature-details">
                                 <h2>Room Management</h2>
                                 <p>
-                                    Create public or private rooms. Invite friends with room codes,
-                                    manage permissions, and control who can add videos or control playback.
+                                    Create public or private rooms. Invite friends with room codes, manage permissions,
+                                    and control who can add videos or control playback.
                                 </p>
                                 <ul class="feature-list">
                                     <li>Public and private rooms</li>
@@ -108,8 +108,8 @@ export default class FeaturesSection {
                             <div class="feature-details">
                                 <h2>Cross-Platform Support</h2>
                                 <p>
-                                    ShareTube works everywhere. Use it on desktop browsers, mobile devices,
-                                    tablets, and more. All platforms stay in sync.
+                                    ShareTube works everywhere. Use it on desktop browsers, mobile devices, tablets, and
+                                    more. All platforms stay in sync.
                                 </p>
                                 <ul class="feature-list">
                                     <li>Chrome extension</li>
@@ -167,9 +167,10 @@ css`
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        opacity: 0.2;
+        filter: opacity(0.5);
         line-height: 0.8;
         font-family: var(--font-mono);
+        mix-blend-mode: hard-light;
     }
 
     .feature-details {
@@ -234,7 +235,7 @@ css`
         .feature-item {
             padding: 2rem;
         }
-        
+
         .feature-list {
             grid-template-columns: 1fr;
         }
