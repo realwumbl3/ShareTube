@@ -1,0 +1,25 @@
+{
+    // JS project configuration for the mobile remote page sub-codebase.
+    // This file is picked up when you open `pages/mobile_remote/` as a workspace.
+    "compilerOptions": {
+        // Use modern ECMAScript for type checking and IntelliSense.
+        "target": "ES6",
+        "module": "ES6",
+        "baseUrl": ".",
+        // Editor-only path aliases for nicer imports while working on this page.
+        "paths": {
+            "/extension/app/*": ["/home/wumbl3wsl/ShareTube/backend/ShareTube-v1-02/extension/app/*"]
+        },
+        // Keep JS checking relaxed unless you prefer stricter rules.
+        "checkJs": false
+    },
+    "exclude": [
+        "../../node_modules",
+        "../../static",
+        "../../templates",
+        "../../migrations",
+        "../../views",
+        "../../models",
+        "../../scripts"
+    ]
+}
