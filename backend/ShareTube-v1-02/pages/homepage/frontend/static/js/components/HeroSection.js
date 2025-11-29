@@ -1,32 +1,68 @@
 import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
 
+import { googleSVG, chromiumSVG } from "/extension/app/assets/svgs.js";
+
 export default class HeroSection {
     constructor() {
         this.stats = new LiveVar({});
+        this.displayedStats = new LiveVar({ rooms: 0, queues: 0 });
+
         this.loadStats();
 
         html`
             <div class="hero-section">
                 <div class="hero-content glass-panel">
                     <div class="hero-text">
-                        <h1 class="hero-title">
-                            Watch Together, <span class="text-gradient">Anywhere</span>
-                        </h1>
+                        <h1 class="hero-title">Watch Together, <span class="text-gradient">Anywhere</span></h1>
                         <p class="hero-subtitle">
-                            ShareTube synchronizes YouTube videos across all devices. Create rooms, invite friends,
-                            and enjoy synchronized playback in real-time.
+                            ShareTube synchronizes YouTube videos across all devices. Install the extension to create
+                            rooms, invite friends, and enjoy synchronized playback in real-time.
                         </p>
-                        <div class="hero-actions">
-                            
+
+                        <div class="hero-actions-container">
+                            <div class="cta-primary-wrapper">
+                                <a
+                                    href="https://chrome.google.com/webstore/detail/sharetube"
+                                    target="_blank"
+                                    class="cta-button cta-primary"
+                                >
+                                    <span class="button-content">
+                                        <img src="${chromiumSVG}" class="chromium-icon" alt="Chromium" />
+                                        <span class="button-text">
+                                            <span class="button-main-text">Install Extension</span>
+                                            <span class="button-sub-text">Free • 30 seconds</span>
+                                        </span>
+                                    </span>
+                                    <span class="button-glow"></span>
+                                </a>
+                                <p class="action-helper">
+                                    <span class="helper-icon">✓</span>
+                                    Works with Chrome, Edge, and Brave
+                                </p>
+                            </div>
+                            <div class="cta-secondary-wrapper">
+                                <a
+                                    href="https://github.com/realwumbl3/sharetube"
+                                    target="_blank"
+                                    class="cta-button cta-secondary"
+                                >
+                                    <span class="icon">💻</span>
+                                    <span>View Source</span>
+                                    <span class="external-icon">↗</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
+
                     <div class="hero-stats glass-panel">
                         <div class="stat-item">
-                            <div class="stat-value">${this.stats.interp(s => s.rooms?.total || 0)}</div>
+                            <div class="stat-value">${this.displayedStats.interp((s) => s.rooms.toLocaleString())}</div>
                             <div class="stat-label">Active Rooms</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value">${this.stats.interp(s => s.queues?.total || 0)}</div>
+                            <div class="stat-value">
+                                ${this.displayedStats.interp((s) => s.queues.toLocaleString())}
+                            </div>
                             <div class="stat-label">Video Queues</div>
                         </div>
                     </div>
@@ -63,9 +99,36 @@ export default class HeroSection {
             const response = await fetch("/api/stats");
             const data = await response.json();
             this.stats.set(data);
+            this.animateStats(data);
         } catch (error) {
             console.error("Failed to load stats:", error);
         }
+    }
+
+    animateStats(data) {
+        const targetRooms = data.rooms?.total || 0;
+        const targetQueues = data.queues?.total || 0;
+        const duration = 2000; // 2 seconds
+        const start = performance.now();
+
+        const animate = (currentTime) => {
+            const elapsed = currentTime - start;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Ease out cubic
+            const ease = 1 - Math.pow(1 - progress, 3);
+
+            this.displayedStats.set({
+                rooms: Math.floor(targetRooms * ease),
+                queues: Math.floor(targetQueues * ease),
+            });
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+
+        requestAnimationFrame(animate);
     }
 }
 
@@ -80,160 +143,116 @@ css`
     .hero-content {
         display: grid;
         grid-template-columns: 1fr auto;
-        gap: 3rem;
+        gap: 4rem;
         align-items: center;
-        padding: 3rem;
+        padding: 4rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Add subtle glow to hero content */
+    .hero-content::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at center, rgba(0, 243, 255, 0.03), transparent 70%);
+        pointer-events: none;
     }
 
     .hero-text {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 2rem;
+        z-index: 1;
     }
 
     .hero-title {
-        font-size: 3.5rem;
-        font-weight: 700;
+        font-size: 4rem;
+        font-weight: 800;
         line-height: 1.1;
         margin: 0;
-        letter-spacing: -1px;
+        letter-spacing: -1.5px;
     }
 
     .hero-subtitle {
-        font-size: 1.25rem;
+        font-size: 1.35rem;
         color: var(--text-secondary);
         line-height: 1.6;
         margin: 0;
-        max-width: 600px;
+        max-width: 650px;
+        font-weight: 300;
     }
 
-    .hero-actions {
+    .hero-actions-container {
         display: flex;
-        gap: 1rem;
+        flex-direction: row;
+        gap: 1.5rem;
+        align-items: flex-start;
+        margin-top: 1.5rem;
         flex-wrap: wrap;
-    }
-
-    .cta-button,
-    .secondary-button {
-        padding: 0.875rem 2rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: var(--radius-md);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.3s ease;
-    }
-
-    .cta-button {
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-        color: #000;
-        box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
-    }
-
-    .cta-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 30px rgba(0, 243, 255, 0.6);
-    }
-
-    .secondary-button {
-        color: var(--text-primary);
     }
 
     .hero-stats {
         display: flex;
-        gap: 2rem;
-        padding: 1.5rem 2rem;
-        min-width: 280px;
-    }
-
-    .stat-item {
-        display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .stat-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .stat-label {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        gap: 2rem;
+        padding: 2.5rem;
+        min-width: 240px;
+        background: rgba(0, 0, 0, 0.4) !important; /* Darker for contrast */
     }
 
     .hero-features-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
+        gap: 2rem;
+        padding: 1rem;
     }
 
-    .feature-card {
-        padding: 2rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .feature-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
-    }
-
-    .feature-icon {
-        font-size: 3rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .feature-card h3 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin: 0;
-        color: var(--text-primary);
-    }
-
-    .feature-card p {
-        font-size: 1rem;
-        color: var(--text-secondary);
-        line-height: 1.6;
-        margin: 0;
-    }
-
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
         .hero-content {
             grid-template-columns: 1fr;
-            gap: 2rem;
+            gap: 3rem;
             padding: 2rem;
+            text-align: center;
         }
 
-        .hero-title {
-            font-size: 2.5rem;
+        .hero-text {
+            align-items: center;
         }
 
-        .hero-subtitle {
-            font-size: 1.1rem;
+        .hero-actions-container {
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cta-primary-wrapper,
+        .cta-secondary-wrapper {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .cta-secondary {
+            width: 100%;
         }
 
         .hero-stats {
             flex-direction: row;
             justify-content: space-around;
-            min-width: auto;
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.75rem;
         }
 
-        .hero-features-grid {
-            grid-template-columns: 1fr;
+        .hero-stats {
+            flex-direction: column;
+            gap: 2rem;
         }
     }
 `;
-
-

@@ -28,6 +28,7 @@ export const startingSVG = resolveAssetUrl("app/assets/starting.svg");
 export const remoteSVG = resolveAssetUrl("app/assets/remote.svg");
 export const errorSVG = resolveAssetUrl("app/assets/error.svg");
 export const googleSVG = resolveAssetUrl("app/assets/google.svg");
+export const chromiumSVG = resolveAssetUrl("app/assets/chromium.svg");
 export const lockSVG = resolveAssetUrl("app/assets/lock.svg");
 export const fullscreenSVG = resolveAssetUrl("app/assets/fullscreen.svg");
 export const exitFullscreenSVG = resolveAssetUrl("app/assets/exit-fullscreen.svg");

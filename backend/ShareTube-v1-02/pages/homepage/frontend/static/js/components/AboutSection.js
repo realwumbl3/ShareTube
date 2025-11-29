@@ -60,13 +60,10 @@ export default class AboutSection {
 
                     <div class="about-cta glass-panel">
                         <h2>Ready to get started?</h2>
-                        <p>Join ShareTube today and start watching videos together with friends.</p>
+                        <p>Install the extension today and start watching videos together with friends.</p>
                         <div class="cta-actions">
-                            <a href="/auth/google" class="cta-button glass-button">
-                                <span>🚀</span> Sign In with Google
-                            </a>
-                            <a href="/dashboard" class="secondary-button glass-button">
-                                <span>📊</span> View Dashboard
+                            <a href="https://chrome.google.com/webstore/detail/sharetube" target="_blank" class="cta-button glass-button">
+                                <span>🚀</span> Install Extension
                             </a>
                         </div>
                     </div>
@@ -80,29 +77,8 @@ css`
     .about-section {
         display: flex;
         flex-direction: column;
-        gap: 3rem;
+        gap: 4rem;
         padding: 2rem 0;
-    }
-
-    .section-header {
-        text-align: center;
-        margin-bottom: 1rem;
-    }
-
-    .section-title {
-        font-size: 3rem;
-        font-weight: 700;
-        margin: 0 0 1rem 0;
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .section-subtitle {
-        font-size: 1.25rem;
-        color: var(--text-secondary);
-        margin: 0;
     }
 
     .about-content {
@@ -113,20 +89,23 @@ css`
 
     .about-main {
         padding: 3rem;
+        background: rgba(0, 0, 0, 0.3) !important;
     }
 
     .about-main h2 {
-        font-size: 2rem;
-        font-weight: 600;
+        font-size: 2.2rem;
+        font-weight: 700;
         margin: 0 0 1.5rem 0;
         color: var(--text-primary);
+        letter-spacing: -0.5px;
     }
 
     .about-main p {
         font-size: 1.1rem;
         color: var(--text-secondary);
-        line-height: 1.7;
+        line-height: 1.8;
         margin: 0 0 1.5rem 0;
+        max-width: 900px;
     }
 
     .about-main p:last-child {
@@ -140,16 +119,20 @@ css`
     }
 
     .about-card {
-        padding: 2rem;
+        padding: 2.5rem;
         display: flex;
         flex-direction: column;
         gap: 1rem;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+        background: rgba(0, 0, 0, 0.3) !important;
     }
 
     .about-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        border-color: rgba(0, 243, 255, 0.2);
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) !important;
     }
 
     .about-card h3 {
@@ -160,80 +143,35 @@ css`
     }
 
     .about-card p {
-        font-size: 1rem;
+        font-size: 1.05rem;
         color: var(--text-secondary);
         line-height: 1.6;
         margin: 0;
     }
 
     .about-cta {
-        padding: 3rem;
+        padding: 4rem 2rem;
         text-align: center;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.4), rgba(0, 243, 255, 0.05)) !important;
+        border: 1px solid rgba(0, 243, 255, 0.1);
     }
 
     .about-cta h2 {
-        font-size: 2rem;
-        font-weight: 600;
+        font-size: 2.5rem;
+        font-weight: 800;
         margin: 0 0 1rem 0;
         color: var(--text-primary);
     }
 
     .about-cta p {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         color: var(--text-secondary);
-        margin: 0 0 2rem 0;
-    }
-
-    .cta-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .cta-button,
-    .secondary-button {
-        padding: 0.875rem 2rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: var(--radius-md);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.3s ease;
-    }
-
-    .cta-button {
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-        color: #000;
-        box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
-    }
-
-    .cta-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 30px rgba(0, 243, 255, 0.6);
-    }
-
-    .secondary-button {
-        color: var(--text-primary);
+        margin: 0 0 2.5rem 0;
     }
 
     @media (max-width: 768px) {
-        .section-title {
-            font-size: 2rem;
-        }
-
-        .section-subtitle {
-            font-size: 1.1rem;
-        }
-
         .about-main {
             padding: 2rem;
-        }
-
-        .about-main h2 {
-            font-size: 1.5rem;
         }
 
         .about-grid {
@@ -241,19 +179,7 @@ css`
         }
 
         .about-cta {
-            padding: 2rem;
-        }
-
-        .cta-actions {
-            flex-direction: column;
-        }
-
-        .cta-button,
-        .secondary-button {
-            width: 100%;
-            justify-content: center;
+            padding: 3rem 1.5rem;
         }
     }
 `;
-
-

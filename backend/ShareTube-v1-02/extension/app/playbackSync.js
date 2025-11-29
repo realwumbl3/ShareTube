@@ -60,7 +60,6 @@ export default class PlaybackSyncer {
         if (video.paused) return this.resetPlaybackRate();
 
         // Access manager's properties/methods
-        if (this.youtubePlayer.ad_playing.get()) return this.resetPlaybackRate();
         if (this.youtubePlayer.isAdPlayingNow()) return this.resetPlaybackRate();
         if (this.youtubePlayer.isNearContentEnd(1)) return this.resetPlaybackRate();
 

@@ -2,6 +2,7 @@ import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
 import HeroSection from "./HeroSection.js";
 import FeaturesSection from "./FeaturesSection.js";
 import AboutSection from "./AboutSection.js";
+import AmbientBackground from "/extension/app/background/AmbientBackground.js";
 
 export default class HomepageApp {
     constructor() {
@@ -14,6 +15,12 @@ export default class HomepageApp {
 
         html`
             <div class=${this.isReady.interp((r) => (r ? "homepage-app visible" : "homepage-app"))}>
+                ${new AmbientBackground({
+                    fragmentShader: "/extension/app/background/shaders/ps3LiquidGlassFragment.glsl",
+                    skipFrame: true,
+                    maxResolution: 1080,
+                })}
+
                 <header class="homepage-header glass-panel">
                     <div class="header-brand">
                         <h1>ShareTube <span class="brand-accent">/ Home</span></h1>
@@ -45,9 +52,7 @@ export default class HomepageApp {
 
                 <main class="homepage-content">
                     <!-- Home Tab -->
-                    <div class="view" zyx-if=${[this.currentTab, (v) => v === "home"]}>
-                        ${new HeroSection()}
-                    </div>
+                    <div class="view" zyx-if=${[this.currentTab, (v) => v === "home"]}>${new HeroSection()}</div>
 
                     <!-- Features Tab -->
                     <div class="view" zyx-if=${[this.currentTab, (v) => v === "features"]}>
@@ -55,10 +60,12 @@ export default class HomepageApp {
                     </div>
 
                     <!-- About Tab -->
-                    <div class="view" zyx-if=${[this.currentTab, (v) => v === "about"]}>
-                        ${new AboutSection()}
-                    </div>
+                    <div class="view" zyx-if=${[this.currentTab, (v) => v === "about"]}>${new AboutSection()}</div>
                 </main>
+
+                <footer class="homepage-footer">
+                    <p>&copy; ${new Date().getFullYear()} ShareTube. Open Source.</p>
+                </footer>
             </div>
         `.bind(this);
     }
@@ -66,7 +73,7 @@ export default class HomepageApp {
     setTab(tab) {
         this.currentTab.set(tab);
         // Smooth scroll to top when switching tabs
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     init() {
@@ -89,6 +96,8 @@ css`
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        position: relative;
+        z-index: 1;
     }
 
     .homepage-header {
@@ -100,12 +109,18 @@ css`
         column-gap: 2rem;
         outline: 1px solid var(--glass-border);
         border-radius: 100px;
-        background: rgba(0, 0, 0, 0.4);
+        background: rgba(5, 5, 7, 0.7);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         position: sticky;
         top: 1rem;
         z-index: 100;
+        transition: all 0.3s ease;
+    }
+
+    .homepage-header:hover {
+        background: rgba(5, 5, 7, 0.85);
+        outline-color: rgba(255, 255, 255, 0.15);
     }
 
     .header-brand h1 {
@@ -130,22 +145,20 @@ css`
         align-items: center;
         justify-content: center;
         gap: 0.4rem;
-        background: radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.08), transparent 60%),
-            rgba(255, 255, 255, 0.02);
-        padding: 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 0.5rem 1rem;
         border-radius: 999px;
         outline: 1px solid var(--glass-border);
-        box-shadow: var(--glow-primary);
         margin-left: auto;
     }
 
     .nav-btn {
         position: relative;
-        padding: 0.5rem 1.4rem;
+        padding: 0.6rem 1.5rem;
         border-radius: 999px;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         font-weight: 500;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
         background: transparent;
         color: var(--text-secondary);
@@ -154,21 +167,21 @@ css`
         outline: 0;
         -webkit-appearance: none;
         appearance: none;
-        transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, transform 0.15s ease;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
     }
 
     .nav-btn:hover {
         color: var(--text-primary);
         background: rgba(255, 255, 255, 0.08);
-        box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
         transform: translateY(-1px);
     }
 
     .nav-btn[active="true"] {
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-        color: #000;
-        font-weight: 600;
-        box-shadow: 0 0 18px rgba(0, 243, 255, 0.6);
+        background: rgb(0 0 0 / 54%);
+        color: var(--text-primary);
+        outline-color: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
     }
 
     .homepage-content {
@@ -179,17 +192,24 @@ css`
         width: 100%;
     }
 
-    .view {
-        animation: slideUpFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    .homepage-footer {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: auto;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
     }
 
-    @keyframes slideUpFade {
+    .view {
+        animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    @keyframes slideUp {
         from {
-            opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(30px);
         }
         to {
-            opacity: 1;
             transform: translateY(0);
         }
     }
@@ -208,10 +228,10 @@ css`
 
         .homepage-nav {
             width: 100%;
-            justify-content: flex-start;
+            justify-content: center;
             overflow-x: auto;
             white-space: nowrap;
-            padding: 0.5rem;
+
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
@@ -225,5 +245,3 @@ css`
         }
     }
 `;
-
-

@@ -119,7 +119,7 @@ export default class YoutubePlayerManager {
     // Check if video is an actual player (descendant of ytd-video#ytd-player) and not a preview
     isActualVideoPlayer(videoEl) {
         // Must NOT be a child of ytd-video-preview
-        const videoPreview = videoEl.closest('ytd-video-preview');
+        const videoPreview = videoEl.closest("ytd-video-preview");
         if (videoPreview) return false;
         return true;
     }
@@ -232,14 +232,14 @@ export default class YoutubePlayerManager {
 
     onEnded = (e) => {
         this.near_end_probe_sent = true;
-        this.app.socket.emit("queue.probe");
         this.setDesiredState("paused", "onEnded");
     };
 
     checkIfVideoFinished() {
-        if (!this.video) return;
+        if (!this.video || this.isAdPlayingNow()) return;
         if (this.videoCurrentTimeMs < this.videoDurationMs - 1000) return;
         this.app.socket.emit("queue.probe");
+        this.osdDebug.log("checkIfVideoFinished: queue probe sent");
     }
 
     getPlayerState() {
@@ -290,7 +290,6 @@ export default class YoutubePlayerManager {
         const seconds = progressMs / 1000;
         if (!this.video) return;
         // Don't seek during ads - let ads play naturally
-        if (this.ad_playing.get && this.ad_playing.get()) return;
         if (this.isAdPlayingNow()) return;
         // Suppress our seeking/seeked handlers during programmatic seek
         this.is_programmatic_seek.set(true);
@@ -390,7 +389,6 @@ export default class YoutubePlayerManager {
     maybeEmitNearEndProbe() {
         if (!this.video || this.near_end_probe_sent) return;
         // Don't probe if it's an ad
-        if (this.ad_playing.get && this.ad_playing.get()) return;
         if (this.isAdPlayingNow()) return;
 
         // Use authoritative server-side timing to decide when the video is "near end"
@@ -409,6 +407,7 @@ export default class YoutubePlayerManager {
             // Prevent restarts while server advances the queue
             this.setDesiredState("paused");
             this.app.socket.emit("queue.probe");
+            this.osdDebug.log("maybeEmitNearEndProbe: near end probe sent");
         }
     }
 

@@ -16,15 +16,12 @@ export default class PlayerOSDDebug {
         this.logList = new LiveList([]);
 
         html`<div class="player_osd_debug" zyx-if=${state.debug_mode}>
-            Video Observed.
             <div class="debug-list">
                 <span>ad_sync_mode: ${state.adSyncMode.interp()}</span>
                 <span>in_room: ${state.inRoom.interp()}</span>
                 <span>room_state: ${state.roomState.interp()}</span>
-                <span>desired_state: ${this.youtubePlayer.desired_state.interp()}</span>
+                <span>enforced player state: ${this.youtubePlayer.desired_state.interp()}</span>
                 <span>ad_playing: ${this.youtubePlayer.ad_playing.interp()}</span>
-                <span>is_enforcing: ${this.youtubePlayer.is_enforcing.interp()}</span>
-                <span>is_programmatic_seek: ${this.youtubePlayer.is_programmatic_seek.interp()}</span>
                 <span>current_playback_rate: ${state.currentPlaybackRate.interp()}</span>
             </div>
             <div class="log-header">Log</div>
@@ -51,19 +48,21 @@ css`
         position: absolute;
         top: 4px;
         left: 4px;
-        backdrop-filter: blur(10px) brightness(0.5) contrast(1.1);
+        backdrop-filter: blur(10px) brightness(2) contrast(0.5);
         color: #fff;
         z-index: 1000000000;
         min-width: 200px;
         padding: 2px;
         border-radius: 4px;
-        font-size: 11px;
-        font-family: sans-serif;
-        flex-direction: column;
         gap: 1px;
-        align-items: center;
-        justify-content: center;
         display: flex;
+        flex-direction: column;
+        outline: 1px solid rgba(255, 255, 255, 0.6);
+
+        font-size: 8px;
+        font-family: "Roboto";
+        color: #fff;
+
         & .debug-list {
             display: flex;
             flex-direction: column;
@@ -71,18 +70,9 @@ css`
             align-items: start;
             text-align: left;
             width: 100%;
-            & > span {
-                font-size: 8px;
-                font-family: sans-serif;
-                color: #fff;
-            }
         }
         & .log-header {
-            font-size: 8px;
-            font-family: sans-serif;
-            color: #fff;
-            width: 100%;
-            border-left: 1px solid #fff;
+            border-left: 3px solid #fff;
             border-bottom: 1px solid #fff;
             padding-left: 4px;
         }
@@ -97,9 +87,6 @@ css`
             overflow-y: auto;
         }
         & .log-item {
-            font-size: 8px;
-            font-family: sans-serif;
-            color: #fff;
         }
     }
 `;

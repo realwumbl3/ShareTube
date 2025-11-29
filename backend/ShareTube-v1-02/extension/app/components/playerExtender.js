@@ -202,7 +202,6 @@ export default class PlayerExtender {
 
     seekRelative(deltaSeconds) {
         // Don't seek during ads - let ads play naturally
-        if (this.youtubePlayer.ad_playing.get()) return;
         if (this.youtubePlayer.isAdPlayingNow()) return;
 
         if (!state.inRoom.get()) {
