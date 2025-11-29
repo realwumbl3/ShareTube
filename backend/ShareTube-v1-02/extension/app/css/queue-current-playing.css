@@ -104,7 +104,7 @@
     font-size: 9px;
     opacity: 0.9;
     background: rgba(0, 0, 0, 0.7);
-    border-radius: 3px;
+    border-radius: 100vh;
     display: grid;
     place-items: center;
     width: 100%;
@@ -116,11 +116,10 @@
     height: 100%;
     width: 100%;
     background: rgba(0, 0, 0, 0.7);
-    border-radius: 3px;
+    border-radius: inherit;
     display: grid;
     align-items: stretch;
     overflow: hidden;
-    /* padding: var(--padding); */
 }
 
 #sharetube_queue .current_playing_progress .bar_inner {
@@ -137,7 +136,7 @@
     width: 100%;
     font-size: 9px;
     opacity: 0.9;
-    padding: calc(var(--padding) * 2);
+    padding: 3px 16px;
     user-select: none;
 }
 
@@ -160,5 +159,3 @@
 #sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-playing-since {
     display: inline;
 }
-
-

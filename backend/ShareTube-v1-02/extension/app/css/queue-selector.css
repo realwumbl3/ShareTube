@@ -3,7 +3,6 @@
     grid-template-columns: repeat(4, 1fr);
     align-items: center;
     gap: 4px;
-    padding: 6px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
@@ -12,17 +11,17 @@
     cursor: pointer;
     text-align: center;
     user-select: none;
-    padding: 10px 20px;
+    padding: 5px 10px;
 }
 
 #sharetube_queue .queue_selector .queue_selector_item:hover {
-    background: rgba(0, 0, 0, 0.5);
+    text-decoration: underline;
 }
 
 #sharetube_queue .queue_selector .queue_selector_item:active {
-    background: rgba(0, 0, 0, 0.6);
+    text-decoration: underline;
 }
 
 #sharetube_queue .queue_selector .queue_selector_item.active {
-    background: rgba(0, 0, 0, 0.6);
+    text-decoration: underline;
 }
