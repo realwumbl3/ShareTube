@@ -28,7 +28,7 @@ from .migrations import run_all_migrations
 # Configure a standard log format for file and console handlers
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 # Initialize base logging with INFO level so our explicit logging.info calls show up
-logging.basicConfig(level=logging.INFO, format=log_format)
+logging.basicConfig(level=logging.DEBUG, format=log_format)
 # Create a logger specific to this module
 logger = logging.getLogger(__name__)
 # Also emit to console for systemd/journald visibility
@@ -36,7 +36,7 @@ try:
     # Create a console handler
     _console = logging.StreamHandler()
     # Set console threshold to INFO
-    _console.setLevel(logging.INFO)
+    _console.setLevel(logging.DEBUG)
     # Apply same formatter to console logs
     _console.setFormatter(logging.Formatter(log_format))
     # Get root logger to attach handler only once

@@ -141,7 +141,7 @@ h6 {
     outline: 1px solid var(--glass-border);
     color: var(--text-primary);
     border-radius: var(--radius-sm);
-    transition: all 0.3s ease;
+    transition: outline-color 0.3s ease, box-shadow 0.3s ease, outline 0.3s ease;
 }
 
 .glass-input:focus {

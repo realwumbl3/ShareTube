@@ -12,7 +12,6 @@ export default class FeaturesSection {
                 <div class="features-list">
                     <div class="feature-item glass-panel">
                         <div class="feature-content">
-                            <div class="feature-number">01</div>
                             <div class="feature-details">
                                 <h2>Synchronized Playback</h2>
                                 <p>
@@ -31,7 +30,6 @@ export default class FeaturesSection {
 
                     <div class="feature-item glass-panel">
                         <div class="feature-content">
-                            <div class="feature-number">02</div>
                             <div class="feature-details">
                                 <h2>Mobile Remote Control</h2>
                                 <p>
@@ -50,7 +48,6 @@ export default class FeaturesSection {
 
                     <div class="feature-item glass-panel">
                         <div class="feature-content">
-                            <div class="feature-number">03</div>
                             <div class="feature-details">
                                 <h2>Real-time Chat</h2>
                                 <p>
@@ -68,7 +65,6 @@ export default class FeaturesSection {
 
                     <div class="feature-item glass-panel">
                         <div class="feature-content">
-                            <div class="feature-number">04</div>
                             <div class="feature-details">
                                 <h2>Queue Management</h2>
                                 <p>
@@ -86,7 +82,6 @@ export default class FeaturesSection {
 
                     <div class="feature-item glass-panel">
                         <div class="feature-content">
-                            <div class="feature-number">05</div>
                             <div class="feature-details">
                                 <h2>Room Management</h2>
                                 <p>
@@ -104,7 +99,6 @@ export default class FeaturesSection {
 
                     <div class="feature-item glass-panel">
                         <div class="feature-content">
-                            <div class="feature-number">06</div>
                             <div class="feature-details">
                                 <h2>Cross-Platform Support</h2>
                                 <p>
@@ -126,6 +120,39 @@ export default class FeaturesSection {
 }
 
 css`
+    /* Section Header Styles */
+    .section-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin: 0 0 1rem 0;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -1px;
+        background-size: 100% 100%;
+        display: inline-block;
+    }
+
+    .section-subtitle {
+        font-size: 1.3rem;
+        color: var(--text-secondary);
+        margin: 0;
+        text-shadow: 0px 2px 4px #000001ab;
+        font-weight: 300;
+    }
+
+    @media (max-width: 768px) {
+        .section-title {
+            font-size: 2.5rem;
+        }
+    }
+
     .features-section {
         display: flex;
         flex-direction: column;
@@ -141,7 +168,7 @@ css`
 
     .feature-item {
         padding: 3rem;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         border: 1px solid transparent;
         background: rgba(0, 0, 0, 0.3) !important;
     }
@@ -150,27 +177,14 @@ css`
         transform: translateX(10px);
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         border-color: rgba(0, 243, 255, 0.2);
-        background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01)) !important;
+        background: rgba(0, 0, 0, 0.5) !important;
     }
 
     .feature-content {
         display: grid;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: 1fr;
         gap: 3rem;
         align-items: start;
-    }
-
-    .feature-number {
-        font-size: 5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        filter: opacity(0.5);
-        line-height: 0.8;
-        font-family: var(--font-mono);
-        mix-blend-mode: hard-light;
     }
 
     .feature-details {

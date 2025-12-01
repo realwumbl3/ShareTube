@@ -152,7 +152,7 @@ css`
         background: rgba(0, 0, 0, 0.3);
         outline: 1px solid var(--glass-border);
         box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-        transition: all 0.3s ease;
+        transition: transform 0.3s ease, outline-color 0.3s ease;
     }
 
     .activity-icon::before {
@@ -176,7 +176,7 @@ css`
         padding: 1rem;
         background: rgba(255, 255, 255, 0.02);
         outline: 1px solid var(--glass-border);
-        transition: all 0.2s;
+        transition: background 0.2s, outline-color 0.2s, transform 0.2s;
     }
 
     .activity-item:hover .activity-content {

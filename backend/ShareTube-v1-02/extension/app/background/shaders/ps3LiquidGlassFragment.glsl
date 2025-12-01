@@ -4,20 +4,20 @@ uniform vec2 u_resolution;
 uniform float u_time;
 uniform vec2 u_mouse;
 
-// --- PS3 XMB LIQUID GLASS AESTHETIC ---
-// The iconic flowing ribbons and glassy waves
+// --- PS3 XMB LIQUID GLASS AESTHETIC (PURPLE EDITION) ---
+// The iconic flowing ribbons and glassy waves with a purple theme
 
-// Color palette - the classic PS3 blue theme with warm accents
-const vec3 C_DEEP_SPACE    = vec3(0.008, 0.012, 0.035);   // Near-black blue
-const vec3 C_OCEAN_DEEP    = vec3(0.02, 0.06, 0.18);      // Deep blue
-const vec3 C_WAVE_BLUE     = vec3(0.1, 0.35, 0.65);       // Mid wave blue
-const vec3 C_GLASS_CYAN    = vec3(0.2, 0.55, 0.85);       // Bright glass cyan
-const vec3 C_GLASS_WHITE   = vec3(0.7, 0.85, 1.0);        // Glass highlight
-const vec3 C_WARM_ACCENT   = vec3(0.95, 0.6, 0.3);        // Warm orange accent
-const vec3 C_PURPLE_TINT   = vec3(0.4, 0.2, 0.6);         // Purple undertone
+// Color palette - tuned to a deep purple/violet theme
+const vec3 C_DEEP_SPACE    = vec3(0.05, 0.0, 0.1);     // Deep purple black
+const vec3 C_OCEAN_DEEP    = vec3(0.15, 0.05, 0.3);    // Rich violet
+const vec3 C_WAVE_BLUE     = vec3(0.4, 0.2, 0.7);      // Mid purple
+const vec3 C_GLASS_CYAN    = vec3(0.7, 0.5, 0.9);      // Bright lavender
+const vec3 C_GLASS_WHITE   = vec3(0.9, 0.8, 1.0);      // White/Purple tint
+const vec3 C_WARM_ACCENT   = vec3(1.0, 0.5, 0.8);      // Magenta/Pink
+const vec3 C_PURPLE_TINT   = vec3(0.6, 0.1, 0.8);      // Deep magenta tint
 
 // Visual tuning
-const float WAVE_SPEED = 0.08;
+const float WAVE_SPEED = 0.32;
 const float WAVE_COMPLEXITY = 6.0;
 const float GLASS_INTENSITY = 0.7;
 const float RIBBON_GLOW = 0.5;
@@ -65,6 +65,14 @@ float fbm(vec2 st, int octaves) {
         amplitude *= 0.5;
     }
     return value;
+}
+
+// --- COLOR UTILS ---
+
+vec3 hueShift(vec3 color, float hue) {
+    const vec3 k = vec3(0.57735, 0.57735, 0.57735);
+    float cosAngle = cos(hue);
+    return vec3(color * cosAngle + cross(k, color) * sin(hue) + k * dot(k, color) * (1.0 - cosAngle));
 }
 
 // --- PS3 WAVE FUNCTION ---
@@ -149,12 +157,13 @@ void main() {
         float layerDepth = (i + 1.0) / WAVE_COMPLEXITY;
         
         // Wave parameters vary per layer
-        float freq = 2.5 + i * 0.4;
-        float amp = 0.12 - i * 0.012;
-        float speed = time * (1.0 + i * 0.15);
+        // Balanced parameters between "ribbon" and "fabric"
+        float freq = 1.8 + i * 0.3; 
+        float amp = 0.14 - i * 0.01;
+        float speed = time * (1.0 + i * 0.12);
         
-        // Calculate wave position
-        float waveY = 0.3 + i * 0.1 + ps3Wave(distortedPos, speed, layerOffset, freq, amp);
+        // Calculate wave position - semi-packed
+        float waveY = 0.38 + i * 0.06 + ps3Wave(distortedPos, speed, layerOffset, freq, amp);
         
         // Apply parallax depth per layer
         waveY += mouseDelta.y * (1.0 + i * 0.5);
@@ -162,12 +171,12 @@ void main() {
         // Distance to wave ribbon
         float distToWave = abs(distortedPos.y - waveY);
         
-        // Ribbon thickness varies
-        float thickness = 0.025 + sin(distortedPos.x * 3.0 + speed) * 0.008;
+        // Ribbon thickness varies - medium thickness
+        float thickness = 0.045 + sin(distortedPos.x * 2.5 + speed) * 0.012;
         
         // Soft ribbon edge with glow
         float ribbon = smoothstep(thickness, 0.0, distToWave);
-        float ribbonGlow = smoothstep(thickness * 4.0, 0.0, distToWave) * 0.3;
+        float ribbonGlow = smoothstep(thickness * 5.0, 0.0, distToWave) * 0.35;
         
         // Glass effect on ribbon
         float glass = glassReflection(distortedPos, ribbon, u_time * 0.3 + i);
@@ -233,6 +242,7 @@ void main() {
         // Pulsing intensity
         float pulse = sin(u_time * (0.5 + i * 0.2) + i * 3.0) * 0.3 + 0.7;
         
+        // Bokeh shape
         float b = bokeh(pos, bokehPos, size, 0.3) * pulse;
         
         // Color varies per bokeh
@@ -282,7 +292,10 @@ void main() {
     float luma = dot(color, vec3(0.299, 0.587, 0.114));
     color = mix(vec3(luma), color, 1.15);
     
+    // --- 8. GLOBAL HUE CYCLE ---
+    // Slowly cycle the entire hue spectrum over time
+    float globalHue = u_time * 0.1; // Slow cycle speed
+    color = hueShift(color, globalHue);
+    
     gl_FragColor = vec4(color, 1.0);
 }
-
-

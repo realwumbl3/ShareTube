@@ -29,7 +29,7 @@ css`
         padding: 1.5rem;
         position: relative;
         overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), outline-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         outline: 1px solid var(--glass-border);
     }
 
@@ -56,7 +56,7 @@ css`
         margin-right: 1.25rem;
         color: var(--text-secondary);
         font-size: 1.5rem;
-        transition: all 0.3s ease;
+        transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
         outline: 1px solid rgba(255, 255, 255, 0.05);
     }
 

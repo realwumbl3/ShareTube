@@ -13,14 +13,14 @@ export default class AboutSection {
                     <div class="about-main glass-panel">
                         <h2>What is ShareTube?</h2>
                         <p>
-                            ShareTube is a platform that enables synchronized video watching across multiple devices.
-                            Whether you're watching YouTube videos with friends, hosting a watch party, or presenting
-                            content to a group, ShareTube keeps everyone in perfect sync.
+                            ShareTube is a Chrome extension that enables synchronized video watching across multiple
+                            devices. Whether you're watching YouTube videos with friends, hosting a watch party, or
+                            presenting content to a group, ShareTube keeps everyone in perfect sync.
                         </p>
                         <p>
-                            Built with modern web technologies, ShareTube provides a seamless experience for creating
-                            rooms, inviting participants, and enjoying synchronized playback with real-time chat and
-                            queue management.
+                            As a browser extension, ShareTube integrates seamlessly with YouTube, providing a seamless
+                            experience for creating rooms, inviting participants, and enjoying synchronized playback
+                            with real-time chat and queue management.
                         </p>
                     </div>
 
@@ -28,32 +28,32 @@ export default class AboutSection {
                         <div class="about-card glass-panel">
                             <h3>🎯 Mission</h3>
                             <p>
-                                To make synchronized video watching accessible, easy, and enjoyable for everyone.
-                                We believe that watching videos together should be as simple as sharing a link.
+                                To make synchronized video watching accessible, easy, and enjoyable for everyone. We
+                                believe that watching videos together should be as simple as sharing a link.
                             </p>
                         </div>
 
                         <div class="about-card glass-panel">
                             <h3>⚡ Technology</h3>
                             <p>
-                                Built with Flask, Socket.IO, and modern JavaScript. Real-time synchronization
-                                powered by WebSockets ensures low-latency playback control across all devices.
+                                Built with Flask, Socket.IO, and modern JavaScript. Real-time synchronization powered by
+                                WebSockets ensures low-latency playback control across all devices.
                             </p>
                         </div>
 
                         <div class="about-card glass-panel">
                             <h3>🔒 Privacy</h3>
                             <p>
-                                Your data is yours. ShareTube respects your privacy and gives you control over
-                                your rooms and content. Private rooms stay private.
+                                Your data is yours. ShareTube respects your privacy and gives you control over your
+                                rooms and content. Private rooms stay private.
                             </p>
                         </div>
 
                         <div class="about-card glass-panel">
                             <h3>🚀 Open Source</h3>
                             <p>
-                                ShareTube is built with open-source technologies and follows best practices
-                                for security, performance, and user experience.
+                                ShareTube is built with open-source technologies and follows best practices for
+                                security, performance, and user experience.
                             </p>
                         </div>
                     </div>
@@ -62,7 +62,11 @@ export default class AboutSection {
                         <h2>Ready to get started?</h2>
                         <p>Install the extension today and start watching videos together with friends.</p>
                         <div class="cta-actions">
-                            <a href="https://chrome.google.com/webstore/detail/sharetube" target="_blank" class="cta-button glass-button">
+                            <a
+                                href="https://chrome.google.com/webstore/detail/sharetube"
+                                target="_blank"
+                                class="cta-button glass-button"
+                            >
                                 <span>🚀</span> Install Extension
                             </a>
                         </div>
@@ -74,6 +78,36 @@ export default class AboutSection {
 }
 
 css`
+    /* Section Header Styles */
+    .section-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin: 0 0 1rem 0;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -1px;
+    }
+
+    .section-subtitle {
+        font-size: 1.3rem;
+        color: var(--text-secondary);
+        margin: 0;
+        font-weight: 300;
+    }
+
+    @media (max-width: 768px) {
+        .section-title {
+            font-size: 2.5rem;
+        }
+    }
+
     .about-section {
         display: flex;
         flex-direction: column;
@@ -123,7 +157,7 @@ css`
         display: flex;
         flex-direction: column;
         gap: 1rem;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         border: 1px solid transparent;
         background: rgba(0, 0, 0, 0.3) !important;
     }
@@ -132,7 +166,7 @@ css`
         transform: translateY(-5px);
         box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
         border-color: rgba(0, 243, 255, 0.2);
-        background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) !important;
+        background: rgba(0, 0, 0, 0.6) !important;
     }
 
     .about-card h3 {
@@ -169,6 +203,14 @@ css`
         margin: 0 0 2.5rem 0;
     }
 
+    /* About Section CTA Styles */
+    .cta-actions {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
     @media (max-width: 768px) {
         .about-main {
             padding: 2rem;
@@ -180,6 +222,11 @@ css`
 
         .about-cta {
             padding: 3rem 1.5rem;
+        }
+
+        .cta-actions {
+            flex-direction: column;
+            gap: 1rem;
         }
     }
 `;

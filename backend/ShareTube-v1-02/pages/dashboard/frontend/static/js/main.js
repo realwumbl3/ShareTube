@@ -10,7 +10,7 @@ function initDashboard() {
     // Create and mount the main dashboard app
     const dashboard = new DashboardApp();
     document.body.appendChild(dashboard.main);
-
+    window.___DASHBOARD_APP__ = dashboard;
     // Initialize Socket.IO for real-time updates
     const socket = io({
         path: "/socket.io",

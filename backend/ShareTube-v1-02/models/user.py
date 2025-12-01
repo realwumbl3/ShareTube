@@ -32,11 +32,15 @@ class User(db.Model):
     # User role: 'user', 'admin', 'super_admin'
     role: Mapped[str] = db.Column(db.String(32), default="user", server_default="user")
 
+    # Whether the user is a fake user for testing purposes
+    fake_user: Mapped[bool] = db.Column(db.Boolean, default=False, index=True)
+
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
             "picture": self.picture,
             "ready": getattr(self, "ready", None),
+            "fake_user": self.fake_user,
         }
 

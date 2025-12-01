@@ -46,7 +46,7 @@
     grid-template-areas: "thumb meta actions";
     align-items: center;
     gap: 8px;
-    padding: 3px 10px;
+    padding: .3em;
     border-radius: 8px;
     background: linear-gradient(135deg,
             rgba(255, 255, 255, 0.03),
@@ -106,15 +106,6 @@
     gap: 4px;
 }
 
-#sharetube_queue .queue-item .meta .url .external-link-icon {
-    display: inline-flex;
-    align-items: center;
-    opacity: 0.6;
-    margin-left: 4px;
-    cursor: pointer;
-    transition: opacity 100ms ease;
-}
-
 #sharetube_queue .queue-item .meta .url .link-drag-icon {
     display: inline-flex;
     align-items: center;
@@ -122,6 +113,14 @@
     margin-left: 4px;
     cursor: grab;
     transition: opacity 100ms ease;
+    margin-left: auto;
+
+    &>img {
+        width: 12px;
+        height: 12px;
+        display: block;
+        user-select: none;
+    }
 }
 
 #sharetube_queue .queue-item .meta .url .link-drag-icon:active {
@@ -132,30 +131,25 @@
     opacity: 1;
 }
 
-#sharetube_queue .queue-item .meta .url .link-drag-icon img {
-    width: 12px;
-    height: 12px;
-    display: block;
-}
-
 #sharetube_queue .queue-item .meta .url .external-link-icon:hover {
     opacity: 1;
 }
 
-#sharetube_queue .queue-item .meta .url .external-link-icon img {
-    width: 12px;
-    height: 12px;
-    display: block;
-}
 
-#sharetube_queue .queue-item img.thumb {
-    width: 80px;
-    height: 45px;
-    object-fit: cover;
-    border-radius: 8px;
-    background: #111;
-    flex: 0 0 auto;
-    grid-area: thumb;
+#sharetube_queue .queue-item .meta .url .external-link-icon {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.6;
+    margin-left: 4px;
+    cursor: pointer;
+    transition: opacity 100ms ease;
+
+    &>img {
+        width: 12px;
+        height: 12px;
+        display: block;
+        user-select: none;
+    }
 }
 
 #sharetube_queue .queue-item-duration {
@@ -173,10 +167,21 @@
 }
 
 #sharetube_queue .queue-item-thumbnail {
+    grid-area: thumb;
     display: flex;
     flex-direction: column;
     gap: 4px;
     position: relative;
+    user-select: none;
+
+    &>img {
+        width: 80px;
+        height: 45px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #111;
+        flex: 0 0 auto;
+    }
 }
 
 #sharetube_queue .queue-item .queue-item-actions {

@@ -15,8 +15,8 @@ export default class HeroSection {
                     <div class="hero-text">
                         <h1 class="hero-title">Watch Together, <span class="text-gradient">Anywhere</span></h1>
                         <p class="hero-subtitle">
-                            ShareTube synchronizes YouTube videos across all devices. Install the extension to create
-                            rooms, invite friends, and enjoy synchronized playback in real-time.
+                            ShareTube is a Chrome extension that synchronizes YouTube videos across all devices. Install
+                            the extension to create rooms, invite friends, and enjoy synchronized playback in real-time.
                         </p>
 
                         <div class="hero-actions-container">
@@ -175,6 +175,7 @@ css`
         line-height: 1.1;
         margin: 0;
         letter-spacing: -1.5px;
+        user-select: none;
     }
 
     .hero-subtitle {
@@ -184,6 +185,7 @@ css`
         margin: 0;
         max-width: 650px;
         font-weight: 300;
+        text-shadow: 0px 2px 4px #000001ab;
     }
 
     .hero-actions-container {
@@ -201,6 +203,7 @@ css`
         gap: 2rem;
         padding: 2.5rem;
         min-width: 240px;
+        user-select: none;
         background: rgba(0, 0, 0, 0.4) !important; /* Darker for contrast */
     }
 
@@ -234,7 +237,7 @@ css`
             max-width: 400px;
         }
 
-        .cta-secondary {
+        .cta-button {
             width: 100%;
         }
 
@@ -254,5 +257,214 @@ css`
             flex-direction: column;
             gap: 2rem;
         }
+    }
+
+    /* Feature Card Styles (used in hero-features-grid) */
+    .feature-card {
+        --gradient-angle: 320deg;
+        padding: 2.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        transition: box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), outline-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-position 0.4s cubic-bezier(0.4, 0, 0.2, 1), --gradient-angle 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        outline: 1px solid transparent;
+        user-select: none;
+        background-image: linear-gradient(
+            var(--gradient-angle),
+            rgba(255, 255, 255, 0.01) 0%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(228, 228, 228, 0.3) 50.5%,
+            rgba(255, 255, 255, 0.05) 100%
+        ) !important;
+        background-size: 100% 100%;
+        background-position: 50% 50%;
+    }
+
+    .feature-card:hover {
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        outline-color: rgba(233, 254, 255, 0.37);
+        background-position: 50% 100%;
+        --gradient-angle: 323deg;
+    }
+
+    .feature-icon {
+        font-size: 3.5rem;
+        margin-bottom: 0.5rem;
+        filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.1));
+    }
+
+    .feature-card h3 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-primary);
+        text-shadow: 0px 2px 4px #000001ab;
+    }
+
+    .feature-card p {
+        font-size: 1.05rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin: 0;
+        text-shadow: 0px 2px 4px #000001ab;
+    }
+
+    /* Stats Styles */
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 3.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-weight: 500;
+    }
+
+    /* Hero Section CTA Button Styles */
+    .cta-primary {
+        padding: 1.35rem 2.75rem;
+        font-weight: 700;
+        box-shadow: 0 6px 25px rgba(0, 243, 255, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    }
+
+    .cta-primary:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 12px 40px rgba(0, 243, 255, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    }
+
+    .cta-primary:active {
+        transform: translateY(-1px) scale(1.01);
+    }
+
+    .cta-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        color: var(--text-primary);
+        outline: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1rem 2rem;
+        font-weight: 600;
+        box-shadow: none;
+    }
+
+    .cta-secondary:hover {
+        background: rgba(255, 255, 255, 0.08);
+        outline-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .cta-primary-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        flex: 0 1 auto;
+    }
+
+    .cta-secondary-wrapper {
+        display: flex;
+        align-items: center;
+        flex: 0 1 auto;
+    }
+
+    .button-content {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .button-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.15rem;
+        line-height: 1.2;
+    }
+
+    .button-main-text {
+        font-size: 1.15rem;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+    }
+
+    .button-sub-text {
+        font-size: 0.75rem;
+        font-weight: 600;
+        opacity: 0.7;
+        letter-spacing: 0.2px;
+    }
+
+    .button-glow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.4), transparent 70%);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease, height 0.6s ease;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .cta-primary:hover .button-glow {
+        width: 300px;
+        height: 300px;
+    }
+
+    .chromium-icon {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    }
+
+    .action-helper {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        opacity: 0.85;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+        padding-left: 0.25rem;
+        user-select: none;
+    }
+
+    .helper-icon {
+        color: var(--accent-primary);
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .external-icon {
+        font-size: 0.9em;
+        opacity: 0.7;
+        transition: opacity 0.3s ease;
+    }
+
+    .cta-secondary:hover .external-icon {
+        opacity: 1;
+    }
+
+    .icon {
+        font-size: 1.2em;
     }
 `;

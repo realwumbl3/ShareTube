@@ -210,17 +210,14 @@ export default class ShareTubeApp {
     }
 
     onClientVerifyConnection(data) {
-        console.log("ShareTube: received client.verify_connection", data);
-        console.log("ShareTube: sending verification response for disconnected socket", data.disconnected_socket_id);
         // When we receive this event, it means another client connection for this user
         // has disconnected. We should respond to confirm we're still active.
         // The server will use this to determine whether to keep the user in the room.
         try {
             this.socket.emit("client.verification_response", {
                 ts: Date.now(),
-                disconnected_socket_id: data.disconnected_socket_id
+                disconnected_socket_id: data.disconnected_socket_id,
             });
-            console.log("ShareTube: verification response sent successfully");
         } catch (err) {
             console.warn("ShareTube: failed to emit verification response", err);
         }

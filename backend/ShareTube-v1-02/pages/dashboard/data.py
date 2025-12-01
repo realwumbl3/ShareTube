@@ -61,6 +61,7 @@ class DashboardData:
                 "created_at": None,  # User model doesn't have created_at
                 "room_count": room_count,
                 "videos_added": videos_added,
+                "fake_user": user.fake_user,
             })
 
         return user_data
@@ -89,19 +90,19 @@ class DashboardData:
                 RoomAudit.created_at >= day_ago_ts
             ).count()
 
-        room_data.append({
-            "id": room.id,
-            "code": room.code,
-            "name": room.code,  # Use code as name since there's no name field
-            "is_active": True,  # Assume rooms are active since no is_active field
-            "is_public": not room.is_private,
-            "member_count": member_count,
-            "queue_count": queue_count,
-            "recent_activity": recent_activity,
-            "created_at": room.created_at,
-            "owner": room.owner.name if room.owner else "Unknown",
-            "owner_id": room.owner_id,
-        })
+            room_data.append({
+                "id": room.id,
+                "code": room.code,
+                "name": room.code,  # Use code as name since there's no name field
+                "is_active": True,  # Assume rooms are active since no is_active field
+                "is_public": not room.is_private,
+                "member_count": member_count,
+                "queue_count": queue_count,
+                "recent_activity": recent_activity,
+                "created_at": room.created_at,
+                "owner": room.owner.name if room.owner else "Unknown",
+                "owner_id": room.owner_id,
+            })
 
         return room_data
 
@@ -141,6 +142,61 @@ class DashboardData:
             })
 
         return queue_data
+
+    @staticmethod
+    def create_fake_users(count: int = 5) -> Dict[str, Any]:
+        """Create fake users for testing purposes."""
+        try:
+            import random
+            import uuid
+            for i in range(count):
+                name = f"FakeUser{random.randint(1000, 9999)}"
+                email = f"fake{uuid.uuid4().hex[:16]}@test.com"
+                # Create fake user
+                fake_user = User(
+                    name=name,
+                    email=email,
+                    fake_user=True,
+                    active=True,
+                    role="user"
+                )
+                db.session.add(fake_user)
+            db.session.flush()
+            db.session.commit()
+            return {
+                "success": True,
+                "created_count": count
+            }
+        except Exception as e:
+            logger.error(f"Error creating fake users: {e}")
+            db.session.rollback()
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    @staticmethod
+    def remove_all_fake_users() -> Dict[str, Any]:
+        """Remove all fake users from the database."""
+        try:
+            # Get count before deletion
+            count_before = db.session.query(User).filter(User.fake_user == True).count()
+
+            # Delete all fake users
+            db.session.query(User).filter(User.fake_user == True).delete()
+            db.session.commit()
+
+            return {
+                "success": True,
+                "removed_count": count_before
+            }
+        except Exception as e:
+            db.session.rollback()
+            logger.exception("Error removing fake users")
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
     @staticmethod
     def get_system_health() -> Dict[str, Any]:

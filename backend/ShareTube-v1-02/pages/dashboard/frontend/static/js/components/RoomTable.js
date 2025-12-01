@@ -64,7 +64,6 @@ export default class RoomTable {
         this.searchTerm.subscribe(() => this.updateFilteredRooms());
         this.showActiveOnly.subscribe(() => this.updateFilteredRooms());
         this.rooms.subscribe(() => this.updateFilteredRooms());
-        this.updateFilteredRooms();
 
         html`
             <div class="room-table-container glass-panel">
@@ -232,7 +231,7 @@ css`
 
     .room-row {
         display: grid;
-        grid-template-columns: 1fr 1.5fr 1fr 1fr 0.8fr 0.8fr 0.8fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr 1fr 0.8fr 0.8fr 0.8fr 1fr;
         border-bottom: 1px solid var(--glass-border);
         transition: background-color 0.2s;
         align-items: center;

@@ -24,6 +24,7 @@ export default class HomepageApp {
                 <header class="homepage-header glass-panel">
                     <div class="header-brand">
                         <h1>ShareTube <span class="brand-accent">/ Home</span></h1>
+                        <span class="extension-badge">Chrome Extension</span>
                     </div>
                     <nav class="homepage-nav">
                         <button
@@ -101,7 +102,7 @@ css`
     }
 
     .homepage-header {
-        margin: 1rem 2rem;
+        margin: 1rem 1.7rem;
         padding: 1rem 1.5rem;
         display: grid;
         grid-template-columns: auto 1fr;
@@ -109,18 +110,21 @@ css`
         column-gap: 2rem;
         outline: 1px solid var(--glass-border);
         border-radius: 100px;
-        background: rgba(5, 5, 7, 0.7);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
         position: sticky;
         top: 1rem;
         z-index: 100;
-        transition: all 0.3s ease;
+        transition: outline-color 0.3s ease;
     }
 
     .homepage-header:hover {
-        background: rgba(5, 5, 7, 0.85);
         outline-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .header-brand {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        user-select: none;
     }
 
     .header-brand h1 {
@@ -140,13 +144,26 @@ css`
         opacity: 0.8;
     }
 
+    .extension-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--accent-primary);
+        background: rgba(0, 243, 255, 0.1);
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 243, 255, 0.2);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        align-self: flex-start;
+    }
+
     .homepage-nav {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 0.4rem;
         background: rgba(255, 255, 255, 0.03);
-        padding: 0.5rem 1rem;
+        padding: 0.5rem 1.5rem;
         border-radius: 999px;
         outline: 1px solid var(--glass-border);
         margin-left: auto;
@@ -167,19 +184,19 @@ css`
         outline: 0;
         -webkit-appearance: none;
         appearance: none;
-        transition: all 0.3s ease;
+        transition: color 0.3s ease, background 0.3s ease, transform 0.3s ease;
         border: 1px solid transparent;
     }
 
     .nav-btn:hover {
-        color: var(--text-primary);
+        color: var(--accent-primary);
         background: rgba(255, 255, 255, 0.08);
         transform: translateY(-1px);
     }
 
     .nav-btn[active="true"] {
         background: rgb(0 0 0 / 54%);
-        color: var(--text-primary);
+        color: var(--accent-primary);
         outline-color: rgba(255, 255, 255, 0.8);
         box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
     }

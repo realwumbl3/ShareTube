@@ -12,6 +12,7 @@
     pointer-events: auto;
     display: grid;
     grid-template-rows: max-content max-content auto max-content max-content;
+    justify-content: stretch;
     font-size: 12px;
     min-width: min(95vw, 550px);
 

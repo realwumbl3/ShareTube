@@ -4,11 +4,15 @@ import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } f
 
 import { msDurationTimeStamp } from "../utils.js";
 
+import PlaybackControls from "./PlaybackControls.js";
+
 export default class ShareTubeQueue {
     constructor(app, { isMobileRemote = false } = {}) {
         this.app = app;
 
         this.isMobileRemote = isMobileRemote;
+
+        this.playbackControls = isMobileRemote ? new PlaybackControls(app, { isMobileRemote }) : null;
 
         html`
             <div
@@ -31,17 +35,19 @@ export default class ShareTubeQueue {
                     </button>
                 </div>
 
-                <div this="current_playing" class="current_playing" zyx-if=${state.currentPlaying.item}>
-                    <div class="current_playing_header">
-                        <span class="current_playing_header_title">Current playing</span>
-                    </div>
-                    <div class="current_playing_container">
-                        <div class="current_playing_thumbnail">
+                <div this="current_playing" class="current_playing">
+                    <img
+                        class="current_playing_background"
+                        src=${state.currentPlaying.item.interp((v) => v?.thumbnail_url || null)}
+                        loading="lazy"
+                    />    
+                    <div class="current_playing_container" zyx-if=${state.currentPlaying.item}>
+                        <div class="current_playing_thumbnail" >
                             <img
                                 class="thumb"
                                 alt=${state.currentPlaying.item.interp((v) => v?.title || "")}
-                                src=${state.currentPlaying.item.interp((v) => v?.thumbnail_url)}
-                                loading="lazy"
+                                src=${state.currentPlaying.item.interp((v) => v?.thumbnail_url || null)}
+                                loading="lazy" draggable="false"
                             />
                             <div class="current_playing_duration">
                                 ${state.currentPlaying.item.interp((v) => msDurationTimeStamp(v?.duration_ms || 0))}
@@ -54,7 +60,12 @@ export default class ShareTubeQueue {
                             <span class="current_playing_url">${state.currentPlaying.item.interp((v) => v?.url)}</span>
                         </div>
                     </div>
-                    <div this="current_playing_progress" class="current_playing_progress">
+                    <div class="no_video_playing_label" zyx-else>
+                        <span class="current_playing_placeholder_text">No video playing</span>
+                    </div>
+                    <div this="current_playing_progress" 
+                    class="current_playing_progress" 
+                    zyx-if=${state.currentPlaying.item}>
                         <div class="progress_bar">
                             <div class="bar_inner"></div>
                         </div>
@@ -81,11 +92,9 @@ export default class ShareTubeQueue {
                             >
                         </div>
                     </div>
+                    ${this.playbackControls || ""}
                 </div>
-                <div class="no_video_playing_label" zyx-else>
-                    <span class="current_playing_placeholder_text">No video playing</span>
-                </div>
-
+            
                 <div class="queues">
                     <div class="queue_container" zyx-radioview="queues.queued">
                         <div
@@ -148,6 +157,7 @@ export default class ShareTubeQueue {
                         </div>
                     </div>
                 </div>
+
                 <div class="queue_selector">
                     <div class="queue_selector_item" zyx-radioview="queues.queued.open">
                         <span class="queue_selector_item_text"
@@ -170,6 +180,7 @@ export default class ShareTubeQueue {
                         >
                     </div>
                 </div>
+
                 <div class="queue-footer"></div>
             </div>
         `.bind(this);
@@ -230,7 +241,7 @@ export class ShareTubeQueueComponent {
         html`
             <div class="queue-item" data-id=${this.item.id}>
                 <div class="queue-item-thumbnail">
-                    <img class="thumb" alt="${this.item.title || ""}" src="${this.item.thumbnail_url}" loading="lazy" />
+                    <img class="thumb" alt="${this.item.title || ""}" src="${this.item.thumbnail_url}" loading="lazy" draggable="false" />
                     <div class="queue-item-duration">${msDurationTimeStamp(this.item.duration_ms)}</div>
                 </div>
                 <div class="meta">

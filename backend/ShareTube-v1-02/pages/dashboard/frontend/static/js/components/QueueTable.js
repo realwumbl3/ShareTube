@@ -10,29 +10,22 @@ class QueueTableRow {
                 <div class="queue-room">
                     <span class="mobile-label">Room</span>
                     <div class="room-info">
-                        <span class="room-code">${queue.room_code.interp(v => v)}</span>
-                        <button
-                            class="expand-btn"
-                            zyx-click=${() => this.expanded.set(!this.expanded.get())}
-                        >
-                            ${this.expanded.interp(e => e ? '▼' : '▶')}
+                        <span class="room-code">${queue.room_code.interp((v) => v)}</span>
+                        <button class="expand-btn" zyx-click=${() => this.expanded.set(!this.expanded.get())}>
+                            ${this.expanded.interp((e) => (e ? "▼" : "▶"))}
                         </button>
                     </div>
                 </div>
                 <div class="queue-count">
                     <span class="mobile-label">Count</span>
-                    ${queue.entry_count.interp(v => v)} videos
+                    ${queue.entry_count.interp((v) => v)} videos
                 </div>
                 <div class="queue-preview">
                     <span class="mobile-label">Content</span>
                     <!-- Collapsed view -->
-                    <div zyx-if=${[this.expanded, e => !e]}>
-                        ${this.renderCollapsedContent()}
-                    </div>
+                    <div zyx-if=${[this.expanded, (e) => !e]}>${this.renderCollapsedContent()}</div>
+                    <div zyx-else>${this.renderExpandedContent()}</div>
                     <!-- Expanded view -->
-                    <div zyx-if=${[this.expanded, e => e]}>
-                        ${this.renderExpandedContent()}
-                    </div>
                 </div>
             </div>
         `.bind(this);
@@ -48,8 +41,7 @@ class QueueTableRow {
         return html`
             <div class="queue-preview-item">
                 <span class="video-title">${firstEntry.title}</span>
-                ${entries.length > 1 ?
-                    html`<span class="more-items">+${entries.length - 1} more</span>` : ''}
+                ${entries.length > 1 ? html`<span class="more-items">+${entries.length - 1} more</span>` : ""}
             </div>
         `;
     }
@@ -62,32 +54,36 @@ class QueueTableRow {
 
         return html`
             <div class="queue-entries">
-                ${entries.map(entry => html`
-                    <div class="queue-entry">
-                        <div class="entry-info">
-                            <span class="entry-title">${entry.title}</span>
-                            <span class="entry-meta">by ${entry.added_by} • ${this.formatDuration(entry.duration_ms)}</span>
+                ${entries.map(
+                    (entry) => html`
+                        <div class="queue-entry">
+                            <div class="entry-info">
+                                <span class="entry-title">${entry.title}</span>
+                                <span class="entry-meta"
+                                    >by ${entry.added_by} • ${this.formatDuration(entry.duration_ms)}</span
+                                >
+                            </div>
+                            <div class="entry-url">${entry.url}</div>
                         </div>
-                        <div class="entry-url">${entry.url}</div>
-                    </div>
-                `)}
+                    `
+                )}
             </div>
         `;
     }
 
     formatDuration(ms) {
-        if (!ms) return '0:00';
+        if (!ms) return "0:00";
         const seconds = Math.floor(ms / 1000);
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
-        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
     }
 }
 
 export default class QueueTable {
     constructor(queues) {
         this.queues = queues;
-        this.searchTerm = new LiveVar('');
+        this.searchTerm = new LiveVar("");
         this.filteredQueues = new LiveList([]);
 
         // Update filtered queues when search term or queues change
@@ -98,7 +94,7 @@ export default class QueueTable {
         html`
             <div class="queue-table-container glass-panel">
                 <div class="table-header-control">
-                    <h3>Queues <span class="count-badge">${this.queues.interp(q => q.length)}</span></h3>
+                    <h3>Queues <span class="count-badge">${this.queues.interp((q) => q.length)}</span></h3>
                     <div class="table-controls">
                         <input
                             type="text"
@@ -116,12 +112,14 @@ export default class QueueTable {
                             <div class="header-cell">Count</div>
                             <div class="header-cell">Queue Contents</div>
                         </div>
-                        <div class="table-body" zyx-live-list=${{
-                            list: this.filteredQueues,
-                            compose: QueueTableRow,
-                            filter: () => true
-                        }}>
-                        </div>
+                        <div
+                            class="table-body"
+                            zyx-live-list=${{
+                                list: this.filteredQueues,
+                                compose: QueueTableRow,
+                                filter: () => true,
+                            }}
+                        ></div>
                     </div>
                 </div>
             </div>
@@ -136,13 +134,10 @@ export default class QueueTable {
         this.filteredQueues.splice(0, this.filteredQueues.length);
 
         // Add filtered queues
-        const filtered = term ?
-            allQueues.filter(queue =>
-                queue.room_code.toLowerCase().includes(term)
-            ) : allQueues;
+        const filtered = term ? allQueues.filter((queue) => queue.room_code.toLowerCase().includes(term)) : allQueues;
 
         // Add all filtered queues to the LiveList
-        filtered.forEach(queue => this.filteredQueues.push(queue));
+        filtered.forEach((queue) => this.filteredQueues.push(queue));
     }
 }
 
@@ -196,7 +191,7 @@ css`
 
     .queue-table-header {
         display: grid;
-        grid-template-columns: 2fr 1fr 3fr;
+        grid-template-columns: 1fr 1fr 3fr;
         background: rgba(0, 0, 0, 0.2);
         border-bottom: 1px solid var(--glass-border);
         font-weight: 600;
@@ -218,7 +213,7 @@ css`
 
     .queue-row {
         display: grid;
-        grid-template-columns: 2fr 1fr 3fr;
+        grid-template-columns: 1fr 1fr 3fr;
         border-bottom: 1px solid var(--glass-border);
         transition: background-color 0.2s;
     }
@@ -261,7 +256,7 @@ css`
         font-size: 0.8rem;
         padding: 0.2rem;
         border-radius: 3px;
-        transition: all 0.2s;
+        transition: color 0.2s, background-color 0.2s;
         border: none;
     }
 
@@ -276,9 +271,6 @@ css`
         white-space: nowrap;
     }
 
-    .queue-preview {
-        max-width: 400px;
-    }
 
     .queue-preview-item {
         display: flex;
@@ -375,7 +367,7 @@ css`
         .queue-table {
             min-width: 100%;
         }
-        
+
         .queue-table-header {
             display: none;
         }
@@ -399,7 +391,7 @@ css`
             align-items: flex-start; /* Changed from center for preview content */
             width: 100%;
         }
-        
+
         .queue-row > div:last-child {
             border-bottom: none;
             flex-direction: column; /* Stack label and content for preview */
@@ -410,7 +402,7 @@ css`
             display: block;
             flex-shrink: 0;
         }
-        
+
         .queue-preview {
             max-width: none;
             width: 100%;

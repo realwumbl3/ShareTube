@@ -270,3 +270,73 @@ def get_health():
     return jsonify(DashboardData.get_system_health())
 
 
+@dashboard_bp.route("/api/debug/create-fake-users", methods=["POST", "GET"])
+@require_auth
+def create_fake_users():
+    """
+    Create fake users for testing purposes.
+    Accepts count as query parameter or JSON body.
+    """
+    try:
+        logger.info("Starting create_fake_users request")
+
+        # Try query parameter first (GET), then JSON body (POST)
+        count = request.args.get('count', type=int)
+        if count is None:
+            # Try JSON body
+            try:
+                data = request.json or {}
+                count = data.get("count", 5)
+            except Exception as e:
+                logger.warning(f"JSON parsing failed: {e}, using default count")
+                count = 5
+
+        logger.info(f"Requested count: {count}")
+
+        if not isinstance(count, int) or count < 1 or count > 50:
+            logger.warning(f"Invalid count: {count}")
+            return jsonify({"error": "Count must be an integer between 1 and 50"}), 400
+
+        if not isinstance(count, int) or count < 1 or count > 50:
+            logger.warning(f"Invalid count: {count}")
+            return jsonify({"error": "Count must be an integer between 1 and 50"}), 400
+
+        logger.info("Calling DashboardData.create_fake_users")
+        result = DashboardData.create_fake_users(count)
+        logger.info(f"DashboardData.create_fake_users returned: {result}")
+
+        if result["success"]:
+            # Emit real-time update to refresh user data
+            emit_dashboard_update('full_update', {})
+            logger.info("Successfully created fake users, emitting update")
+            return jsonify(result)
+        else:
+            logger.error(f"Failed to create fake users: {result}")
+            return jsonify(result), 500
+
+    except Exception as e:
+        logger.exception("Error in create_fake_users endpoint")
+        return jsonify({"error": str(e)}), 500
+
+
+@dashboard_bp.route("/api/debug/remove-fake-users", methods=["POST"])
+@require_auth
+def remove_fake_users():
+    """
+    Remove all fake users from the database.
+    """
+    try:
+        result = DashboardData.remove_all_fake_users()
+
+        if result["success"]:
+            # Emit real-time update to refresh user data
+            emit_dashboard_update('full_update', {})
+            return jsonify(result)
+        else:
+            return jsonify(result), 500
+
+    except Exception as e:
+        logger.exception("Error in remove_fake_users endpoint")
+        return jsonify({"error": str(e)}), 500
+
+

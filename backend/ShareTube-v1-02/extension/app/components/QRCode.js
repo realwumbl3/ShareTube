@@ -195,7 +195,7 @@ css`
         cursor: pointer;
         padding: 4px;
         border-radius: 4px;
-        transition: all 0.2s ease;
+        transition: background 0.2s ease, color 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -257,7 +257,7 @@ css`
         background: rgba(255, 255, 255, 0.05);
         border-radius: 6px;
         border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-        transition: all 0.2s ease;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     }
 
     .qr-url:hover {

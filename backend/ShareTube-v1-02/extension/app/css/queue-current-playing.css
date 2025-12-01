@@ -21,6 +21,22 @@
     background: linear-gradient(135deg,
             rgba(255, 255, 255, 0.06),
             rgba(0, 0, 0, 0.4));
+    position: relative;
+}
+
+#sharetube_queue .current_playing .current_playing_background {
+    position: absolute;
+    object-fit: cover;
+    place-self: stretch;
+    inset: 0;
+    z-index: -1;
+    filter: blur(5px) brightness(0.6) contrast(0.9);
+    visibility: hidden;
+    user-select: none;
+
+    &[src] {
+        visibility: visible;
+    }
 }
 
 #sharetube_queue .current_playing .current_playing_title {
@@ -50,6 +66,7 @@
     flex-direction: column;
     gap: 4px;
     position: relative;
+    user-select: none;
 
     &>img {
         width: 96px;
