@@ -11,6 +11,7 @@ import RoomManager from "./roomManager.js";
 import AuthManager from "./authManager.js";
 import UIManager from "./uiManager.js";
 import StorageManager from "./storageManager.js";
+import ThumbnailExtAddToQueue from "./components/ThumbnailExtAddToQueue.js";
 
 import Queue from "./components/Queue.js";
 import UserIcons from "./components/UserIcons.js";
@@ -81,6 +82,7 @@ export default class ShareTubeApp {
         this.authManager = new AuthManager(this);
         this.uiManager = new UIManager(this);
         this.storageManager = new StorageManager(this);
+        this.thumbnailExtAddToQueue = new ThumbnailExtAddToQueue(this);
 
         // Components
         this.queue = new Queue(this);

@@ -16,23 +16,7 @@ export default class UIManager {
         const ytUrls = urls.filter(isYouTubeUrl);
         if (ytUrls.length === 0) return;
 
-        if (!state.inRoom.get()) {
-            const code = await this.app.createRoom();
-            if (code) {
-                this.app.updateCodeHashInUrl(code);
-                await this.app.tryJoinRoomFromUrl();
-                // Wait for join to complete
-                const start = Date.now();
-                while (!state.inRoom.get()) {
-                    if (Date.now() - start > 5000) break;
-                    await new Promise((r) => setTimeout(r, 100));
-                }
-            }
-        }
-
-        if (state.inRoom.get()) {
-            ytUrls.forEach((u) => this.app.enqueueUrl(u));
-        }
+        await this.enqueueUrlsOrCreateRoom(ytUrls);
     }
 
     onEnter(e) {
@@ -86,6 +70,29 @@ export default class UIManager {
             if (!this.app.sharetube_main.matches(":hover")) {
                 this.app.sharetube_main.classList.remove("revealed");
             }
+        }
+    }
+
+    async enqueueUrlsOrCreateRoom(urls) {
+        if (!urls || urls.length === 0) return;
+
+        if (!state.inRoom.get()) {
+            const code = await this.app.createRoom();
+            if (code) {
+                this.app.updateCodeHashInUrl(code);
+                await this.app.tryJoinRoomFromUrl();
+                // Wait for join to complete
+                const start = Date.now();
+                while (!state.inRoom.get()) {
+                    if (Date.now() - start > 5000) break;
+                    // eslint-disable-next-line no-await-in-loop
+                    await new Promise((r) => setTimeout(r, 100));
+                }
+            }
+        }
+
+        if (state.inRoom.get()) {
+            urls.forEach((u) => this.app.enqueueUrl(u));
         }
     }
 }
