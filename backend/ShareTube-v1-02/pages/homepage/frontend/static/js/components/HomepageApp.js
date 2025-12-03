@@ -2,7 +2,7 @@ import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
 import HeroSection from "./HeroSection.js";
 import FeaturesSection from "./FeaturesSection.js";
 import AboutSection from "./AboutSection.js";
-import AmbientBackground from "/extension/app/background/AmbientBackground.js";
+import AmbientBackground, { shaderFragmentPathMap } from "/extension/app/background/AmbientBackground.js";
 
 export default class HomepageApp {
     constructor() {
@@ -10,16 +10,21 @@ export default class HomepageApp {
         this.currentTab = new LiveVar("home"); // home, features, about
         this.isReady = new LiveVar(false);
 
+        this.peekBackground = new LiveVar(false);
+        this.ambientBackground = new AmbientBackground({
+            fragmentShader: Object.values(shaderFragmentPathMap)[0],
+            skipFrame: true,
+            maxResolution: 1080,
+        });
         // Initialize
         this.init();
 
         html`
-            <div class=${this.isReady.interp((r) => (r ? "homepage-app visible" : "homepage-app"))}>
-                ${new AmbientBackground({
-                    fragmentShader: "/extension/app/background/shaders/ps3LiquidGlassFragment.glsl",
-                    skipFrame: true,
-                    maxResolution: 1080,
-                })}
+            <div
+                class=${this.isReady.interp((r) => (r ? "homepage-app visible" : "homepage-app"))}
+                peek=${this.peekBackground.interp((v) => v || null)}
+            >
+                ${this.ambientBackground}
 
                 <header class="homepage-header glass-panel">
                     <div class="header-brand">
@@ -66,9 +71,37 @@ export default class HomepageApp {
 
                 <footer class="homepage-footer">
                     <p>&copy; ${new Date().getFullYear()} ShareTube. Open Source.</p>
+                    <div class="shader-selector" zyx-click=${(e) => e.el.classList.toggle("active")}>
+                        <div class="selector-trigger"><span class="icon">🎨</span> Theme</div>
+                        <div class="selector-menu">
+                            ${Object.keys(shaderFragmentPathMap).map(
+                                (shader) =>
+                                    html`<div
+                                        class="shader-selector-item"
+                                        zyx-click=${() => this.ambientBackground.setShader(shader)}
+                                    >
+                                        ${shader
+                                            .replace("Fragment", "")
+                                            .replace(/([A-Z])/g, " $1")
+                                            .trim()}
+                                    </div>`
+                            )}
+                        </div>
+                    </div>
+                    <button class="peek-btn glass-button" zyx-click=${() => this.peekBackground.toggle()}>
+                        ${this.peekBackground.interp((v) => (v ? "Hide" : "Peek"))}
+                    </button>
                 </footer>
             </div>
         `.bind(this);
+
+        document.addEventListener("keypress", this.onKeypress.bind(this));
+    }
+
+    onKeypress(e) {
+        if (e.key === "`") {
+            this.ambientBackground.cycleShader();
+        }
     }
 
     setTab(tab) {
@@ -99,6 +132,18 @@ css`
         flex-direction: column;
         position: relative;
         z-index: 1;
+        &[peek="true"] {
+            .homepage-header {
+                opacity: 0;
+                pointer-events: none;
+            }
+            .homepage-content {
+                opacity: 0;
+                pointer-events: none;
+            }
+            .homepage-footer {
+                opacity: .3;
+        }
     }
 
     .homepage-header {
@@ -113,7 +158,7 @@ css`
         position: sticky;
         top: 1rem;
         z-index: 100;
-        transition: outline-color 0.3s ease;
+        transition: outline-color 0.3s ease, opacity 0.3s ease;
     }
 
     .homepage-header:hover {
@@ -168,7 +213,7 @@ css`
         outline: 1px solid var(--glass-border);
         margin-left: auto;
     }
-
+    
     .nav-btn {
         position: relative;
         padding: 0.6rem 1.5rem;
@@ -187,26 +232,27 @@ css`
         transition: color 0.3s ease, background 0.3s ease, transform 0.3s ease;
         border: 1px solid transparent;
     }
-
+    
     .nav-btn:hover {
         color: var(--accent-primary);
         background: rgba(255, 255, 255, 0.08);
         transform: translateY(-1px);
     }
-
+    
     .nav-btn[active="true"] {
         background: rgb(0 0 0 / 54%);
         color: var(--accent-primary);
         outline-color: rgba(255, 255, 255, 0.8);
         box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
     }
-
+    
     .homepage-content {
         flex: 1;
         padding: 2rem;
         max-width: 1400px;
         margin: 0 auto;
         width: 100%;
+        transition: opacity 0.3s ease;
     }
 
     .homepage-footer {
@@ -216,6 +262,7 @@ css`
         font-size: 0.9rem;
         margin-top: auto;
         background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+        transition: opacity 0.3s ease;
     }
 
     .view {
@@ -260,5 +307,82 @@ css`
         .homepage-content {
             padding: 1rem;
         }
+    }
+
+    /* Shader Selector */
+    .shader-selector {
+        position: relative;
+        display: inline-block;
+        margin-top: 1.5rem;
+        font-family: inherit;
+        text-align: left;
+    }
+
+    .selector-trigger {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-secondary);
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+
+    .selector-trigger:hover,
+    .shader-selector.active .selector-trigger {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .selector-menu {
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%) translateY(10px) scale(0.95);
+        background: rgba(15, 15, 20, 0.9);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 0.4rem;
+        min-width: 180px;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+
+    .shader-selector.active .selector-menu {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    .shader-selector-item {
+        padding: 0.6rem 1rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .shader-selector-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
     }
 `;

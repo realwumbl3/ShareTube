@@ -1,4 +1,4 @@
-import { html, css } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
 
 css`
     /* ============================================
@@ -22,6 +22,17 @@ css`
     }
 `;
 
+export const shaderFragmentPathMap = {
+    xmbPrestigeFlowFragment: "/extension/app/background/shaders/xmbPrestigeFlowFragment.glsl",
+    xmbPremiumFragment: "/extension/app/background/shaders/xmbPremiumFragment.glsl",
+    premiumAmbientFragment: "/extension/app/background/shaders/premiumAmbientFragment.glsl",
+    ps3LiquidGlassFragment: "/extension/app/background/shaders/ps3LiquidGlassFragment.glsl",
+    ps3LiquidGlassImprovedFragment: "/extension/app/background/shaders/ps3LiquidGlassImprovedFragment.glsl",
+    ambientFlowFragment: "/extension/app/background/shaders/ambientFlowFragment.glsl",
+    epicNebulaFragment: "/extension/app/background/shaders/epicNebulaFragment.glsl",
+    prismaticNeuralFragment: "/extension/app/background/shaders/prismaticNeuralFragment.glsl",
+};
+
 export default class AmbientBackground {
     /**
      * Shadertoy-compatible background manager
@@ -38,6 +49,8 @@ export default class AmbientBackground {
         if (!options.fragmentShader) {
             throw new Error("AmbientBackground requires a fragmentShader option");
         }
+
+        this.activeShader = new LiveVar(options.fragmentShader);
 
         this.canvas = null;
         this.gl = null;
@@ -93,10 +106,31 @@ export default class AmbientBackground {
         });
     }
 
+    cycleShader() {
+        this.activeShader.set(
+            Object.keys(shaderFragmentPathMap)[
+                (Object.keys(shaderFragmentPathMap).indexOf(this.activeShader.get()) + 1) %
+                    Object.keys(shaderFragmentPathMap).length
+            ]
+        );
+        this.fragmentShaderSource = shaderFragmentPathMap[this.activeShader.get()];
+        this.destroy();
+        this.init();
+    }
+
+    setShader(name) {
+        if (!shaderFragmentPathMap[name]) return;
+        this.activeShader.set(name);
+        this.fragmentShaderSource = shaderFragmentPathMap[name];
+        this.destroy();
+        this.init();
+    }
+
     setupWebGL() {
         // preserveDrawingBuffer prevents flickering/blank frames during resize
-        this.gl = this.canvas.getContext("webgl", { preserveDrawingBuffer: true }) || 
-                  this.canvas.getContext("experimental-webgl", { preserveDrawingBuffer: true });
+        this.gl =
+            this.canvas.getContext("webgl", { preserveDrawingBuffer: true }) ||
+            this.canvas.getContext("experimental-webgl", { preserveDrawingBuffer: true });
         if (!this.gl) {
             console.error("WebGL not supported");
             return;
