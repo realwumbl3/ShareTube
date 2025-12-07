@@ -32,9 +32,5 @@ export const chromiumSVG = resolveAssetUrl("app/assets/chromium.svg");
 export const lockSVG = resolveAssetUrl("app/assets/lock.svg");
 export const fullscreenSVG = resolveAssetUrl("app/assets/fullscreen.svg");
 export const exitFullscreenSVG = resolveAssetUrl("app/assets/exit-fullscreen.svg");
-
-// Stroke-based paths for smoother look
-export const seekRewindPath = "M 3 12 a 9 9 0 1 0 9 -9 9.75 9.75 0 0 0 -6.74 2.74 L 3 8";
-export const seekRewindArrow = "M 3 3 l 0 5 l 5 0";
-export const seekForwardPath = "M 21 12 a 9 9 0 1 1 -9 -9 9.75 9.75 0 0 1 6.74 2.74 L 21 8";
-export const seekForwardArrow = "M 21 3 l 0 5 l -5 0";
+export const seekRewindSVG = resolveAssetUrl("app/assets/seek-rewind.svg");
+export const seekForwardSVG = resolveAssetUrl("app/assets/seek-forward.svg");

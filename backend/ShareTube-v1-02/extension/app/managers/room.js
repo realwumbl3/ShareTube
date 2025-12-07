@@ -1,6 +1,6 @@
-import state from "./state.js";
-import ShareTubeUser from "./models/user.js";
-import { syncLiveList } from "./utils.js";
+import state from "../state.js";
+import ShareTubeUser from "../models/user.js";
+import { syncLiveList } from "../utils.js";
 
 // RoomManager handles room creation, joining, URL management, and room-related socket events
 export default class RoomManager {

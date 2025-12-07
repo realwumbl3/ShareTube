@@ -1,6 +1,6 @@
-import { html, css } from "../dep/zyx.js";
-import state from "../state.js";
-import { seekRewindPath, seekRewindArrow, seekForwardPath, seekForwardArrow } from "../assets/svgs.js";
+import { html, css } from "../../dep/zyx.js";
+import state from "../../state.js";
+import { seekRewindSVG, seekForwardSVG } from "../../assets/svgs.js";
 
 css`
     .ytp-bezel-text-hide {
@@ -44,6 +44,11 @@ css`
                 opacity: 1;
                 background: var(--yt-spec-overlay-background-medium-light, rgba(0, 0, 0, 0.4));
             }
+            /* youtube makes the background lighter on active */
+            &:active {
+                background: var(--yt-spec-overlay-button-secondary, rgba(255, 255, 255, 0.1));
+            }
+            & > img,
             & > svg {
                 fill: white;
                 box-sizing: border-box;
@@ -52,6 +57,27 @@ css`
                 width: 60%;
                 height: 60%;
             }
+        }
+
+        .ytp-sharetube-seek-text {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            font-weight: 500;
+            font-family: Roboto, Arial, sans-serif;
+            color: #fff;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            line-height: 1;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .ytp-sharetube-extended-button-icon:hover .ytp-sharetube-seek-text {
+            opacity: 1;
         }
     }
 `;
@@ -63,84 +89,16 @@ export default class PlayerExtender {
 
         // Create the button templates
         html`
-            <button
-                this="left_button"
-                class="ytp-sharetube-custom-button"
-                aria-label="Seek -5 seconds"
-                title="Seek -5 seconds"
-                zyx-click=${() => this.seekRelative(-5)}
-            >
+            <button this="left_button" class="ytp-sharetube-custom-button" aria-label="Seek -5 seconds" title="Seek -5 seconds" zyx-click=${() => this.seekRelative(-5)}>
                 <div class="ytp-sharetube-extended-button-icon">
-                    <svg height="100%" version="1.1" viewBox="0 0 24 24" width="100%">
-                        <path
-                            d="${seekRewindPath}"
-                            fill="none"
-                            stroke="#fff"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                        <path
-                            d="${seekRewindArrow}"
-                            fill="none"
-                            stroke="#fff"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                        <text
-                            x="12"
-                            y="14"
-                            text-anchor="middle"
-                            dominant-baseline="middle"
-                            font-size="10px"
-                            font-weight="bold"
-                            fill="#fff"
-                            stroke="none"
-                        >
-                            5
-                        </text>
-                    </svg>
+                    <img src=${seekRewindSVG} draggable="false" alt="Seek -5 seconds" />
+                    <span class="ytp-sharetube-seek-text">5s</span>
                 </div>
             </button>
-            <button
-                this="right_button"
-                class="ytp-sharetube-custom-button"
-                aria-label="Seek +5 seconds"
-                title="Seek +5 seconds"
-                zyx-click=${() => this.seekRelative(5)}
-            >
+            <button this="right_button" class="ytp-sharetube-custom-button" aria-label="Seek +5 seconds" title="Seek +5 seconds" zyx-click=${() => this.seekRelative(5)}>
                 <div class="ytp-sharetube-extended-button-icon">
-                    <svg height="100%" version="1.1" viewBox="0 0 24 24" width="100%">
-                        <path
-                            d="${seekForwardPath}"
-                            fill="none"
-                            stroke="#fff"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                        <path
-                            d="${seekForwardArrow}"
-                            fill="none"
-                            stroke="#fff"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                        <text
-                            x="12"
-                            y="14"
-                            text-anchor="middle"
-                            dominant-baseline="middle"
-                            font-size="10px"
-                            font-weight="bold"
-                            fill="#fff"
-                            stroke="none"
-                        >
-                            5
-                        </text>
-                    </svg>
+                    <img src=${seekForwardSVG} draggable="false" alt="Seek +5 seconds" />
+                    <span class="ytp-sharetube-seek-text">5s</span>
                 </div>
             </button>
         `.bind(this);

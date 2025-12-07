@@ -1,5 +1,5 @@
-import { getCurrentPlayingProgressMs } from "./getters.js";
-import state from "./state.js";
+import { getCurrentPlayingProgressMs } from "../../getters.js";
+import state from "../../state.js";
 
 const PLAYBACK_DRIFT_INTERVAL_MS = 500;
 const PLAYBACK_DRIFT_THRESHOLD_MS = 20;

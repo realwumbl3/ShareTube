@@ -1,6 +1,6 @@
-import { extractUrlsFromDataTransfer, isYouTubeUrl } from "./utils.js";
+import { extractUrlsFromDataTransfer, isYouTubeUrl } from "../utils.js";
 
-import state from "./state.js";
+import state from "../state.js";
 
 // UIManager handles UI behaviors like drag/drop, reveal/hide, and pill locking
 export default class UIManager {

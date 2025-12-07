@@ -1,8 +1,8 @@
 // Log module load for diagnostics in the page console
 console.log("cs/socket.js loaded");
 
-import state from "./state.js";
-import { io } from "./dep/socket.io.min.esm.js";
+import state from "../state.js";
+import { io } from "../dep/socket.io.min.esm.js";
 
 // Ensure a single connected Socket.IO client on the provided app instance
 export default class SocketManager {

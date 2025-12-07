@@ -1,6 +1,6 @@
-import { html, css } from "../dep/zyx.js";
+import { html, css } from "../../../dep/zyx.js";
 
-import { msDurationTimeStamp } from "../utils.js";
+import { msDurationTimeStamp } from "../../../utils.js";
 
 export default class Splash {
     constructor(video) {
@@ -56,10 +56,7 @@ class BadgeBase {
     }
 
     animate() {
-        setTimeout(
-            () => (this.badge.style.animation = "spring_in 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards"),
-            1
-        );
+        setTimeout(() => (this.badge.style.animation = "spring_in 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards"), 1);
     }
 }
 
@@ -197,12 +194,7 @@ function getActionFromPlaybackData(playbackData) {
         "room.control.pause": "action-pause",
         "room.control.play": "action-play",
         "room.control.restartvideo": "action-restart",
-        "room.control.seek":
-            playbackData.delta_ms === null
-                ? "action-seek"
-                : playbackData.delta_ms > 0
-                ? "action-seek-forward"
-                : "action-seek-backward",
+        "room.control.seek": playbackData.delta_ms === null ? "action-seek" : playbackData.delta_ms > 0 ? "action-seek-forward" : "action-seek-backward",
     };
 
     return actionMap[playbackData.trigger] || "action-unknown";

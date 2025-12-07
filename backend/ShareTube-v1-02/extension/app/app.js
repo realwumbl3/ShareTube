@@ -3,14 +3,14 @@ import { html, css, LiveVar, ZyXInput } from "./dep/zyx.js";
 
 import state from "./state.js";
 
-import SocketManager from "./socket.js";
+import SocketManager from "./managers/socket.js";
 import DebugMenu from "./DebugMenu.js";
-import YoutubePlayerManager from "./youtubePlayer.js";
+import YoutubePlayerManager from "./managers/youtubePlayer/manager.js";
 import VirtualPlayer from "./virtualPlayer.js";
-import RoomManager from "./roomManager.js";
-import AuthManager from "./authManager.js";
-import UIManager from "./uiManager.js";
-import StorageManager from "./storageManager.js";
+import RoomManager from "./managers/room.js";
+import AuthManager from "./managers/auth.js";
+import UIManager from "./managers/ui.js";
+import StorageManager from "./managers/storage.js";
 import ThumbnailExtAddToQueue from "./components/ThumbnailExtAddToQueue.js";
 
 import Queue from "./components/Queue.js";

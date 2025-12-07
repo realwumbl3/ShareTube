@@ -1,13 +1,14 @@
-import { LiveVar, html, css } from "./dep/zyx.js";
-import { throttle } from "./utils.js";
-import state from "./state.js";
-import Splash from "./components/Splash.js";
-import { getCurrentPlayingProgressMs } from "./getters.js";
-import PlaybackSyncer from "./playbackSync.js";
-import PlayerControls from "./playerControls.js";
-import PlayerExtender from "./components/playerExtender.js";
+import { LiveVar, html, css } from "../../dep/zyx.js";
+import { throttle } from "../../utils.js";
+import { getCurrentPlayingProgressMs } from "../../getters.js";
 
-import PlayerOSDDebug from "./playerosddebug.js";
+import state from "../../state.js";
+
+import PlaybackSyncer from "./syncer.js";
+import PlayerControls from "./controls.js";
+import PlayerExtender from "./extender.js";
+import PlayerOSDDebug from "./osdDebug.js";
+import Splash from "./components/Splash.js";
 
 // Lightweight observer/controller around the active <video> element on YouTube
 export default class YoutubePlayerManager {
@@ -421,10 +422,7 @@ export default class YoutubePlayerManager {
         if (container) {
             hasAdClass = container.classList.contains("ad-showing");
             try {
-                hasAdElements =
-                    container.querySelector(
-                        ".ytp-ad-duration-remaining, .ytp-ad-player-overlay, .ytp-ad-skip-button, .ytp-ad-skip-button-modern"
-                    ) != null;
+                hasAdElements = container.querySelector(".ytp-ad-duration-remaining, .ytp-ad-player-overlay, .ytp-ad-skip-button, .ytp-ad-skip-button-modern") != null;
             } catch {
                 hasAdElements = false;
             }
@@ -466,8 +464,7 @@ export default class YoutubePlayerManager {
             return;
         }
 
-        const haveCurrentData =
-            typeof HTMLMediaElement !== "undefined" && HTMLMediaElement ? HTMLMediaElement.HAVE_CURRENT_DATA : 2;
+        const haveCurrentData = typeof HTMLMediaElement !== "undefined" && HTMLMediaElement ? HTMLMediaElement.HAVE_CURRENT_DATA : 2;
         const canPlay = this.video.readyState >= haveCurrentData;
         const adNow = this.isAdPlayingNow();
         const ready = Boolean(canPlay && !adNow);

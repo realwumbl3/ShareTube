@@ -1,5 +1,5 @@
-import state from "./state.js";
-import { decodeJwt } from "./utils.js";
+import state from "../state.js";
+import { decodeJwt } from "../utils.js";
 
 // AuthManager handles authentication tokens, backend URL management, and API calls
 export default class AuthManager {
