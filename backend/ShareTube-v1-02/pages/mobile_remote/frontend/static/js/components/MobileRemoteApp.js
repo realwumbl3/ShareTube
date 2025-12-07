@@ -2,8 +2,8 @@ import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
 import PlaybackControls from "./PlaybackControls.js";
 import QueueList from "./QueueList.js";
 
-import SocketManager from "/extension/app/socket.js";
-import VirtualPlayer from "/extension/app/virtualPlayer.js";
+import SocketManager from "/extension/app/managers/socket.js";
+import VirtualPlayer from "/extension/app/managers/virtualPlayer.js";
 import state from "/extension/app/state.js";
 import { fullscreenSVG, exitFullscreenSVG } from "/extension/app/assets/svgs.js";
 

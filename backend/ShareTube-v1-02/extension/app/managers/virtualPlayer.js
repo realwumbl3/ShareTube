@@ -1,12 +1,12 @@
-import state from "./state.js";
-import { getCurrentPlayingProgressMs } from "./getters.js";
-import { syncLiveList } from "./utils.js";
-import ShareTubeQueueItem from "./models/queueItem.js";
+import state from "../state.js";
+import { getCurrentPlayingProgressMs } from "../getters.js";
+import { syncLiveList } from "../utils.js";
+import ShareTubeQueueItem from "../models/queueItem.js";
 
 // Virtual room player: coordinates backend room state, local state, and the YouTube player
 export default class VirtualPlayer {
     /**
-     * @param {import("./app.js").default} app
+     * @param {import("../app.js").default} app
      */
     constructor(app) {
         this.app = app;

@@ -1,8 +1,8 @@
-import { LiveVar, html, css } from "../../dep/zyx.js";
-import { throttle } from "../../utils.js";
-import { getCurrentPlayingProgressMs } from "../../getters.js";
+import { LiveVar, html, css } from "../dep/zyx.js";
+import { throttle } from "../utils.js";
+import { getCurrentPlayingProgressMs } from "../getters.js";
 
-import state from "../../state.js";
+import state from "../state.js";
 
 import PlaybackSyncer from "./syncer.js";
 import PlayerControls from "./controls.js";

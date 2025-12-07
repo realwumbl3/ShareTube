@@ -1,5 +1,5 @@
-import { html, css, LiveVar } from "./dep/zyx.js";
-import state from "./state.js";
+import { html, css, LiveVar } from "../dep/zyx.js";
+import state from "../state.js";
 
 function epochToTimeString(epoch) {
     const ms = epoch < 1e12 ? epoch * 1000 : epoch; // if seconds, convert to ms
