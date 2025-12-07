@@ -1,8 +1,8 @@
 // Homepage main application using Zyx framework
-import { html, css, LiveVar, LiveList } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar, LiveList } from "/extension/app/@dep/zyx.js";
 import HomepageApp from "./components/HomepageApp.js";
 css`
-    @import "/static/homepage/css/styles.css";
+    @import "/static/homepage/@css/styles.css";
 `;
 
 function initHomepage() {

@@ -1,11 +1,11 @@
-import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar } from "/extension/app/@dep/zyx.js";
 import PlaybackControls from "./PlaybackControls.js";
 import QueueList from "./QueueList.js";
 
 import SocketManager from "/extension/app/managers/socket.js";
 import VirtualPlayer from "/extension/app/managers/virtualPlayer.js";
 import state from "/extension/app/state.js";
-import { fullscreenSVG, exitFullscreenSVG } from "/extension/app/assets/svgs.js";
+import { fullscreenSVG, exitFullscreenSVG } from "/extension/app/@assets/svgs.js";
 
 const noop = () => {};
 

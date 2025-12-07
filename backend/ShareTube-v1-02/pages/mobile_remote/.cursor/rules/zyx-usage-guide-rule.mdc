@@ -9,7 +9,7 @@ This is a rule for the Zyx Framework. If making UI components in the frontend, u
 ## Imports
 
 ```javascript
-import { html, css, LiveVar, LiveList } from "./dep/zyx.js"; // Adjust path as needed
+import { html, css, LiveVar, LiveList } from "./@dep/zyx.js"; // Adjust path as needed
 ```
 
 ## Component Structure

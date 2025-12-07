@@ -31,6 +31,6 @@ It is possible to import code from the browser extension in this sub-application
 Example:
 
 ```javascript
-import { io } from "/extension/app/dep/socket.io.min.esm.js";
+import { io } from "/extension/app/@dep/socket.io.min.esm.js";
 import VirtualPlayer from "/extension/app/virtualPlayer.js";
 ```

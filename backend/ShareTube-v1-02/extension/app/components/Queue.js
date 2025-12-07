@@ -1,4 +1,4 @@
-import { html, LiveVar, css } from "../dep/zyx.js";
+import { html, LiveVar, css } from "../@dep/zyx.js";
 import state from "../state.js";
 import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } from "../getters.js";
 
@@ -12,7 +12,7 @@ export default class ShareTubeQueue {
 
         this.isMobileRemote = isMobileRemote;
 
-        this.playbackControls = isMobileRemote ? new PlaybackControls(app, { isMobileRemote }) : null;
+        this.playbackControls = isMobileRemote ? new PlaybackControls(app) : null;
 
         html`
             <div
@@ -228,7 +228,7 @@ export default class ShareTubeQueue {
     }
 }
 
-import { openInNewTabSVG, linkSVG, xSVG, requeueSVG } from "../assets/svgs.js";
+import { openInNewTabSVG, linkSVG, xSVG, requeueSVG } from "../@assets/svgs.js";
 
 // UI component representing a queued YouTube item
 export class ShareTubeQueueComponent {

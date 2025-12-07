@@ -195,7 +195,7 @@ This script automatically:
 -   Loads the extension with proper sandbox settings
 -   Supports dual-window testing configurations
 
-See [LAUNCH_EXT-README.md](./md/LAUNCH_EXT-README.md) for detailed usage options.
+See [LAUNCH_EXT-README.md](./.md/LAUNCH_EXT-README.md) for detailed usage options.
 
 
 
@@ -514,4 +514,4 @@ This project uses a **Commercial License** that allows free personal/non-commerc
 
 **Contact**: https://github.com/wumbl3/ShareTube for commercial licensing inquiries.
 
-See the [LICENSE](LICENSE) file for complete terms and conditions, and [COMMERCIAL_LICENSE.md](./md/COMMERCIAL_LICENSE.md) for licensing options.
+See the [LICENSE](LICENSE) file for complete terms and conditions, and [COMMERCIAL_LICENSE.md](./.md/COMMERCIAL_LICENSE.md) for licensing options.

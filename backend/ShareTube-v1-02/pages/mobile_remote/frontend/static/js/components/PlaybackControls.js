@@ -1,8 +1,8 @@
-import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar } from "/extension/app/@dep/zyx.js";
 import state from "/extension/app/state.js";
 import { getCurrentPlayingProgressMs, currentPlayingProgressMsPercentageToMs } from "/extension/app/getters.js";
 
-import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "/extension/app/assets/svgs.js";
+import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "/extension/app/@assets/svgs.js";
 export default class PlaybackControls {
     constructor(app) {
         this.app = app;

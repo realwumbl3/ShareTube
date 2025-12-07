@@ -1,4 +1,4 @@
-import { html, css } from "../dep/zyx.js";
+import { html, css } from "../@dep/zyx.js";
 import state from "../state.js";
 
 export default class Intermission {

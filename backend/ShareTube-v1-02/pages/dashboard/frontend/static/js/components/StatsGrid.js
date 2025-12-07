@@ -1,4 +1,4 @@
-import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar } from "/extension/app/@dep/zyx.js";
 import StatsCard from "./StatsCard.js";
 
 export default class StatsGrid {

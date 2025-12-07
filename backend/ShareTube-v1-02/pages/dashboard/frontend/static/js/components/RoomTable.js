@@ -1,4 +1,4 @@
-import { html, css, LiveVar, LiveList } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar, LiveList } from "/extension/app/@dep/zyx.js";
 
 class RoomTableRow {
     constructor(room) {

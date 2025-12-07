@@ -1,31 +1,26 @@
-/* ShareTube Dashboard - Queue Theme */
+/* ShareTube Mobile Remote - Epic Future Theme */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
-/* Import extension styles */
-@import "/extension/app/css/styles-base.css";
-@import "/extension/app/css/styles-components.css";
-@import "/extension/app/css/styles-forms.css";
-@import "/extension/app/css/queue-container.css";
-@import "/extension/app/css/queue-header.css";
-@import "/extension/app/css/queue-list.css";
+/* Import extension CSS files */
+@import "/extension/app/@css/queue-header.css";
+@import "/extension/app/@css/queue-current-playing.css";
+@import "/extension/app/@css/queue-list.css";
+@import "/extension/app/@css/queue-footer.css";
+@import "/extension/app/@css/queue-selector.css";
+@import "/extension/app/@css/queue-container.css";
+@import "/extension/app/@css/splash.css";
 
 :root {
-    /* Color Palette - Queue Theme (matching extension) */
+    /* Color Palette - Deep Space & Neon */
     --bg-app: #050507;
 
     /* Queue-like Theme Variables */
     --bg-queue-panel: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
     --bg-queue-header: linear-gradient(to bottom, rgba(18, 18, 18, 0.98), rgba(18, 18, 18, 0.9));
-    --outline-queue: 1px solid rgba(255, 255, 255, 0.18);
-    --outline-queue-light: 1px solid rgba(255, 255, 255, 0.22);
-    --outline-queue-dim: 1px solid rgba(255, 255, 255, 0.12);
-
-    /* Legacy variables for compatibility */
-    --bg-panel: var(--bg-queue-panel);
-    --bg-panel-hover: rgba(30, 30, 40, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shine: rgba(255, 255, 255, 0.03);
+    --border-queue: 1px solid rgba(255, 255, 255, 0.18);
+    --border-queue-light: 1px solid rgba(255, 255, 255, 0.22);
+    --border-queue-dim: 1px solid rgba(255, 255, 255, 0.12);
 
     /* Accents */
     --accent-primary: #00f3ff;
@@ -75,9 +70,10 @@ body {
         radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.08), transparent 25%);
     color: var(--text-primary);
     line-height: 1.6;
-    min-height: 100vh;
+    max-height: 100dvh;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
 }
 
 h1,
@@ -108,29 +104,29 @@ h6 {
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* Utility Classes for Queue Theme */
+/* Utility Classes for Glassmorphism */
 .glass-panel {
     background: var(--bg-queue-panel);
     backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
     -webkit-backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
-    outline: var(--outline-queue);
+    border: var(--border-queue);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
 }
 
 .glass-button {
     background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(54, 54, 54, 0.9));
-    outline: var(--outline-queue-light);
-    border: none;
+    border: var(--border-queue-light);
+    outline: none;
     color: var(--text-primary);
     border-radius: var(--radius-sm);
-    transition: background 140ms ease, outline-color 140ms ease, transform 80ms ease;
+    transition: background 140ms ease, border-color 140ms ease, transform 80ms ease;
     cursor: pointer;
 }
 
 .glass-button:hover {
     background: radial-gradient(circle at top, rgba(255, 255, 255, 0.18), rgba(68, 68, 68, 0.95));
-    outline-color: rgba(255, 255, 255, 0.32);
+    border-color: rgba(255, 255, 255, 0.32);
     transform: translateY(-1px);
     box-shadow: none;
     /* Reset glow */

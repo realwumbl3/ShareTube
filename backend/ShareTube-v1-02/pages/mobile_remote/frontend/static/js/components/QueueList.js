@@ -1,4 +1,4 @@
-import { css } from "/extension/app/dep/zyx.js";
+import { css } from "/extension/app/@dep/zyx.js";
 
 import ShareTubeQueue from "/extension/app/components/Queue.js";
 import state from "/extension/app/state.js";

@@ -1,4 +1,4 @@
-import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar } from "/extension/app/@dep/zyx.js";
 
 css`
     /* ============================================
@@ -22,15 +22,17 @@ css`
     }
 `;
 
+const SHADER_DIR = "/extension/app/components/AmbientBackground/shaders/";
+
 export const shaderFragmentPathMap = {
-    xmbPrestigeFlowFragment: "/extension/app/background/shaders/xmbPrestigeFlowFragment.glsl",
-    xmbPremiumFragment: "/extension/app/background/shaders/xmbPremiumFragment.glsl",
-    premiumAmbientFragment: "/extension/app/background/shaders/premiumAmbientFragment.glsl",
-    ps3LiquidGlassFragment: "/extension/app/background/shaders/ps3LiquidGlassFragment.glsl",
-    ps3LiquidGlassImprovedFragment: "/extension/app/background/shaders/ps3LiquidGlassImprovedFragment.glsl",
-    ambientFlowFragment: "/extension/app/background/shaders/ambientFlowFragment.glsl",
-    epicNebulaFragment: "/extension/app/background/shaders/epicNebulaFragment.glsl",
-    prismaticNeuralFragment: "/extension/app/background/shaders/prismaticNeuralFragment.glsl",
+    xmbPrestigeFlowFragment: `${SHADER_DIR}xmbPrestigeFlowFragment.glsl`,
+    xmbPremiumFragment: `${SHADER_DIR}xmbPremiumFragment.glsl`,
+    premiumAmbientFragment: `${SHADER_DIR}premiumAmbientFragment.glsl`,
+    ps3LiquidGlassFragment: `${SHADER_DIR}ps3LiquidGlassFragment.glsl`,
+    ps3LiquidGlassImprovedFragment: `${SHADER_DIR}ps3LiquidGlassImprovedFragment.glsl`,
+    ambientFlowFragment: `${SHADER_DIR}ambientFlowFragment.glsl`,
+    epicNebulaFragment: `${SHADER_DIR}epicNebulaFragment.glsl`,
+    prismaticNeuralFragment: `${SHADER_DIR}prismaticNeuralFragment.glsl`,
 };
 
 export default class AmbientBackground {
@@ -108,10 +110,7 @@ export default class AmbientBackground {
 
     cycleShader() {
         this.activeShader.set(
-            Object.keys(shaderFragmentPathMap)[
-                (Object.keys(shaderFragmentPathMap).indexOf(this.activeShader.get()) + 1) %
-                    Object.keys(shaderFragmentPathMap).length
-            ]
+            Object.keys(shaderFragmentPathMap)[(Object.keys(shaderFragmentPathMap).indexOf(this.activeShader.get()) + 1) % Object.keys(shaderFragmentPathMap).length]
         );
         this.fragmentShaderSource = shaderFragmentPathMap[this.activeShader.get()];
         this.destroy();
@@ -128,9 +127,7 @@ export default class AmbientBackground {
 
     setupWebGL() {
         // preserveDrawingBuffer prevents flickering/blank frames during resize
-        this.gl =
-            this.canvas.getContext("webgl", { preserveDrawingBuffer: true }) ||
-            this.canvas.getContext("experimental-webgl", { preserveDrawingBuffer: true });
+        this.gl = this.canvas.getContext("webgl", { preserveDrawingBuffer: true }) || this.canvas.getContext("experimental-webgl", { preserveDrawingBuffer: true });
         if (!this.gl) {
             console.error("WebGL not supported");
             return;
@@ -260,11 +257,7 @@ void main() {
                     resolve(null);
                 };
                 img.src = source;
-            } else if (
-                source instanceof HTMLImageElement ||
-                source instanceof HTMLVideoElement ||
-                source instanceof HTMLCanvasElement
-            ) {
+            } else if (source instanceof HTMLImageElement || source instanceof HTMLVideoElement || source instanceof HTMLCanvasElement) {
                 // Use directly
                 this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, source);
                 resolve(texture);
@@ -504,17 +497,11 @@ void main() {
             this.setUniform("iResolution", resolution3);
 
             // iMouse - mouse position and click state (vec4: x, y, click, drag)
-            this.setUniform("iMouse", [
-                this.mouseX * this.canvas.width,
-                this.mouseY * this.canvas.height,
-                this.mouseClick,
-                this.mouseDrag,
-            ]);
+            this.setUniform("iMouse", [this.mouseX * this.canvas.width, this.mouseY * this.canvas.height, this.mouseClick, this.mouseDrag]);
 
             // iDate - date/time info (vec4: year, month, day, seconds)
             const now = new Date();
-            const seconds =
-                now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
+            const seconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
             this.setUniform("iDate", [now.getFullYear(), now.getMonth() + 1, now.getDate(), seconds]);
 
             // iChannel0-3 - texture channels

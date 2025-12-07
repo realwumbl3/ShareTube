@@ -10,7 +10,7 @@
     // Editor-only path aliases for nicer imports while working on this page.
     "paths": {
       "@js/*": ["frontend/static/js/*"],
-      "@css/*": ["frontend/static/css/*"],
+      "@css/*": ["frontend/static/@css/*"],
       "@templates/*": ["frontend/templates/*"]
     },
     // Keep JS checking relaxed unless you prefer stricter rules.

@@ -1,4 +1,4 @@
-import { LiveVar } from "../dep/zyx.js";
+import { LiveVar } from "../@dep/zyx.js";
 
 export default class ShareTubeQueueItem {
     constructor(app, item) {

@@ -1,4 +1,4 @@
-import { html, css, LiveVar } from "../dep/zyx.js";
+import { html, css, LiveVar } from "../@dep/zyx.js";
 
 css`
     #sharetube_search_iframe_container {

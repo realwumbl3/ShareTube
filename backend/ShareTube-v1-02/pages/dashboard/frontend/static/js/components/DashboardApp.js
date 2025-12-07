@@ -1,5 +1,5 @@
-import { html, css, LiveVar, LiveList, sleep } from "/extension/app/dep/zyx.js";
-import { io } from "/extension/app/dep/socket.io.min.esm.js";
+import { html, css, LiveVar, LiveList, sleep } from "/extension/app/@dep/zyx.js";
+import { io } from "/extension/app/@dep/socket.io.min.esm.js";
 import DashboardUser from "../models/User.js";
 import DashboardRoom from "../models/Room.js";
 import DashboardQueue from "../models/Queue.js";
@@ -11,7 +11,7 @@ import UserTable from "./UserTable.js";
 import RoomTable from "./RoomTable.js";
 import QueueTable from "./QueueTable.js";
 import DebugTab from "./DebugTab.js";
-import AmbientBackground from "/extension/app/background/AmbientBackground.js";
+import AmbientBackground, { shaderFragmentPathMap } from "/extension/app/components/AmbientBackground/AmbientBackground.js";
 
 const API_BASE = window.__DASHBOARD_API_BASE__ || "/dashboard";
 
@@ -55,64 +55,26 @@ export default class DashboardApp {
                             user
                                 ? html`
                                       <div class="user-profile">
-                                          ${user.picture
-                                              ? html`<img src="${user.picture}" alt="Avatar" class="user-avatar" />`
-                                              : ""}
+                                          ${user.picture ? html`<img src="${user.picture}" alt="Avatar" class="user-avatar" />` : ""}
                                           <span class="user-name">${user.name}</span>
-                                          <button class="logout-btn glass-button" zyx-click=${this.handleLogout}>
-                                              Sign Out
-                                          </button>
+                                          <button class="logout-btn glass-button" zyx-click=${this.handleLogout}>Sign Out</button>
                                       </div>
                                   `
                                 : ""
                         )}
                     </div>
                     <nav class="dashboard-nav">
-                        <button
-                            class="nav-btn glass-button"
-                            active=${this.currentView.interp((v) => v === "overview")}
-                            zyx-click=${() => this.setView("overview")}
-                        >
+                        <button class="nav-btn glass-button" active=${this.currentView.interp((v) => v === "overview")} zyx-click=${() => this.setView("overview")}>
                             Overview
                         </button>
-                        <button
-                            class="nav-btn glass-button"
-                            active=${this.currentView.interp((v) => v === "users")}
-                            zyx-click=${() => this.setView("users")}
-                        >
-                            Users
-                        </button>
-                        <button
-                            class="nav-btn glass-button"
-                            active=${this.currentView.interp((v) => v === "rooms")}
-                            zyx-click=${() => this.setView("rooms")}
-                        >
-                            Rooms
-                        </button>
-                        <button
-                            class="nav-btn glass-button"
-                            active=${this.currentView.interp((v) => v === "queues")}
-                            zyx-click=${() => this.setView("queues")}
-                        >
-                            Queues
-                        </button>
-                        <button
-                            class="nav-btn glass-button"
-                            active=${this.currentView.interp((v) => v === "debug")}
-                            zyx-click=${() => this.setView("debug")}
-                        >
-                            Debug
-                        </button>
+                        <button class="nav-btn glass-button" active=${this.currentView.interp((v) => v === "users")} zyx-click=${() => this.setView("users")}>Users</button>
+                        <button class="nav-btn glass-button" active=${this.currentView.interp((v) => v === "rooms")} zyx-click=${() => this.setView("rooms")}>Rooms</button>
+                        <button class="nav-btn glass-button" active=${this.currentView.interp((v) => v === "queues")} zyx-click=${() => this.setView("queues")}>Queues</button>
+                        <button class="nav-btn glass-button" active=${this.currentView.interp((v) => v === "debug")} zyx-click=${() => this.setView("debug")}>Debug</button>
                     </nav>
                     <div class="dashboard-status">
-                        <span class="last-update">
-                            ${this.lastUpdate.interp((v) => (v ? `Updated: ${v}` : "Loading..."))}
-                        </span>
-                        <button
-                            class="refresh-btn glass-button"
-                            zyx-click=${() => this.loadDashboardData()}
-                            disabled=${this.loading.interp((v) => v || null)}
-                        >
+                        <span class="last-update"> ${this.lastUpdate.interp((v) => (v ? `Updated: ${v}` : "Loading..."))} </span>
+                        <button class="refresh-btn glass-button" zyx-click=${() => this.loadDashboardData()} disabled=${this.loading.interp((v) => v || null)}>
                             ${this.loading.interp((v) => (v ? "Refreshing..." : "Refresh"))}
                         </button>
                     </div>
@@ -183,7 +145,7 @@ export default class DashboardApp {
             }, 500);
         }
         this.ambientBackground = new AmbientBackground({
-            fragmentShader: "/extension/app/background/shaders/ps3LiquidGlassFragment.glsl",
+            fragmentShader: shaderFragmentPathMap.ps3LiquidGlassFragment,
             skipFrame: true,
             maxResolution: 1080,
         });
@@ -203,13 +165,7 @@ export default class DashboardApp {
                 fetch(`${API_BASE}/api/queues`),
             ]);
 
-            const [stats, activity, users, rooms, queues] = await Promise.all([
-                statsRes.json(),
-                activityRes.json(),
-                usersRes.json(),
-                roomsRes.json(),
-                queuesRes.json(),
-            ]);
+            const [stats, activity, users, rooms, queues] = await Promise.all([statsRes.json(), activityRes.json(), usersRes.json(), roomsRes.json(), queuesRes.json()]);
 
             // Update reactive state
             this.stats.set(stats);

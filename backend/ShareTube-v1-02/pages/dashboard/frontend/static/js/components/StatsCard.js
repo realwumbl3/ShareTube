@@ -1,4 +1,4 @@
-import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar } from "/extension/app/@dep/zyx.js";
 
 export default class StatsCard {
     constructor(title, value, icon = "bar-chart", color = "var(--accent-primary)") {

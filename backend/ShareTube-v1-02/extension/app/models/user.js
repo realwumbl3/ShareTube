@@ -1,4 +1,4 @@
-import { LiveVar, LiveList } from "../dep/zyx.js";
+import { LiveVar, LiveList } from "../@dep/zyx.js";
 
 export default class ShareTubeUser {
     constructor(item) {

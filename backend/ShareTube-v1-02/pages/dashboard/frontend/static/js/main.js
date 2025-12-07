@@ -1,9 +1,9 @@
 // Dashboard main application using Zyx framework
-import { html, css, LiveVar, LiveList } from "/extension/app/dep/zyx.js";
-import { io } from "/extension/app/dep/socket.io.min.esm.js";
+import { html, css, LiveVar, LiveList } from "/extension/app/@dep/zyx.js";
+import { io } from "/extension/app/@dep/socket.io.min.esm.js";
 import DashboardApp from "./components/DashboardApp.js";
 css`
-    @import "/static/dashboard/css/styles.css";
+    @import "/static/dashboard/@css/styles.css";
 `;
 
 function initDashboard() {

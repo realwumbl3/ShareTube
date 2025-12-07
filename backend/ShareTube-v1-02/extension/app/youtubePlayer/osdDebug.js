@@ -1,4 +1,4 @@
-import { html, css, LiveList, LiveVar } from "../dep/zyx.js";
+import { html, css, LiveList, LiveVar } from "../@dep/zyx.js";
 
 import state from "../state.js";
 

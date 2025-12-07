@@ -1,4 +1,4 @@
-import { css, html } from "../dep/zyx.js";
+import { css, html } from "../@dep/zyx.js";
 import state from "../state.js";
 import { isYouTubeUrl } from "../utils.js";
 

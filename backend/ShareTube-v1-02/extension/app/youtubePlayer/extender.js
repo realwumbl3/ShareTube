@@ -1,6 +1,6 @@
-import { html, css } from "../dep/zyx.js";
+import { html, css } from "../@dep/zyx.js";
 import state from "../state.js";
-import { seekRewindSVG, seekForwardSVG } from "../assets/svgs.js";
+import { seekRewindSVG, seekForwardSVG } from "../@assets/svgs.js";
 
 css`
     .ytp-bezel-text-hide {

@@ -1,20 +1,15 @@
-import { html, css, LiveVar } from "../dep/zyx.js";
+import { html, css, LiveVar } from "../@dep/zyx.js";
 import state from "../state.js";
-import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "../assets/svgs.js";
+import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "../@assets/svgs.js";
 
 export default class PlaybackControls {
-    constructor(app, { isMobileRemote = false } = {}) {
+    constructor(app) {
         this.app = app;
-        this.isMobileRemote = isMobileRemote;
 
         html`
             <div class="playback-controls" draggable="false">
                 <div class="control-buttons">
-                    <button
-                        class="control-btn secondary-btn"
-                        title="Restart Video"
-                        zyx-click=${() => this.handlePrevious()}
-                    >
+                    <button class="control-btn secondary-btn" title="Restart Video" zyx-click=${() => this.handlePrevious()}>
                         <svg
                             viewBox="0 0 24 24"
                             width="24"
@@ -32,46 +27,21 @@ export default class PlaybackControls {
                     </button>
 
                     <button title="Seek -10s" class="control-btn seek-btn" zyx-click=${() => this.handleSeek(-10)}>
-                        <svg
-                            viewBox="0 0 24 24"
-                            width="24"
-                            height="24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M11 17l-5-5 5-5" />
                             <path d="M6 12h9a6 6 0 0 1 6 6v1" />
                         </svg>
                         <span class="seek-text">10</span>
                     </button>
 
-                    <button
-                        title="Toggle Play/Pause"
-                        class="control-btn play-btn"
-                        zyx-click=${() => this.handleTogglePlayPause()}
-                    >
+                    <button title="Toggle Play/Pause" class="control-btn play-btn" zyx-click=${() => this.handleTogglePlayPause()}>
                         <div class="play-icon-container">
-                            <img
-                                src=${state.roomState.interp((status) => this.stateToButtonLabel(status))}
-                                draggable="false"
-                            />
+                            <img src=${state.roomState.interp((status) => this.stateToButtonLabel(status))} draggable="false" />
                         </div>
                     </button>
 
                     <button title="Seek +10s" class="control-btn seek-btn" zyx-click=${() => this.handleSeek(10)}>
-                        <svg
-                            viewBox="0 0 24 24"
-                            width="24"
-                            height="24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M13 17l5-5-5-5" />
                             <path d="M18 12H9a6 6 0 0 0-6 6v1" />
                         </svg>
@@ -79,16 +49,7 @@ export default class PlaybackControls {
                     </button>
 
                     <button title="Skip to Next" class="control-btn secondary-btn" zyx-click=${() => this.handleNext()}>
-                        <svg
-                            viewBox="0 0 24 24"
-                            width="24"
-                            height="24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polygon points="5 4 15 12 5 20 5 4"></polygon>
                             <line x1="19" y1="5" x2="19" y2="19"></line>
                         </svg>
@@ -163,9 +124,8 @@ css`
                 align-items: center;
                 justify-content: center;
                 position: relative;
-                transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
             /* Secondary buttons (Skip/Prev) slightly smaller/dimmer */

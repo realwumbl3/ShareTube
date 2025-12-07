@@ -1,4 +1,4 @@
-import { LiveVar, html, css } from "../dep/zyx.js";
+import { LiveVar, html, css } from "../@dep/zyx.js";
 import { throttle } from "../utils.js";
 import { getCurrentPlayingProgressMs } from "../getters.js";
 

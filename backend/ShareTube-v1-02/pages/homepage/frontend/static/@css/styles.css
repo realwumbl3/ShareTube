@@ -3,12 +3,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 /* Import extension styles */
-@import "/extension/app/css/styles-base.css";
-@import "/extension/app/css/styles-components.css";
-@import "/extension/app/css/styles-forms.css";
-@import "/extension/app/css/queue-container.css";
-@import "/extension/app/css/queue-header.css";
-@import "/extension/app/css/queue-list.css";
+@import "/extension/app/@css/styles-base.css";
+@import "/extension/app/@css/styles-components.css";
+@import "/extension/app/@css/styles-forms.css";
+@import "/extension/app/@css/queue-container.css";
+@import "/extension/app/@css/queue-header.css";
+@import "/extension/app/@css/queue-list.css";
 
 @property --gradient-angle {
     syntax: '<angle>';

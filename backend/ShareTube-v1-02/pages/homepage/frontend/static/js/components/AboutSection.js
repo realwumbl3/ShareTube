@@ -1,4 +1,4 @@
-import { html, css } from "/extension/app/dep/zyx.js";
+import { html, css } from "/extension/app/@dep/zyx.js";
 
 export default class AboutSection {
     constructor() {

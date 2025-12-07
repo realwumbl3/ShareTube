@@ -1,4 +1,4 @@
-import { html, css, LiveVar, LiveList } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar, LiveList } from "/extension/app/@dep/zyx.js";
 import AuthManager from "../models/AuthManager.js";
 
 export default class LoginComponent {
@@ -71,7 +71,7 @@ export default class LoginComponent {
 }
 
 css`
-    @import "/static/dashboard/css/styles.css";
+    @import "/static/dashboard/@css/styles.css";
 
     .login-container {
         min-height: 100vh;

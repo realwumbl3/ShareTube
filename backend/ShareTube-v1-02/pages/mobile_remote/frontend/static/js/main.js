@@ -1,10 +1,10 @@
 // Mobile Remote main application using Zyx framework
-import { css } from "/extension/app/dep/zyx.js";
-import { io } from "/extension/app/dep/socket.io.min.esm.js";
+import { css } from "/extension/app/@dep/zyx.js";
+import { io } from "/extension/app/@dep/socket.io.min.esm.js";
 import MobileRemoteApp from "./components/MobileRemoteApp.js";
 
 css`
-    @import "/static/mobile_remote/css/styles.css";
+    @import "/static/mobile_remote/@css/styles.css";
 `;
 
 // Initialize the mobile remote when DOM is ready

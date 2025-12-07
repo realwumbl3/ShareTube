@@ -1,5 +1,5 @@
 console.log("app/app.js loaded");
-import { html, css, LiveVar, ZyXInput } from "./dep/zyx.js";
+import { html, css, LiveVar, ZyXInput } from "./@dep/zyx.js";
 
 import state from "./state.js";
 
@@ -22,26 +22,26 @@ import QRCodeComponent from "./components/QRCode.js";
 
 export const zyxInput = new ZyXInput();
 
-import { googleSVG, lockSVG } from "./assets/svgs.js";
+import { googleSVG, lockSVG } from "./@assets/svgs.js";
 
 css`
     @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap");
-    @import url(${chrome.runtime.getURL("app/css/styles-base.css")});
-    @import url(${chrome.runtime.getURL("app/css/styles-popup.css")});
-    @import url(${chrome.runtime.getURL("app/css/styles-forms.css")});
-    @import url(${chrome.runtime.getURL("app/css/styles-components.css")});
-    @import url(${chrome.runtime.getURL("app/css/styles-main.css")});
-    @import url(${chrome.runtime.getURL("app/css/styles-animations.css")});
-    @import url(${chrome.runtime.getURL("app/css/pill.css")});
-    @import url(${chrome.runtime.getURL("app/css/adOverlay.css")});
-    @import url(${chrome.runtime.getURL("app/css/queue-container.css")});
-    @import url(${chrome.runtime.getURL("app/css/queue-header.css")});
-    @import url(${chrome.runtime.getURL("app/css/queue-current-playing.css")});
-    @import url(${chrome.runtime.getURL("app/css/queue-selector.css")});
-    @import url(${chrome.runtime.getURL("app/css/queue-list.css")});
-    @import url(${chrome.runtime.getURL("app/css/queue-footer.css")});
-    @import url(${chrome.runtime.getURL("app/css/firstParty.css")});
-    @import url(${chrome.runtime.getURL("app/css/splash.css")});
+    @import url(${chrome.runtime.getURL("app/@css/styles-base.css")});
+    @import url(${chrome.runtime.getURL("app/@css/styles-popup.css")});
+    @import url(${chrome.runtime.getURL("app/@css/styles-forms.css")});
+    @import url(${chrome.runtime.getURL("app/@css/styles-components.css")});
+    @import url(${chrome.runtime.getURL("app/@css/styles-main.css")});
+    @import url(${chrome.runtime.getURL("app/@css/styles-animations.css")});
+    @import url(${chrome.runtime.getURL("app/@css/pill.css")});
+    @import url(${chrome.runtime.getURL("app/@css/adOverlay.css")});
+    @import url(${chrome.runtime.getURL("app/@css/queue-container.css")});
+    @import url(${chrome.runtime.getURL("app/@css/queue-header.css")});
+    @import url(${chrome.runtime.getURL("app/@css/queue-current-playing.css")});
+    @import url(${chrome.runtime.getURL("app/@css/queue-selector.css")});
+    @import url(${chrome.runtime.getURL("app/@css/queue-list.css")});
+    @import url(${chrome.runtime.getURL("app/@css/queue-footer.css")});
+    @import url(${chrome.runtime.getURL("app/@css/firstParty.css")});
+    @import url(${chrome.runtime.getURL("app/@css/splash.css")});
 `;
 
 export default class ShareTubeApp {
@@ -99,12 +99,7 @@ export default class ShareTubeApp {
             <div id="sharetube_main" class="st_reset" is_locked=${state.pillLocked.interp()}>
                 ${this.queue} ${this.debugMenu}
                 <div id="sharetube_pill">
-                    <button
-                        zyx-if=${state.pillLocked}
-                        id="sharetube_lock_btn"
-                        class="lock_btn"
-                        zyx-click=${() => this.uiManager.setLock(false)}
-                    >
+                    <button zyx-if=${state.pillLocked} id="sharetube_lock_btn" class="lock_btn" zyx-click=${() => this.uiManager.setLock(false)}>
                         <img src=${lockSVG} alt="Lock" />
                     </button>
                     <img
@@ -115,33 +110,18 @@ export default class ShareTubeApp {
                         src=${state.avatarUrl.interp((v) => v || "")}
                         user-ready=${state.userReady.interp()}
                     />
-                    <div
-                        zyx-else
-                        class="sign_in_button rounded_btn"
-                        zyx-click=${() => this.authManager.openSignInWithGooglePopup()}
-                    >
+                    <div zyx-else class="sign_in_button rounded_btn" zyx-click=${() => this.authManager.openSignInWithGooglePopup()}>
                         Sign in with <img src=${googleSVG} alt="Google" />
                     </div>
                     ${this.logo}
                     <span zyx-if=${state.userId}>
                         ${this.userIcons}
-                        <div
-                            zyx-if=${state.roomCode}
-                            id="sharetube_toggle_queue"
-                            class="rounded_btn"
-                            zyx-click=${() => this.queue.toggleQueueVisibility()}
-                        >
+                        <div zyx-if=${state.roomCode} id="sharetube_toggle_queue" class="rounded_btn" zyx-click=${() => this.queue.toggleQueueVisibility()}>
                             ${state.queueQueued.interp((v) => (v.length > 0 ? `Queue (${v.length})` : "Queue empty."))}
                         </div>
                         ${this.controls}
                     </span>
-                    <button
-                        zyx-if=${state.debug_mode}
-                        class="rounded_btn"
-                        zyx-click=${() => this.debugMenu.toggleVisibility()}
-                    >
-                        dbg
-                    </button>
+                    <button zyx-if=${state.debug_mode} class="rounded_btn" zyx-click=${() => this.debugMenu.toggleVisibility()}>dbg</button>
                 </div>
             </div>
             ${this.qrCode}

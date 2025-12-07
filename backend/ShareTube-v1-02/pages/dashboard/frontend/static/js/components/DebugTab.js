@@ -1,4 +1,4 @@
-import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar } from "/extension/app/@dep/zyx.js";
 
 const API_BASE = window.__DASHBOARD_API_BASE__ || "/dashboard";
 

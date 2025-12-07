@@ -1,4 +1,4 @@
-import { html, css } from "../../dep/zyx.js";
+import { html, css } from "../../@dep/zyx.js";
 
 import { msDurationTimeStamp } from "../../utils.js";
 
@@ -65,7 +65,7 @@ class PlayPauseBadge extends BadgeBase {
         super();
         const state = playbackData.trigger === "room.control.pause" ? "pause" : "play";
         html`<div this="large_icon" class="large_icon"></div>`.join(this).appendTo(this.badge);
-        const badgeSvg = chrome.runtime.getURL(`app/assets/${state}.svg`);
+        const badgeSvg = chrome.runtime.getURL(`app/@assets/${state}.svg`);
         this.large_icon.style.backgroundImage = `url(${badgeSvg})`;
     }
 }

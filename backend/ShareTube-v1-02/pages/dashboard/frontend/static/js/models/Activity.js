@@ -1,4 +1,4 @@
-import { LiveVar } from "/extension/app/dep/zyx.js";
+import { LiveVar } from "/extension/app/@dep/zyx.js";
 
 export default class DashboardActivity {
     constructor(activityData) {

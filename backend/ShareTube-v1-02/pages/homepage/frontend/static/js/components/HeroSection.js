@@ -1,6 +1,6 @@
-import { html, css, LiveVar } from "/extension/app/dep/zyx.js";
+import { html, css, LiveVar } from "/extension/app/@dep/zyx.js";
 
-import { googleSVG, chromiumSVG } from "/extension/app/assets/svgs.js";
+import { googleSVG, chromiumSVG } from "/extension/app/@assets/svgs.js";
 
 export default class HeroSection {
     constructor() {
