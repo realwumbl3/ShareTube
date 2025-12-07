@@ -21,7 +21,7 @@ from ..sockets import (
     has_user_been_verified
 )
 
-from ..app import get_user_id_from_auth_header
+from .. import get_user_id_from_auth_header
 from ..extensions import db, socketio
 from ..models import Room, RoomMembership, User
 from .room_timeouts import cancel_starting_timeout

@@ -75,7 +75,7 @@ def require_auth(f):
 def register_socket_handlers():
     """Register Socket.IO event handlers for dashboard real-time updates."""
     # Import socketio directly from extensions to avoid import issues
-    from ....extensions import socketio
+    from ....backend.extensions import socketio
 
     @socketio.on('dashboard.connect')
     def handle_dashboard_connect():
@@ -92,7 +92,7 @@ def emit_dashboard_update(update_type, data):
     """Emit a real-time update to connected dashboard clients."""
     try:
         # Import socketio directly from extensions to avoid import issues
-        from ....extensions import socketio
+        from ....backend.extensions import socketio
         socketio.emit('dashboard.update', {
             'type': update_type,
             'data': data,

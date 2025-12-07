@@ -26,7 +26,7 @@ class Config:
     # JWT signing secret; defaults to SECRET_KEY if not explicitly provided
     JWT_SECRET = os.getenv("JWT_SECRET", SECRET_KEY)
     # Prefer absolute DB path under instance/ directory at repo root for SQLite
-    _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+    _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
     # Default SQLAlchemy URI pointing to a sqlite database stored in instance/VERSION/APP_NAME.db
     _DB_DEFAULT = (
         f"sqlite:///{os.path.join(_ROOT, 'instance', VERSION, f'{APP_NAME}.db')}"

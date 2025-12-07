@@ -226,7 +226,7 @@ def register_socket_handlers():
     def _on_queue_load_debug_list(room: Room, user_id: int, queue: Queue, data: dict):
         # load the debug list from the testdata/queue.json file
         with open(
-            os.path.join(current_app.root_path, ".test-data", "queue.json"), "r"
+            os.path.join(current_app.root_path, ".tests", ".test-data", "queue.json"), "r"
         ) as f:
             debug_queue = json.load(f)
         

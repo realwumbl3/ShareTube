@@ -4,7 +4,7 @@ clear
 # Force unbuffered output for this session
 export PYTHONUNBUFFERED=1
 
-LOG_FILE=".instance/ShareTube.error.log"
+LOG_FILE=".instance/ShareTube.log"
 
 # cleanup background tails from previous runs to prevent duplicates/confusion
 pkill -f "tail -f $LOG_FILE" 2>/dev/null

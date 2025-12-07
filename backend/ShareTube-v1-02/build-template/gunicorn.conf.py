@@ -9,7 +9,7 @@ worker_class = "geventwebsocket.gunicorn.workers.GeventWebSocketWorker"
 # Change working directory to the project root before loading app
 chdir = "$PROJECT_ROOT"
 # WSGI app module path for Gunicorn to load
-wsgi_app = "backend.$VERSION.app:app"
+wsgi_app = "backend.$VERSION.backend:app"
 # Kill and restart workers that block beyond this many seconds
 timeout = 120
 # File creation mask for logs and socket to be group-readable/writable
@@ -21,7 +21,7 @@ group = "www-data"
 # Access log file path
 accesslog = "$PROJECT_ROOT/instance/$VERSION/$APP_NAME.access.log"
 # Error log file path
-errorlog = "$PROJECT_ROOT/instance/$VERSION/$APP_NAME.error.log"
+errorlog = "$PROJECT_ROOT/instance/$VERSION/$APP_NAME.log"
 # Logging level for Gunicorn
 loglevel = "debug"
 # Capture stdout/stderr of workers into Gunicorn logs
