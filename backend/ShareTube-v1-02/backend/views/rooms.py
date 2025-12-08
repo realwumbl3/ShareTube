@@ -72,6 +72,7 @@ def register_socket_handlers() -> None:
     def _on_join_room(data: dict):
         try:
             logging.debug(f"room.join: data={data}, is_mobile_remote={is_mobile_remote_socket()}")
+            client_timestamp = (data or {}).get("clientTimestamp")
 
             # Handle mobile remote connections differently
             if is_mobile_remote_socket():
@@ -96,8 +97,9 @@ def register_socket_handlers() -> None:
                         "code": room.code,
                         "snapshot": room.to_dict(),
                         "serverNowMs": now_ms(),
+                        "clientTimestamp": client_timestamp,
                     },
-                    room=f"room:{room.code}",
+                    to=request.sid,
                 )
                 return
 
@@ -140,8 +142,9 @@ def register_socket_handlers() -> None:
                     "code": room.code,
                     "snapshot": room.to_dict(),
                     "serverNowMs": now_ms(),
+                    "clientTimestamp": client_timestamp,
                 },
-                room=f"room:{room.code}",
+                to=request.sid,
             )
         except Exception:
             logging.exception("room.join handler error")
@@ -348,6 +351,25 @@ def register_socket_handlers() -> None:
                 logging.debug("client.pong: updated last_seen for user %s", user_id)
         except Exception:
             logging.exception("client.pong handler error")
+
+    @socketio.on("time.sync")
+    def _on_time_sync(data: Optional[dict]):
+        """Respond with server time to support client-side NTP-style offset calculation."""
+        try:
+            payload = data or {}
+            client_timestamp = payload.get("clientTimestamp")
+            sample_id = payload.get("sampleId")
+            socketio.emit(
+                "time.sync.response",
+                {
+                    "serverNowMs": now_ms(),
+                    "clientTimestamp": client_timestamp,
+                    "sampleId": sample_id,
+                },
+                to=request.sid,
+            )
+        except Exception:
+            logging.exception("time.sync handler error")
 
     @socketio.on("disconnect")
     def _on_disconnect():

@@ -11,6 +11,8 @@ export default class VirtualPlayer {
     constructor(app) {
         this.app = app;
         this.verbose = false;
+        this.timeSyncIntervalId = null;
+        this.startTimeSyncLoop();
     }
 
     bindListeners(socket) {
@@ -86,6 +88,7 @@ export default class VirtualPlayer {
         if (!result.ok) return;
 
         this.updateServerClock(result);
+        await this.performTimeSyncSamples(5);
         state.roomCode.set(result.code);
         state.inRoom.set(true);
         state.adSyncMode.set(result.snapshot.ad_sync_mode);
@@ -97,6 +100,59 @@ export default class VirtualPlayer {
         this.onRoomStateUpdate(result.snapshot);
         this.app.roomManager.updateCodeHashInUrl(result.code);
         this.applyTimestamp();
+    }
+
+    startTimeSyncLoop() {
+        if (this.timeSyncIntervalId) return;
+        // Periodic resync to handle route/DNS/latency shifts
+        this.timeSyncIntervalId = setInterval(() => {
+            if (!state.inRoom.get()) return;
+            this.performTimeSyncSamples(3).catch((err) => this.verbose && console.warn("time sync loop error", err));
+        }, 30000);
+    }
+
+    async performTimeSyncSamples(sampleCount = 5) {
+        const socket = await this.app.socket.ensureSocket();
+        if (!socket) return;
+
+        const samples = [];
+
+        for (let i = 0; i < sampleCount; i++) {
+            const sampleId = `${Date.now()}-${Math.random()}`;
+            const clientTimestamp = Date.now();
+            const startMono = performance.now();
+
+            const result = await new Promise((resolve) => {
+                const handler = (payload) => {
+                    if (!payload || payload.sampleId !== sampleId) return;
+                    clearTimeout(timeout);
+                    socket.off("time.sync.response", handler);
+                    resolve({ ...payload, clientTimestamp, endMono: performance.now() });
+                };
+                const timeout = setTimeout(() => {
+                    socket.off("time.sync.response", handler);
+                    resolve(null);
+                }, 3000);
+                socket.on("time.sync.response", handler);
+                socket.emit("time.sync", { sampleId, clientTimestamp });
+            });
+
+            if (result && Number.isFinite(result.serverNowMs)) {
+                const rtt = result.endMono - startMono;
+                const offset = result.serverNowMs - (clientTimestamp + rtt / 2);
+                samples.push({ rtt, offset, serverNowMs: result.serverNowMs });
+            }
+
+            // Small delay between samples to avoid burst batching effects
+            await new Promise((r) => setTimeout(r, 25));
+        }
+
+        if (!samples.length) return;
+
+        samples.sort((a, b) => a.rtt - b.rtt);
+        const best = samples[0];
+        state.serverMsOffset.set(best.offset);
+        state.serverNowMs.set(best.serverNowMs);
     }
 
     async emitRestartVideo() {
@@ -198,10 +254,21 @@ export default class VirtualPlayer {
         return code === state.roomCode.get();
     }
 
-    updateServerClock({ serverNowMs }) {
-        const now = Date.now() + state.fakeTimeOffset.get();
+    updateServerClock({ serverNowMs, clientTimestamp }) {
+        const receiveTime = Date.now() + state.fakeTimeOffset.get();
         state.serverNowMs.set(serverNowMs);
-        const offset = now - serverNowMs;
+
+        // If we have the originating client timestamp, compute NTP-style offset:
+        // offset = serverTimeAtSend - (clientSendTime + RTT/2)
+        if (Number.isFinite(clientTimestamp)) {
+            const rtt = receiveTime - clientTimestamp;
+            const offset = serverNowMs - (clientTimestamp + rtt / 2);
+            state.serverMsOffset.set(offset);
+            return;
+        }
+
+        // Fallback to naive offset when client timestamp is unavailable
+        const offset = receiveTime - serverNowMs;
         state.serverMsOffset.set(offset);
     }
 

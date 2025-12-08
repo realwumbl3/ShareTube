@@ -129,6 +129,11 @@ export default class PlayerControls {
         // Ignore clicks initiated within ShareTube UI
         const path = this.getEventPath(e);
         if (this.shouldIgnoreShareTube(path)) return;
+        // Detect clicks on YouTube thumbnails (homepage, sidebar, endscreen, etc.)
+        if (this.isThumbnailClick(path, e)) {
+            this.onThumbnailClick(e, path);
+            return;
+        }
         // Find YouTube player container
         const playerEl = this.getPlayerContainer();
         if (!this.isEventWithinPlayer(e, playerEl)) return;
@@ -246,6 +251,37 @@ export default class PlayerControls {
             },
             1000
         );
+    }
+
+    isThumbnailClick(path, e) {
+        const targetAnchor =
+            (e?.target instanceof Element && e.target.closest("a.yt-lockup-view-model__content-image")) || null;
+        if (targetAnchor) return true;
+
+        return path.some((el) => {
+            if (!el || !(el instanceof Element)) return false;
+            const idMatch = (el.id || "").toLowerCase() === "thumbnail";
+            const tagMatch = el.tagName === "YTD-THUMBNAIL" || el.tagName === "YT-LOCKUP-VIEW-MODEL";
+            const classMatch =
+                el.classList?.contains("ytd-thumbnail") ||
+                el.classList?.contains("ytp-videowall-still") ||
+                el.classList?.contains("ytp-ce-element") ||
+                el.classList?.contains("yt-lockup-view-model__content-image") ||
+                el.classList?.contains("yt-lockup-view-model");
+            return idMatch || tagMatch || classMatch;
+        });
+    }
+
+    onThumbnailClick(e, path) {
+        if (!state.roomCode.get()) return;
+        const anchor =
+            path.find((el) => el instanceof Element && el.tagName === "A") ||
+            (e.target instanceof Element ? e.target.closest("a") : null);
+        const href = anchor?.getAttribute?.("href") || null;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (href) window.open(href, "_blank");
     }
 
     emitToggleRoomPlayPause() {

@@ -10,7 +10,7 @@ from ..extensions import db
 from ..utils import fetch_youtube_channel_meta, now_ms
 
 if TYPE_CHECKING:
-    from .queue import QueueEntry
+    from .queue_entry import QueueEntry
 
 
 class YouTubeAuthor(db.Model):

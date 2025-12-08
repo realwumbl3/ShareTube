@@ -17,7 +17,8 @@ export default class SocketManager {
     }
 
     async joinRoom(code) {
-        return await this.emit("room.join", { code });
+        // Include a client-side timestamp so the server can echo it back for NTP-style offset calc
+        return await this.emit("room.join", { code, clientTimestamp: Date.now() });
     }
 
     async ensureSocket() {

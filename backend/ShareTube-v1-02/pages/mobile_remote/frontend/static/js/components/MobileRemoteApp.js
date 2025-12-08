@@ -118,7 +118,7 @@ export default class MobileRemoteApp {
         this.socket.on("connect", () => {
             console.log("Mobile Remote: Socket connected");
             if (this.pendingRoomCode) {
-                this.socket.emit("room.join", { code: this.pendingRoomCode });
+                this.socket.emit("room.join", { code: this.pendingRoomCode, clientTimestamp: Date.now() });
             }
         });
 
@@ -152,7 +152,7 @@ export default class MobileRemoteApp {
             }
 
             if (socketInstance.connected) {
-                await this.socket.emit("room.join", { code: roomCode });
+                await this.socket.emit("room.join", { code: roomCode, clientTimestamp: Date.now() });
             }
         } catch (err) {
             // console.error("Mobile Remote: Failed to initialize socket connection", err);
@@ -174,6 +174,7 @@ export default class MobileRemoteApp {
             code: data.code,
             snapshot,
             serverNowMs: data.serverNowMs,
+            clientTimestamp: data.clientTimestamp,
         });
 
         this.cleanAuthFromUrl();
