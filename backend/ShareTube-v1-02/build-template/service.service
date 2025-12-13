@@ -1,14 +1,14 @@
 [Unit]
-Description=$APP_NAME Gunicorn (gevent)
+Description=&APP_NAME Gunicorn (gevent)
 After=network.target
 
 [Service]
-User=$USERNAME
+User=&USERNAME
 Group=www-data
-WorkingDirectory=$PROJECT_ROOT
+WorkingDirectory=&PROJECT_ROOT
 
-Environment=APP_NAME=$APP_NAME
-Environment=VERSION=$VERSION
+Environment=APP_NAME=&APP_NAME
+Environment=VERSION=&VERSION
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=SOCKETIO_MESSAGE_QUEUE=redis://127.0.0.1:6379/0
@@ -18,8 +18,8 @@ Environment=SOCKETIO_ASYNC_MODE=gevent
 Environment=TEMPLATES_AUTO_RELOAD=true
 UMask=007
 
-ExecStart=$PROJECT_ROOT/.venv/bin/gunicorn \
-  -c $PROJECT_ROOT/instance/$VERSION/deploy/gunicorn.conf.py
+ExecStart=&PROJECT_ROOT/.venv/bin/gunicorn \
+  -c &PROJECT_ROOT/instance/&VERSION/deploy/gunicorn.conf.py
 
 Restart=always
 RestartSec=2

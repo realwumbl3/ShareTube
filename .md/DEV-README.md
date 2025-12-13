@@ -520,11 +520,11 @@ python3 setup_deploy.py --this --version=v1-02 --port=8000
 - **Systemd service**: `instance/{version}/deploy/service.service`
 
 **Template Variables:**
-- `$USERNAME`: Target server username
-- `$PROJECT_ROOT`: Absolute path to project on server
-- `$VERSION`: Application version (e.g., v1-02)
-- `$APP_NAME`: Application name (ShareTube)
-- `$PORT`: Optional port override
+- `&USERNAME`: Target server username
+- `&PROJECT_ROOT`: Absolute path to project on server
+- `&VERSION`: Application version (e.g., v1-02)
+- `&APP_NAME`: Application name (ShareTube)
+- `&LISTEN_PORT`: Optional port override
 
 The script outputs exact commands to run on your server for complete deployment.
 

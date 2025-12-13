@@ -33,11 +33,11 @@ def render_content(
     # Normalize project_path to have no trailing slash
     project_path = project_path.rstrip("/")
     # Replace placeholders
-    rendered = rendered.replace("$USERNAME", username)
-    rendered = rendered.replace("$VERSION", version)
-    rendered = rendered.replace("$APP_NAME", APP_NAME)
-    rendered = rendered.replace("$PROJECT_ROOT", project_path)
-    rendered = rendered.replace("$PORT", str(port))
+    rendered = rendered.replace("&USERNAME", username)
+    rendered = rendered.replace("&VERSION", version)
+    rendered = rendered.replace("&APP_NAME", APP_NAME)
+    rendered = rendered.replace("&PROJECT_ROOT", project_path)
+    rendered = rendered.replace("&LISTEN_PORT", str(port))
     return rendered
 
 
@@ -126,7 +126,7 @@ def main() -> None:
         "sudo systemctl daemon-reload",
         f"sudo systemctl enable --now {APP_NAME}.{args.version}.service",
         # Ensure correct ownership and permissions on the unix socket so Nginx (www-data) can read/write it
-        f'sudo ln -sf "$PROJECT_ROOT/instance/ShareTube-nginx.conf" /etc/nginx/sites-enabled/ShareTube-entry.conf'
+        f'sudo ln -sf "$&PROJECT_ROOT/instance/ShareTube-nginx.conf" /etc/nginx/sites-enabled/ShareTube-entry.conf'
         "sudo nginx -t && sudo systemctl reload nginx",
         # Run this command after the deployment is successful to ensure the correct ownership and permissions are set.
         f'sudo chmod 770 "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
