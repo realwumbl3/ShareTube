@@ -249,12 +249,14 @@ def register_routes(app: Flask) -> None:
         logging.exception("player socket handlers registration failed")
 
     try:
-        from .views.rooms import rooms_bp, register_socket_handlers
-        from .views.heartbeat import start_heartbeat_if_needed
+        from .views.rooms import (
+            rooms_bp,
+            register_socket_handlers,
+            start_heartbeat_if_needed,
+        )
 
         app.register_blueprint(rooms_bp)
         register_socket_handlers()
-        # Start global heartbeat cleanup task
         start_heartbeat_if_needed(app)
     except Exception:
         logging.exception("rooms blueprint import failed")

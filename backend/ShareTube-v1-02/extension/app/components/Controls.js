@@ -1,4 +1,4 @@
-import { html, css, LiveVar, throttle } from "../@dep/zyx.js";
+import { html, css, throttle } from "../@dep/zyx.js";
 
 import state from "../state.js";
 
@@ -8,7 +8,14 @@ export default class Controls {
     constructor(app) {
         this.app = app;
         html`
-            <div id="sharetube_controls" zyx-if=${state.roomCode}>
+            <div
+                id="sharetube_controls"
+                zyx-if=${[
+                    state.roomCode,
+                    state.isOperator,
+                    (roomCode, isOperator) => roomCode && isOperator,
+                ]}
+            >
                 <div class="control">
                     <button
                         title=${state.roomState.interp((v) => this.stateToButtonTitle(v))}
@@ -21,7 +28,7 @@ export default class Controls {
                         />
                     </button>
                 </div>
-                <div class="control">
+                <div class="control" zyx-if=${[state.nextUpItem, (v) => v !== null]}>
                     <button title="Skip to next video" class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>
                         <img src=${skipSVG} alt="Skip" />
                     </button>
@@ -40,7 +47,6 @@ export default class Controls {
     }
 
     stateToButtonLabel(state) {
-        console.log("stateToButtonLabel() called with state:", state);
         switch (state) {
             case "playing":
                 return pauseSVG;

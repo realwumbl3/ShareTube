@@ -4,7 +4,7 @@
     align-items: center;
     transition: opacity 200ms ease,
         box-shadow 160ms ease,
-        transform 80ms ease,
+        transform 300ms ease,
         background 160ms ease,
         border-color 160ms ease;
     gap: 6px;
@@ -21,6 +21,7 @@
     pointer-events: auto;
     margin-bottom: 12px;
     min-height: 2.5em;
+    transform: translateY(100%);
 
     >span {
         display: flex;
@@ -125,6 +126,11 @@
 #sharetube_pill span {
     white-space: nowrap;
     font-weight: 500;
+}
+
+#sharetube_pill.revealed,
+#sharetube_pill[is_locked="true"] {
+    transform: translateY(0);
 }
 
 #sharetube_lock_btn {

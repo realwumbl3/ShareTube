@@ -16,14 +16,13 @@ export default class VirtualPlayer {
     }
 
     bindListeners(socket) {
-        socket.on("queue.update", this.onQueueUpdate.bind(this));
         socket.on("queue.added", this.onQueueAdded.bind(this));
         socket.on("queue.removed", this.onQueueRemoved.bind(this));
         socket.on("queue.moved", this.onQueueMoved.bind(this));
-        socket.on("room.state.update", this.onRoomStateUpdate.bind(this));
         socket.on("user.join.result", this.onRoomJoinResult.bind(this));
         socket.on("room.playback", this.onRoomPlayback.bind(this));
-        socket.on("queue.probe", this.onQueueProbe.bind(this));
+        socket.on("room.settings.update", this.onRoomSettingsUpdate.bind(this));
+        socket.on("room.error", this.onRoomError.bind(this));
     }
 
     async onQueueAdded(data) {
@@ -34,39 +33,67 @@ export default class VirtualPlayer {
         if (item.status.get() === "played") state.queuePlayed.push(item);
         if (item.status.get() === "skipped") state.queueSkipped.push(item);
         if (item.status.get() === "deleted") state.queueDeleted.push(item);
+        this.updateNextUpItem();
     }
 
     async onQueueRemoved(data) {
         if (!data.id) return;
-        const remove = (list) => {
-            const idx = list.findIndex((i) => i.id === data.id);
-            if (idx !== -1) list.splice(idx, 1);
-        };
-        remove(state.queue);
-        remove(state.queueQueued);
-        remove(state.queuePlayed);
-        remove(state.queueSkipped);
-        remove(state.queueDeleted);
+        if (data.remove) {
+            const remove = (list) => {
+                const idx = list.findIndex((i) => i.id === data.id);
+                if (idx !== -1) list.splice(idx, 1);
+            };
+            remove(state.queue);
+            remove(state.queueQueued);
+            remove(state.queuePlayed);
+            remove(state.queueSkipped);
+            remove(state.queueDeleted);
+            this.updateNextUpItem();
+            return;
+        }
+
+        const item = state.queue.find((i) => i.id === data.id);
+        if (item) {
+            if (data.position !== undefined) item.position.set(data.position);
+            item.status.set(data.status || "deleted");
+            this.refreshQueueLists();
+            this.updateNextUpItem();
+            return;
+        }
+
+        this.updateNextUpItem();
     }
 
     async onQueueMoved(data) {
         if (!data.id) return;
-        const item = state.queue.find((i) => i.id === data.id);
-        if (!item) return;
+        // Apply bulk updates when provided (used by reorder operations that renumber positions)
+        const updates = data?.opts?.updates;
+        if (Array.isArray(updates) && updates.length) {
+            for (const u of updates) {
+                if (!u?.id) continue;
+                const it = state.queue.find((i) => i.id === u.id);
+                if (!it) continue;
+                if (u.position !== undefined) it.position.set(u.position);
+                if (u.status !== undefined) it.status.set(u.status);
+            }
+        } else {
+            const item = state.queue.find((i) => i.id === data.id);
+            if (!item) return;
+            if (data.position !== undefined) item.position.set(data.position);
+            if (data.status !== undefined) item.status.set(data.status);
+        }
 
-        if (data.position !== undefined) item.position.set(data.position);
-        if (data.status !== undefined) item.status.set(data.status);
-
-        // Re-sort and re-filter lists
-        // Ideally we would move just this item, but re-syncing the specific lists is safer given status changes
         this.refreshQueueLists();
+        this.updateNextUpItem();
     }
 
     refreshQueueLists() {
-        const all = state.queue.get().slice().sort((a, b) => (a.position.get() || 0) - (b.position.get() || 0));
-        
+        // LiveList behaves like an array; use get() if provided, else treat as array
+        const base = typeof state.queue.get === "function" ? state.queue.get() : state.queue;
+        const all = (base || []).slice().sort((a, b) => (a.position.get() || 0) - (b.position.get() || 0));
+
         const sync = (list, filter) => {
-             syncLiveList({
+            syncLiveList({
                 localList: list,
                 remoteItems: filter ? all.filter(filter) : all,
                 extractRemoteId: (v) => v.id,
@@ -82,7 +109,43 @@ export default class VirtualPlayer {
         sync(state.queueDeleted, (i) => i.status.get() === "deleted");
     }
 
-    async onQueueProbe(data) {}
+    async loadQueueEntries(queue) {
+        if (!queue || !queue.entries) return;
+        for (const entry of queue.entries) {
+            const item = new ShareTubeQueueItem(this.app, entry);
+            state.queue.push(item);
+        }
+        this.refreshQueueLists();
+        this.updateNextUpItem();
+    }
+
+    updateNextUpItem() {
+        const currentPlayingId = state.currentPlaying.item.get()?.id;
+        const nextUpEntry = state.queueQueued.find((entry) => entry.id !== currentPlayingId);
+        state.nextUpItem.set(nextUpEntry || null);
+    }
+
+    async onRoomSettingsUpdate(data) {
+        if (data.autoadvance_on_end !== undefined) {
+            state.roomAutoadvanceOnEnd.set(data.autoadvance_on_end);
+        }
+    }
+
+    async onRoomError(data) {
+        // Handle autoadvance disabled error to show continue prompt
+        if (data.error === "queue.probe: autoadvance_disabled" && state.nextUpItem.get()) {
+            state.showContinueNextPrompt.set(true);
+        }
+        // Handle authentication errors - clear auth state so user knows to re-sign in
+        if (data.error === "Authentication required") {
+            console.warn("ShareTube: Authentication required error, clearing sign-in state");
+            try {
+                await this.app.clearAuthState();
+            } catch (e) {
+                console.warn("ShareTube: failed to clear auth state on room error", e);
+            }
+        }
+    }
 
     async onRoomJoinResult(result) {
         if (!result.ok) return;
@@ -92,12 +155,21 @@ export default class VirtualPlayer {
         state.roomCode.set(result.code);
         state.inRoom.set(true);
         state.adSyncMode.set(result.snapshot.ad_sync_mode);
+        state.roomAutoadvanceOnEnd.set(result.snapshot.autoadvance_on_end ?? true);
+
+        // Calculate if current user is an operator
+        const userId = state.userId.get();
+        const isOwner = result.snapshot.owner_id === userId;
+        const isOperatorListed = (result.snapshot.operators || []).includes(userId);
+        state.isOperator.set(isOwner || isOperatorListed);
 
         const currentQueue = result.snapshot.current_queue;
         this.updateCurrentPlayingFromEntry(currentQueue?.current_entry);
         this.gotoVideoIfNotOnVideoPage(currentQueue?.current_entry);
 
-        this.onRoomStateUpdate(result.snapshot);
+        this.setRoomState(result.snapshot.state);
+        this.loadQueueEntries(result.snapshot.current_queue);
+
         this.app.roomManager.updateCodeHashInUrl(result.code);
         this.applyTimestamp();
     }
@@ -159,12 +231,6 @@ export default class VirtualPlayer {
         return await this.app.socket.emit("room.control.restartvideo");
     }
 
-    async onRoomStateUpdate(data) {
-        if (!data.state) return;
-        this.setRoomState(data.state);
-        this.onQueueUpdate(data.current_queue);
-    }
-
     shouldSuppressTimestampUpdate(data) {
         const localUserId = state.userId && state.userId.get ? state.userId.get() : null;
         const isOwnActor = data.actor_user_id && localUserId && data.actor_user_id === localUserId;
@@ -191,34 +257,6 @@ export default class VirtualPlayer {
         }
 
         if (data.trigger === "room.control.seek" && !this.shouldSuppressTimestampUpdate(data)) this.applyTimestamp();
-    }
-
-    async onQueueUpdate(queue) {
-        if (!queue || !queue.entries) return;
-        this.updateCurrentPlayingFromEntry(queue.current_entry);
-
-        const entries = (queue.entries || []).slice().sort((a, b) => {
-            const pa = a.position ?? 0;
-            const pb = b.position ?? 0;
-            return pa - pb;
-        });
-
-        const sync = (list, filter) => {
-            syncLiveList({
-                localList: list,
-                remoteItems: filter ? entries.filter(filter) : entries,
-                extractRemoteId: (v) => v.id,
-                extractLocalId: (u) => u.id,
-                createInstance: (item) => new ShareTubeQueueItem(this.app, item),
-                updateInstance: (inst, item) => inst.updateFromRemote(item),
-            });
-        };
-
-        sync(state.queue);
-        sync(state.queueQueued, (i) => i.status === "queued");
-        sync(state.queuePlayed, (i) => i.status === "played");
-        sync(state.queueSkipped, (i) => i.status === "skipped");
-        sync(state.queueDeleted, (i) => i.status === "deleted");
     }
 
     playerStateChange(priorState, newState) {

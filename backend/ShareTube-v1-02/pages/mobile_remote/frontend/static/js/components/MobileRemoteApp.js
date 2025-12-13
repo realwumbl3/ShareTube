@@ -1,5 +1,4 @@
 import { html, css, LiveVar } from "/extension/app/@dep/zyx.js";
-import PlaybackControls from "./PlaybackControls.js";
 import QueueList from "./QueueList.js";
 
 import SocketManager from "/extension/app/managers/socket.js";

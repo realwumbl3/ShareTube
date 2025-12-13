@@ -10,9 +10,8 @@
     background: #00000000;
     gap: 4px;
     opacity: 0;
-    transition: opacity 200ms ease, transform 300ms ease;
-    transform: translateY(80%);
-    /* Position container so only top 20% is visible (pill partially showing) */
+    transition: opacity 200ms ease;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 
 
     &.visible {
@@ -22,10 +21,4 @@
             pointer-events: auto;
         }
     }
-
-    &.revealed,
-    &[is_locked="true"] {
-        transform: translateY(0);
-    }
 }
-

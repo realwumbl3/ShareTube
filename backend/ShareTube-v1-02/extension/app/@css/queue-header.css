@@ -44,3 +44,28 @@
     transform: translateY(1px);
 }
 
+#sharetube_queue .queue-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#sharetube_queue .autoadvance-toggle {
+    background: linear-gradient(135deg,
+            rgba(0, 243, 255, 0.2),
+            rgba(0, 160, 255, 0.15)) !important;
+    border-color: rgba(0, 243, 255, 0.4) !important;
+    color: #00f3ff !important;
+
+    &[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+#sharetube_queue .autoadvance-toggle:not(:disabled):hover {
+    background: linear-gradient(135deg,
+            rgba(0, 243, 255, 0.3),
+            rgba(0, 160, 255, 0.25)) !important;
+    border-color: rgba(0, 243, 255, 0.6) !important;
+}

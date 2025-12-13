@@ -21,6 +21,14 @@ export default class ShareTubeQueueItem {
         return await this.app.socket.emit("queue.requeue_to_top", { id: this.id });
     }
 
+    async moveToPosition(targetId, position) {
+        return await this.app.socket.emit("queue.move", {
+            id: this.id,
+            target_id: targetId,
+            position: position
+        });
+    }
+
     /**
      * Update this instance from a fresh remote queue entry payload.
      * Keeps object identity stable while reflecting latest metadata/position.

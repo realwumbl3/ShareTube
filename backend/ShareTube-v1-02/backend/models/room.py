@@ -47,6 +47,8 @@ class Room(db.Model):
     controller_id: Mapped[str] = db.Column(db.String(64), default="")
     # Ad sync policy: off | pause_all | operators_only | starting_only
     ad_sync_mode: Mapped[str] = db.Column(db.String(24), default="pause_all")
+    # Whether to auto-advance to next video when current video ends
+    autoadvance_on_end: Mapped[bool] = db.Column(db.Boolean, default=True)
     # Current playback/state machine status for the room
     # idle | starting | playing | paused | midroll
     state: Mapped[str] = db.Column(db.String(16), default="idle")
@@ -127,6 +129,7 @@ class Room(db.Model):
             "is_private": self.is_private,
             "control_mode": self.control_mode,
             "ad_sync_mode": self.ad_sync_mode,
+            "autoadvance_on_end": self.autoadvance_on_end,
             "state": self.state,
             "current_queue_id": self.current_queue_id,
             "current_queue": (

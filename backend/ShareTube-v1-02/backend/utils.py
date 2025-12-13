@@ -297,6 +297,37 @@ def commit_with_retry(
         raise last_exc
 
 
+def flush_with_retry(
+    session, retries: int = 5, initial_delay: float = 0.05, backoff: float = 2.0
+) -> None:
+    """Flush the SQLAlchemy session with retries for SQLite lock contention."""
+    delay = float(initial_delay)
+    last_exc: Exception | None = None
+    for _ in range(retries):
+        try:
+            session.flush()
+            return
+        except (sqlite3.OperationalError, SAOperationalError) as e:
+            msg = str(e).lower()
+            if "database is locked" not in msg:
+                raise
+            try:
+                session.rollback()
+            except Exception:
+                pass
+            time.sleep(delay)
+            delay *= backoff
+            last_exc = e
+        except Exception:
+            try:
+                session.rollback()
+            except Exception:
+                pass
+            raise
+    if last_exc:
+        raise last_exc
+
+
 def get_redis_client():
     """
     Get a Redis client using the same connection as SocketIO message queue.

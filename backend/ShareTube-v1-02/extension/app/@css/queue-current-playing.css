@@ -12,7 +12,7 @@
 }
 
 #sharetube_queue .current_playing {
-    padding: 8px 10px 10px;
+    padding: 4px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     display: flex;
     align-items: center;
@@ -24,15 +24,25 @@
     position: relative;
 }
 
-#sharetube_queue .current_playing .current_playing_background {
+#sharetube_queue .current_playing .current_playing_bg {
     position: absolute;
-    object-fit: cover;
-    place-self: stretch;
     inset: 0;
+    overflow: hidden;
     z-index: -1;
+}
+
+#sharetube_queue .current_playing .current_playing_bg .current_playing_background {
+    position: absolute;
+    --overdraw: 20%;
+    width: calc(100% + var(--overdraw) * 2);
+    height: calc(100% + var(--overdraw) * 2);
+    top: calc(var(--overdraw) * -1);
+    left: calc(var(--overdraw) * -1);
+    object-fit: cover;
     filter: blur(5px) brightness(0.6) contrast(0.9);
     visibility: hidden;
     user-select: none;
+    transform-origin: center;
 
     &[src] {
         visibility: visible;
@@ -132,7 +142,7 @@
     position: absolute;
     height: 100%;
     width: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgb(35 35 35 / 70%);
     border-radius: inherit;
     display: grid;
     align-items: stretch;
@@ -141,7 +151,7 @@
 
 #sharetube_queue .current_playing_progress .bar_inner {
     position: relative;
-    background: rgba(255, 255, 255, 0.4);
+    background: rgb(0 0 0);
     border-radius: 3px;
     width: calc(var(--progress-int) * 100%);
     transition: width 100ms ease;

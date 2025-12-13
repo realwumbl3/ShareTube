@@ -161,7 +161,7 @@ class Queue(db.Model):
         return entry, None
 
     def advance_to_next(self) -> tuple[Optional["QueueEntry"], Optional[str]]:
-        """Advance to the next queued entry in the queue, wrapping around.
+        """Advance to the next queued entry in the queue.
 
         Returns (next_entry, error_message).
         """
@@ -169,14 +169,18 @@ class Queue(db.Model):
         if not current_entry:
             return None, "queue.advance_to_next: no current entry"
 
-        # Find the next queued entry strictly after the current entry's position.
-        next_entry = (
-            db.session.query(QueueEntry)
-            .filter_by(queue_id=self.id, status="queued")
-            .filter(QueueEntry.position > (current_entry.position or 0))
-            .order_by(QueueEntry.position.asc())
-            .first()
-        )
+        # IMPORTANT:
+        # Queue reordering renumbers *queued* entries to 1..N, but the current
+        # playing entry may have a position outside that range (or may not be in
+        # the queued list at all). Using "position > current.position" can
+        # therefore skip the real top-of-queue entry.
+        #
+        # The desired behavior is: the next entry is always the top queued entry
+        # (lowest position). Exclude the current entry if it is still marked as
+        # queued for any reason.
+        q = db.session.query(QueueEntry).filter_by(queue_id=self.id, status="queued")
+        q = q.filter(QueueEntry.id != current_entry.id)
+        next_entry = q.order_by(QueueEntry.position.asc()).first()
 
         # If there is no queued entry after the current one, signal exhaustion
         # without treating it as a hard error so callers can decide how to

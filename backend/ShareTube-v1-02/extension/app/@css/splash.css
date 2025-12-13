@@ -6,11 +6,21 @@
     height: 100%;
     display: grid;
     place-items: center;
-    gap: 10px;
+    gap: 8px;
     z-index: 1000000001;
     pointer-events: none;
     overflow: hidden;
     contain: strict;
+
+    /* Keep the overlay visually light and consistent */
+    --splash-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --splash-text: rgba(255, 255, 255, 0.92);
+    --splash-text-muted: rgba(255, 255, 255, 0.68);
+    --splash-border: rgba(255, 255, 255, 0.14);
+    --splash-surface: rgba(0, 0, 0, 0.63);
+    --splash-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    --splash-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+    --splash-avatar-border: rgba(255, 255, 255, 0.18);
 
     & .badge_zone {
         position: absolute;
@@ -23,23 +33,22 @@
             inset: 0;
             display: grid;
             place-items: center;
-            gap: 10px;
+            gap: 8px;
 
             & .badge {
                 position: absolute;
-                height: 120px;
+                height: 92px;
                 aspect-ratio: 1 / 1;
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
-                backdrop-filter: blur(20px) saturate(180%);
+                background: rgba(0, 0, 0, 0.45);
                 border-radius: 50%;
                 display: grid;
                 place-items: center;
                 font-weight: bold;
                 opacity: 0;
-                scale: 0.6;
-                border: 2px solid rgba(255, 255, 255, 0.2);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-                transition: opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), scale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                scale: 0.96;
+                border: 1px solid var(--splash-border);
+                box-shadow: var(--splash-shadow);
+                transition: opacity 140ms ease, scale 140ms ease;
 
                 & .large_icon {
                     position: absolute;
@@ -47,18 +56,17 @@
                     background-size: 60%;
                     background-position: center;
                     background-repeat: no-repeat;
-                    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+                    filter: none;
                 }
 
                 & .label {
                     position: absolute;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-                        sans-serif;
-                    font-size: 1.4em;
-                    font-weight: 700;
-                    color: #fff;
-                    letter-spacing: 1px;
-                    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 255, 255, 0.3);
+                    font-family: var(--splash-font);
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: var(--splash-text);
+                    letter-spacing: 0.3px;
+                    text-shadow: var(--splash-text-shadow);
 
                     &.frame_step_label {
                         display: flex;
@@ -66,19 +74,11 @@
                         gap: 8px;
 
                         &>.frame_step_icon {
-                            font-size: 1.2em;
+                            font-size: 14px;
                             font-weight: 700;
-                            color: #fff;
-                            letter-spacing: 1px;
-                            text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 255, 255, 0.3);
-
-                            .frame_step_label.forward & {
-                                transform: rotate(0deg);
-                            }
-
-                            .frame_step_label.backward & {
-                                transform: rotate(180deg);
-                            }
+                            color: var(--splash-text);
+                            letter-spacing: 0.2px;
+                            text-shadow: var(--splash-text-shadow);
                         }
                     }
                 }
@@ -94,125 +94,109 @@
         left: 2em;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
         align-items: flex-start;
         z-index: 1000000002;
+
+        & .actor_entry {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background-color: var(--splash-surface);
+            border-radius: 10px;
+            border: 1px solid var(--splash-border);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.425);
+            opacity: 0;
+            transform: translateX(-6px);
+            transition: background-color 240ms ease;
+
+            &>.actor_details {
+                display: flex;
+                flex-direction: column;
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            &>.actor_avatar {
+                width: 28px;
+                height: 28px;
+                object-fit: cover;
+                border-radius: 50%;
+                border: 1px solid var(--splash-avatar-border);
+                box-shadow: none;
+            }
+
+            &>.actor_details>.actor_name {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--splash-text);
+                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+                letter-spacing: 0.1px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            &>.actor_details>.action_label {
+                font-size: 11px;
+                color: var(--splash-text-muted);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            & .action_history {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                margin-top: 4px;
+                opacity: 0.92;
+                align-self: flex-end;
+            }
+
+            & .action_hist_icon {
+                width: 13px;
+                height: 13px;
+                background-size: 100% 100%;
+                background-position: center;
+                background-repeat: no-repeat;
+                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+            }
+        }
     }
 
+}
+
+.splash_overlay .badge_zone .badge_container .badge .label.frame_step_label.forward>.frame_step_icon {
+    transform: rotate(0deg);
+}
+
+.splash_overlay .badge_zone .badge_container .badge .label.frame_step_label.backward>.frame_step_icon {
+    transform: rotate(180deg);
 }
 
 @keyframes spring_in {
     0% {
         opacity: 0;
-        scale: 0.6;
-        filter: blur(8px);
-    }
-
-    20% {
-        opacity: 0.8;
-        scale: 0.95;
-        filter: blur(2px);
+        scale: 0.96;
     }
 
     50% {
         opacity: 1;
-        scale: 1.05;
-        filter: blur(0px);
-    }
-
-    80% {
-        opacity: 1;
         scale: 1;
-        filter: blur(0px);
     }
 
     100% {
         opacity: 0;
-        scale: 1.3;
-        filter: blur(4px);
+        scale: 1.04;
     }
-}
-
-.actor_entry {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background-color: var(--bg-color, rgba(0, 0, 0, 0.7));
-    backdrop-filter: blur(12px) saturate(180%);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.3s ease;
-
-    &>.actor_details {
-        display: flex;
-        flex-direction: column;
-    }
-
-    &>.actor_avatar {
-        width: 32px;
-        height: 32px;
-        object-fit: cover;
-        border-radius: 50%;
-        border: 1.5px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    &>.actor_details>.actor_name {
-        font-size: 13px;
-        font-weight: 600;
-        color: #fff;
-        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-        letter-spacing: 0.2px;
-        white-space: nowrap;
-    }
-
-    &>.actor_details>.action_label {
-        font-size: 11px;
-        color: rgba(255, 255, 255, 0.7);
-        white-space: nowrap;
-    }
-}
-
-.actor_entry.action-play {
-    --bg-color: rgba(76, 175, 80, 0.4);
-}
-
-.actor_entry.action-pause {
-    --bg-color: rgba(244, 67, 54, 0.4);
-}
-
-.actor_entry.action-seek-forward {
-    --bg-color: rgba(255, 152, 0, 0.4);
-}
-
-.actor_entry.action-seek-backward {
-    --bg-color: rgba(33, 150, 243, 0.4);
-}
-
-.actor_entry.action-restart {
-    --bg-color: rgba(156, 39, 176, 0.4);
-}
-
-.actor_entry.action-frame-forward {
-    --bg-color: rgba(205, 220, 57, 0.4);
-}
-
-.actor_entry.action-frame-backward {
-    --bg-color: rgba(0, 188, 212, 0.4);
-}
-
-.actor_entry.action-unknown {
-    --bg-color: rgba(158, 158, 158, 0.4);
 }
 
 @keyframes actor_fade_in {
     0% {
         opacity: 0;
-        transform: translateX(-10px);
+        transform: translateX(-6px);
     }
 
     100% {
@@ -229,6 +213,6 @@
 
     100% {
         opacity: 0;
-        transform: translateX(-10px);
+        transform: translateX(-6px);
     }
 }

@@ -9,6 +9,7 @@ import PlayerControls from "./controls.js";
 import PlayerExtender from "./extender.js";
 import PlayerOSDDebug from "./osdDebug.js";
 import Splash from "./components/Splash.js";
+import ContinueNextOverlay from "./components/ContinueNextOverlay.js";
 
 // Lightweight observer/controller around the active <video> element on YouTube
 export default class YoutubePlayerManager {
@@ -16,7 +17,6 @@ export default class YoutubePlayerManager {
         this.app = app;
         this.verbose = false;
         this.video = null;
-        this.scan_timer = null;
         this.near_end_probe_sent = false;
         this.desired_state = new LiveVar("paused");
         this.ad_playing = new LiveVar(false);
@@ -47,6 +47,7 @@ export default class YoutubePlayerManager {
         ];
 
         this.splash = new Splash(this.video);
+        this.continueNextOverlay = new ContinueNextOverlay(this.video, this.app);
         // this.intermission = new Intermission();
 
         this.playbackSyncer = new PlaybackSyncer(this);
@@ -64,9 +65,7 @@ export default class YoutubePlayerManager {
 
     // Begin scanning for an active video element and bind to it
     start() {
-        if (this.scan_timer) return;
-        this.scan_timer = setInterval(() => this.ensureBoundToActiveVideo(), 500);
-        // Attempt immediate bind
+        // Attempt immediate bind to main video player
         this.ensureBoundToActiveVideo();
         // Track recent user gestures to classify media events
         this.playerControls.toggleDocumentListeners(true);
@@ -74,39 +73,50 @@ export default class YoutubePlayerManager {
 
     // Stop scanning and unbind from any current video element
     stop() {
-        if (this.scan_timer) {
-            clearInterval(this.scan_timer);
-            this.scan_timer = null;
-        }
         this.playerControls.toggleDocumentListeners(false);
         this.unbindFromVideo();
     }
 
-    // Find and bind to the currently active/visible YouTube video element
+    // Find and bind to the main video player (only rebinds if video element changed or not bound)
     ensureBoundToActiveVideo() {
-        const vid = this.findActiveVideoElement();
-        if (!vid) {
+        // If already bound, check if the video element still exists in DOM
+        if (this.video) {
+            // Check if the video element is still in the document
+            if (document.contains(this.video)) {
+                // Video still exists, keep it bound
+                return;
+            }
+            // Video was removed from DOM, unbind and look for new one
             this.unbindFromVideo();
-            return;
         }
-        if (this.video !== vid) {
-            this.unbindFromVideo();
+
+        // Find the main video player
+        const vid = this.findMainVideoElement();
+        if (vid) {
             this.bindToVideo(vid);
         }
     }
 
-    // Heuristics to locate the main video, shorts, or any visible <video>
-    findActiveVideoElement() {
-        // Prefer main watch video
+    // Called on navigation events to rebind if needed
+    onNavigation() {
+        // Only rebind if we're not currently bound or if the bound video is gone
+        if (!this.video || !document.contains(this.video)) {
+            this.ensureBoundToActiveVideo();
+        }
+    }
+
+    // Find the main video player element (prefers main watch page video)
+    findMainVideoElement() {
+        // Prefer main watch video - don't check visibility, just existence
         let vid = document.querySelector("video.html5-main-video");
-        if (vid && this.isElementVisible(vid) && this.isActualVideoPlayer(vid)) return vid;
+        if (vid && this.isActualVideoPlayer(vid)) return vid;
         // Shorts/reels
         const shorts = document.querySelector("ytd-reel-video-renderer video");
-        if (shorts && this.isElementVisible(shorts) && this.isActualVideoPlayer(shorts)) return shorts;
-        // Fallback to first visible video that is an actual player (not preview)
+        if (shorts && this.isActualVideoPlayer(shorts)) return shorts;
+        // Fallback to first video that is an actual player (not preview)
         const all = Array.from(document.querySelectorAll("video"));
         for (const v of all) {
-            if (this.isElementVisible(v) && this.isActualVideoPlayer(v)) return v;
+            if (this.isActualVideoPlayer(v)) return v;
         }
         return null;
     }
@@ -127,10 +137,12 @@ export default class YoutubePlayerManager {
 
     // Hook into a specific <video>: intercept play(), add event listeners, enforce state
     bindToVideo(video) {
+        console.log("bindToVideo() called");
         this.video = video;
         this.near_end_probe_sent = false;
         this.video.after(this.osdDebug.main);
         this.video.parentElement.after(this.splash.main);
+        this.video.parentElement.after(this.continueNextOverlay.main);
         this.toggleVideoListeners(this.video, true);
         this.enforceDesiredState("bind");
         this.playbackSyncer.start();
@@ -142,11 +154,13 @@ export default class YoutubePlayerManager {
 
     // Detach from current video element and cleanup
     unbindFromVideo() {
+        console.log("unbindFromVideo() called");
         if (!this.video) return;
         this.toggleVideoListeners(this.video, false);
         this.playbackSyncer.stop();
         this.playbackSyncer.resetPlaybackRate(true);
         this.osdDebug.main.remove();
+        this.continueNextOverlay.main.remove();
         this.playerControls.unbindFromVideo();
         this.playerExtender.unbind();
         this.video = null;
@@ -198,6 +212,7 @@ export default class YoutubePlayerManager {
         this.osdDebug.log("onSeeked: native seek");
 
         // If this was a frame step, sync it after the native seek completes
+        // Set in ./controls.js onControlKeydown.
         if (this.pending_frame_step_sync !== null) {
             this.osdDebug.log("onSeeked: pending frame step sync");
             const direction = this.pending_frame_step_sync;
@@ -422,7 +437,10 @@ export default class YoutubePlayerManager {
         if (container) {
             hasAdClass = container.classList.contains("ad-showing");
             try {
-                hasAdElements = container.querySelector(".ytp-ad-duration-remaining, .ytp-ad-player-overlay, .ytp-ad-skip-button, .ytp-ad-skip-button-modern") != null;
+                hasAdElements =
+                    container.querySelector(
+                        ".ytp-ad-duration-remaining, .ytp-ad-player-overlay, .ytp-ad-skip-button, .ytp-ad-skip-button-modern"
+                    ) != null;
             } catch {
                 hasAdElements = false;
             }
@@ -464,7 +482,8 @@ export default class YoutubePlayerManager {
             return;
         }
 
-        const haveCurrentData = typeof HTMLMediaElement !== "undefined" && HTMLMediaElement ? HTMLMediaElement.HAVE_CURRENT_DATA : 2;
+        const haveCurrentData =
+            typeof HTMLMediaElement !== "undefined" && HTMLMediaElement ? HTMLMediaElement.HAVE_CURRENT_DATA : 2;
         const canPlay = this.video.readyState >= haveCurrentData;
         const adNow = this.isAdPlayingNow();
         const ready = Boolean(canPlay && !adNow);

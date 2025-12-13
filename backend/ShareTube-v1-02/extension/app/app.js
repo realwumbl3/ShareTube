@@ -14,15 +14,12 @@ import StorageManager from "./managers/storage.js";
 import ThumbnailExtAddToQueue from "./youtubePlayer/addToST.js";
 
 import Queue from "./components/Queue.js";
-import UserIcons from "./components/UserIcons.js";
-import Controls from "./components/Controls.js";
-import Logo from "./components/Logo.js";
 import SearchBox from "./components/SearchBox.js";
 import QRCodeComponent from "./components/QRCode.js";
 
 export const zyxInput = new ZyXInput();
 
-import { googleSVG, lockSVG } from "./@assets/svgs.js";
+import ShareTubePill from "./components/ShareTubePill.js";
 
 css`
     @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap");
@@ -37,6 +34,7 @@ css`
     @import url(${chrome.runtime.getURL("app/@css/queue-container.css")});
     @import url(${chrome.runtime.getURL("app/@css/queue-header.css")});
     @import url(${chrome.runtime.getURL("app/@css/queue-current-playing.css")});
+    @import url(${chrome.runtime.getURL("app/@css/continue-next-overlay.css")});
     @import url(${chrome.runtime.getURL("app/@css/queue-selector.css")});
     @import url(${chrome.runtime.getURL("app/@css/queue-list.css")});
     @import url(${chrome.runtime.getURL("app/@css/queue-footer.css")});
@@ -86,43 +84,16 @@ export default class ShareTubeApp {
 
         // Components
         this.queue = new Queue(this);
-        this.userIcons = new UserIcons(this);
         this.debugMenu = new DebugMenu(this);
-        this.controls = new Controls(this);
-        this.logo = new Logo(this);
+        this.sharetubePill = new ShareTubePill(this);
+
         this.qrCode = new QRCodeComponent(this);
 
-        this.storageManager.getLocalStorage("locked", false).then((locked) => state.pillLocked.set(locked));
         this.storageManager.getLocalStorage("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
 
         html`
-            <div id="sharetube_main" class="st_reset" is_locked=${state.pillLocked.interp()}>
-                ${this.queue} ${this.debugMenu}
-                <div id="sharetube_pill">
-                    <button zyx-if=${state.pillLocked} id="sharetube_lock_btn" class="lock_btn" zyx-click=${() => this.uiManager.setLock(false)}>
-                        <img src=${lockSVG} alt="Lock" />
-                    </button>
-                    <img
-                        zyx-if=${state.userId}
-                        class="user_icon_avatar"
-                        draggable="false"
-                        alt="Profile"
-                        src=${state.avatarUrl.interp((v) => v || "")}
-                        user-ready=${state.userReady.interp()}
-                    />
-                    <div zyx-else class="sign_in_button rounded_btn" zyx-click=${() => this.authManager.openSignInWithGooglePopup()}>
-                        Sign in with <img src=${googleSVG} alt="Google" />
-                    </div>
-                    ${this.logo}
-                    <span zyx-if=${state.userId}>
-                        ${this.userIcons}
-                        <div zyx-if=${state.roomCode} id="sharetube_toggle_queue" class="rounded_btn" zyx-click=${() => this.queue.toggleQueueVisibility()}>
-                            ${state.queueQueued.interp((v) => (v.length > 0 ? `Queue (${v.length})` : "Queue empty."))}
-                        </div>
-                        ${this.controls}
-                    </span>
-                    <button zyx-if=${state.debug_mode} class="rounded_btn" zyx-click=${() => this.debugMenu.toggleVisibility()}>dbg</button>
-                </div>
+            <div id="sharetube_main" class="st_reset">
+                ${this.queue} ${this.debugMenu} ${this.sharetubePill}
             </div>
             ${this.qrCode}
         `.bind(this);
@@ -130,8 +101,6 @@ export default class ShareTubeApp {
         this.setupKeypressListeners();
 
         this.uiManager.setupDragAndDrop();
-        this.uiManager.setupRevealBehavior();
-        this.uiManager.setupPillLockBehavior();
         this.bindSocketListeners();
         this.virtualPlayer.bindListeners(this.socket);
 
@@ -183,6 +152,19 @@ export default class ShareTubeApp {
         return await this.authManager.applyAvatarFromToken();
     }
 
+    async clearAuthState() {
+        // Clear auth token from storage
+        await chrome.storage.local.remove(["auth_token"]);
+        // Clear user state
+        state.userId.set(0);
+        state.avatarUrl.set("");
+        // Reset room state
+        this.resetRoomState();
+        // Disconnect socket to prevent further authenticated requests
+        this.socket.disconnect();
+        console.log("ShareTube: Auth state cleared - user needs to re-sign in");
+    }
+
     attachBrowserListeners() {
         return this.storageManager.attachBrowserListeners();
     }
@@ -216,5 +198,7 @@ export default class ShareTubeApp {
 
     navKick() {
         console.log("ShareTube navKick", this);
+        // Rebind video player on navigation if needed
+        this.youtubePlayer.onNavigation();
     }
 }

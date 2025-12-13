@@ -258,6 +258,11 @@ export default class PlayerControls {
             (e?.target instanceof Element && e.target.closest("a.yt-lockup-view-model__content-image")) || null;
         if (targetAnchor) return true;
 
+        // Check for modern videowall stills (end screen thumbnails)
+        const modernVideowallAnchor =
+            (e?.target instanceof Element && e.target.closest("a.ytp-modern-videowall-still")) || null;
+        if (modernVideowallAnchor) return true;
+
         return path.some((el) => {
             if (!el || !(el instanceof Element)) return false;
             const idMatch = (el.id || "").toLowerCase() === "thumbnail";
@@ -265,6 +270,9 @@ export default class PlayerControls {
             const classMatch =
                 el.classList?.contains("ytd-thumbnail") ||
                 el.classList?.contains("ytp-videowall-still") ||
+                el.classList?.contains("ytp-modern-videowall-still") ||
+                el.classList?.contains("ytp-modern-videowall-still-image") ||
+                el.classList?.contains("ytp-suggestion-set") ||
                 el.classList?.contains("ytp-ce-element") ||
                 el.classList?.contains("yt-lockup-view-model__content-image") ||
                 el.classList?.contains("yt-lockup-view-model");

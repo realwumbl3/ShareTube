@@ -10,6 +10,8 @@ class ShareTubeState {
         this.roomCode = new LiveVar("");
         this.roomState = new LiveVar("");
         this.adSyncMode = new LiveVar("");
+        this.roomAutoadvanceOnEnd = new LiveVar(true);
+        this.isOperator = new LiveVar(false);
         // Whether this client currently considers itself joined to a room
         this.inRoom = new LiveVar(false);
 
@@ -34,6 +36,10 @@ class ShareTubeState {
 
         this.queueVisible = new LiveVar(false);
 
+        // Continue next prompt
+        this.showContinueNextPrompt = new LiveVar(false);
+        this.nextUpItem = new LiveVar(null);
+
         // Current playing
         this.currentPlaying = {
             item: new LiveVar(null),
@@ -43,8 +49,6 @@ class ShareTubeState {
         };
 
         this.currentPlaybackRate = new LiveVar(1);
-
-        this.pillLocked = new LiveVar(false);
     }
 
     resetRoomState() {
@@ -52,6 +56,10 @@ class ShareTubeState {
         this.roomCode.set("");
         this.roomState.set("");
         this.adSyncMode.set("");
+        this.roomAutoadvanceOnEnd.set(true);
+        this.isOperator.set(false);
+        this.showContinueNextPrompt.set(false);
+        this.nextUpItem.set(null);
     }
 
     serverDateNow() {

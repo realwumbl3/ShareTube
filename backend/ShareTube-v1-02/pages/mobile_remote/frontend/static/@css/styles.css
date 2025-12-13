@@ -3,6 +3,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 /* Import extension CSS files */
+@import "/extension/app/@css/styles-base.css";
 @import "/extension/app/@css/queue-header.css";
 @import "/extension/app/@css/queue-current-playing.css";
 @import "/extension/app/@css/queue-list.css";
@@ -21,18 +22,6 @@
     --border-queue: 1px solid rgba(255, 255, 255, 0.18);
     --border-queue-light: 1px solid rgba(255, 255, 255, 0.22);
     --border-queue-dim: 1px solid rgba(255, 255, 255, 0.12);
-
-    /* Accents */
-    --accent-primary: #00f3ff;
-    /* Cyber Cyan */
-    --accent-secondary: #bc13fe;
-    /* Neon Purple */
-    --accent-success: #00ff9d;
-    /* Matrix Green */
-    --accent-danger: #ff0055;
-    /* Laser Red */
-    --accent-warning: #ffb800;
-    /* Solar Yellow */
 
     /* Text */
     --text-primary: #ffffff;

@@ -6,9 +6,15 @@ import { msDurationTimeStamp } from "../utils.js";
 
 import PlaybackControls from "./PlaybackControls.js";
 
+// Global drag state since dataTransfer doesn't work with zyx framework
 export default class ShareTubeQueue {
     constructor(app, { isMobileRemote = false } = {}) {
         this.app = app;
+
+        this.dragState = {
+            draggedItemId: null,
+            draggedItem: null,
+        };
 
         this.isMobileRemote = isMobileRemote;
 
@@ -24,23 +30,38 @@ export default class ShareTubeQueue {
             >
                 <div class="queue-header">
                     <span class="queue-title">Queue (${state.queue.interp((v) => v.length)})</span>
-                    <button
-                        class="rounded_btn"
-                        ${this.isMobileRemote ? "style='display: none;'" : ""}
-                        aria-label="Toggle queue visibility"
-                        title="Toggle queue visibility"
-                        zyx-click=${() => state.queueVisible.set(!state.queueVisible.get())}
-                    >
-                        ${state.queueVisible.interp((v) => (v ? "Hide" : "Show"))}
-                    </button>
+                    <div class="queue-controls">
+                        <button
+                            class="rounded_btn autoadvance-toggle"
+                            disabled=${state.isOperator.interp((v) => !v || null)}
+                            aria-label="Toggle auto advance"
+                            title=${state.roomAutoadvanceOnEnd.interp(
+                                (v) => `Auto advance ${v ? "ON" : "OFF"} - Click to toggle`
+                            )}
+                            zyx-click=${() => this.toggleAutoadvance()}
+                        >
+                            Auto advance ${state.roomAutoadvanceOnEnd.interp((v) => (v ? "ON" : "OFF"))}
+                        </button>
+                        <button
+                            class="rounded_btn"
+                            ${this.isMobileRemote ? "style='display: none;'" : ""}
+                            aria-label="Toggle queue visibility"
+                            title="Toggle queue visibility"
+                            zyx-click=${() => state.queueVisible.set(!state.queueVisible.get())}
+                        >
+                            ${state.queueVisible.interp((v) => (v ? "Hide" : "Show"))}
+                        </button>
+                    </div>
                 </div>
 
                 <div this="current_playing" class="current_playing">
-                    <img
-                        class="current_playing_background"
-                        src=${state.currentPlaying.item.interp((v) => v?.thumbnail_url || null)}
-                        loading="lazy"
-                    />    
+                    <div class="current_playing_bg">
+                        <img
+                            class="current_playing_background"
+                            src=${state.currentPlaying.item.interp((v) => v?.thumbnail_url || null)}
+                            loading="lazy"
+                        />
+                    </div>
                     <div class="current_playing_container" zyx-if=${state.currentPlaying.item}>
                         <div class="current_playing_thumbnail" >
                             <img
@@ -94,16 +115,23 @@ export default class ShareTubeQueue {
                     </div>
                     ${this.playbackControls || ""}
                 </div>
-            
+
+
                 <div class="queues">
                     <div class="queue_container" zyx-radioview="queues.queued">
                         <div
                             zyx-if=${[state.queueQueued, (v) => v.length > 0]}
                             class="queue-list"
                             id="sharetube_queue_list"
+                            zyx-dragstart=${(e) => this.onListDragStart(e)}
+                            zyx-dragend=${(e) => this.onListDragEnd(e)}
+                            zyx-dragover=${(e) => this.onListDragOver(e)}
+                            zyx-dragenter=${(e) => this.onListDragEnter(e)}
+                            zyx-dragleave=${(e) => this.onListDragLeave(e)}
+                            zyx-drop=${(e) => this.onListDrop(e)}
                             zyx-live-list=${{
                                 list: state.queueQueued,
-                                compose: ShareTubeQueueComponent,
+                                compose: (item) => new ShareTubeQueueComponent(item, { draggable: true }),
                                 filter: (v) => v.status.get() === "queued",
                             }}
                         ></div>
@@ -181,13 +209,15 @@ export default class ShareTubeQueue {
                     </div>
                 </div>
 
-                <div class="queue-footer"></div>
+                <div class="queue-footer" this=footer></div>
             </div>
         `.bind(this);
         /** zyXSense @type {HTMLDivElement} */
         this.current_playing;
         /** zyXSense @type {HTMLDivElement} */
         this.current_playing_progress;
+        /** zyXSense @type {HTMLDivElement} */
+        this.footer;
 
         /** zyx-sense @type {HTMLDivElement} */
         this.current_playing;
@@ -226,6 +256,140 @@ export default class ShareTubeQueue {
     toggleQueueVisibility() {
         state.queueVisible.set(!state.queueVisible.get());
     }
+
+    findQueueItemAtPosition(clientY) {
+        // Find which queue item is at the given Y position
+        const queueItems = document.querySelectorAll(".queue-item");
+        for (const item of queueItems) {
+            const rect = item.getBoundingClientRect();
+            if (clientY >= rect.top && clientY <= rect.bottom) {
+                return {
+                    element: item,
+                    id: item.dataset.id,
+                    rect: rect,
+                };
+            }
+        }
+        return null;
+    }
+
+    onListDragStart(e) {
+        // Find which queue item we're starting to drag from
+        const targetItem = this.findQueueItemAtPosition(e.e.clientY);
+        if (!targetItem) return;
+
+        // Store drag state globally
+        this.dragState.draggedItemId = targetItem.id;
+        this.dragState.draggedItem = state.queue.find((item) => item.id == targetItem.id);
+
+        // Add visual feedback to the dragged item
+        targetItem.element.classList.add("dragging");
+    }
+
+    onListDragEnd(e) {
+        // Clear global drag state
+        this.dragState.draggedItemId = null;
+        this.dragState.draggedItem = null;
+
+        // Remove all visual feedback
+        document
+            .querySelectorAll(".queue-item.dragging, .queue-item.drop-target-above, .queue-item.drop-target-below")
+            .forEach((el) => {
+                el.classList.remove("dragging", "drop-target-above", "drop-target-below");
+            });
+    }
+
+    onListDragEnter(e) {
+        e.e.preventDefault();
+    }
+
+    onListDragLeave(e) {
+        // Only remove indicators if we're actually leaving the list container
+        const rect = e.target.getBoundingClientRect();
+        const x = e.e.clientX;
+        const y = e.e.clientY;
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+            this.clearDropTargetIndicators();
+        }
+    }
+
+    onListDragOver(e) {
+        e.e.preventDefault();
+        e.e.dataTransfer.dropEffect = "move";
+
+        const draggedItemId = this.dragState.draggedItemId;
+        if (!draggedItemId) return;
+
+        // Find target item at mouse position
+        const clientY = e.e.clientY;
+        const targetItem = this.findQueueItemAtPosition(clientY);
+        if (!targetItem || targetItem.id === draggedItemId) {
+            // Remove indicators if not over a valid target
+            this.clearDropTargetIndicators();
+            return;
+        }
+
+        // Remove previous indicators
+        const midpoint = targetItem.rect.top + targetItem.rect.height / 2;
+        this.setDropTargetIndicator(targetItem.element, clientY >= midpoint);
+    }
+
+    async onListDrop(e) {
+        e.e.preventDefault();
+
+        const draggedItemId = this.dragState.draggedItemId;
+        const draggedItem = this.dragState.draggedItem;
+
+        if (!draggedItemId || !draggedItem) {
+            return;
+        }
+
+        // Find target item at drop position
+        const targetItem = this.findQueueItemAtPosition(e.e.clientY);
+        if (!targetItem || targetItem.id === draggedItemId) {
+            return;
+        }
+
+        // Determine position (before/after) based on mouse position
+        const midpoint = targetItem.rect.top + targetItem.rect.height / 2;
+        const insertBefore = e.e.clientY < midpoint;
+
+        this.clearDropTargetIndicators();
+
+        try {
+            await draggedItem.moveToPosition(targetItem.id, insertBefore ? "before" : "after");
+        } catch (error) {
+            console.error("Failed to move queue item:", error);
+        }
+    }
+
+    async toggleAutoadvance() {
+        const newValue = !state.roomAutoadvanceOnEnd.get();
+        try {
+            await this.app.socket.emit("room.settings.autoadvance_on_end.set", {
+                autoadvance_on_end: newValue,
+                code: state.roomCode.get(),
+            });
+        } catch (error) {
+            console.warn("Failed to toggle autoadvance:", error);
+            // Could show a toast or error message here
+        }
+    }
+
+    clearDropTargetIndicators() {
+        document.querySelectorAll(".queue-item.drop-target-above, .queue-item.drop-target-below").forEach((el) => {
+            el.classList.remove("drop-target-above", "drop-target-below");
+        });
+    }
+
+    setDropTargetIndicator(targetElement, isBelow) {
+        this.clearDropTargetIndicators();
+        if (isBelow) {
+            targetElement.classList.add("drop-target-below");
+        } else {
+            targetElement.classList.add("drop-target-above");
+        }
+    }
 }
 
 import { openInNewTabSVG, linkSVG, xSVG, requeueSVG } from "../@assets/svgs.js";
@@ -235,13 +399,23 @@ export class ShareTubeQueueComponent {
     /**
      * @param {ShareTubeQueueItem} item
      */
-    constructor(item) {
+    constructor(item, { draggable = false } = {}) {
         this.item = item;
+        this.draggable = new LiveVar(draggable);
         // Render queue item DOM structure and bind LiveVars
         html`
             <div class="queue-item" data-id=${this.item.id}>
+                <div zyx-if=${this.draggable} class="queue-item-drag-handle" title="Drag to reorder" draggable="true">
+                    ≡
+                </div>
                 <div class="queue-item-thumbnail">
-                    <img class="thumb" alt="${this.item.title || ""}" src="${this.item.thumbnail_url}" loading="lazy" draggable="false" />
+                    <img
+                        class="thumb"
+                        alt="${this.item.title || ""}"
+                        src="${this.item.thumbnail_url}"
+                        loading="lazy"
+                        draggable="false"
+                    />
                     <div class="queue-item-duration">${msDurationTimeStamp(this.item.duration_ms)}</div>
                 </div>
                 <div class="meta">

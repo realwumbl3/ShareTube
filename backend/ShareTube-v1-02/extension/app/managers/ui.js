@@ -23,7 +23,7 @@ export default class UIManager {
         e.preventDefault();
         e.stopPropagation();
         this.app.sharetube_main.classList.add("dragover");
-        this.app.sharetube_main.classList.add("revealed");
+        this.app.sharetubePill.reveal();
     }
 
     onOver(e) {
@@ -42,35 +42,6 @@ export default class UIManager {
         this.app.sharetube_main.addEventListener("dragover", this.onOver.bind(this));
         this.app.sharetube_main.addEventListener("dragleave", this.onLeave.bind(this));
         this.app.sharetube_main.addEventListener("drop", this.onDrop.bind(this));
-    }
-
-    setupRevealBehavior() {
-        this.app.sharetube_main.addEventListener("mouseenter", () => {
-            this.app.sharetube_main.classList.add("revealed");
-        });
-        this.app.sharetube_main.addEventListener("mouseleave", () => {
-            if (state.pillLocked.get()) return;
-            this.app.sharetube_main.classList.remove("revealed");
-        });
-    }
-
-    setupPillLockBehavior() {
-        this.app.sharetube_pill.addEventListener("click", (e) => {
-            if (e.target !== this.app.sharetube_pill || state.pillLocked.get()) return;
-            this.setLock(true);
-        });
-    }
-
-    async setLock(locked) {
-        state.pillLocked.set(locked);
-        await this.app.storageManager.setLocalStorage("locked", locked);
-        if (locked) {
-            this.app.sharetube_main.classList.add("revealed");
-        } else {
-            if (!this.app.sharetube_main.matches(":hover")) {
-                this.app.sharetube_main.classList.remove("revealed");
-            }
-        }
     }
 
     async enqueueUrlsOrCreateRoom(urls) {

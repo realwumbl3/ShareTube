@@ -11,7 +11,7 @@ css`
         all: unset;
         display: inline-grid;
         place-items: center;
-        width: 51px;
+        width: 42px;
         border: none;
         cursor: pointer;
         background: transparent;
@@ -31,8 +31,8 @@ css`
         .ytp-sharetube-extended-button-icon {
             display: grid;
             place-items: center;
-            width: 34px;
-            height: 34px;
+            width: 28px;
+            height: 28px;
             padding: 4px;
             border-radius: 999px;
             opacity: 0.9;
@@ -89,13 +89,25 @@ export default class PlayerExtender {
 
         // Create the button templates
         html`
-            <button this="left_button" class="ytp-sharetube-custom-button" aria-label="Seek -5 seconds" title="Seek -5 seconds" zyx-click=${() => this.seekRelative(-5)}>
+            <button
+                this="left_button"
+                class="ytp-sharetube-custom-button"
+                aria-label="Seek -5 seconds"
+                title="Seek -5 seconds"
+                zyx-click=${() => this.seekRelative(-5)}
+            >
                 <div class="ytp-sharetube-extended-button-icon">
                     <img src=${seekRewindSVG} draggable="false" alt="Seek -5 seconds" />
                     <span class="ytp-sharetube-seek-text">5s</span>
                 </div>
             </button>
-            <button this="right_button" class="ytp-sharetube-custom-button" aria-label="Seek +5 seconds" title="Seek +5 seconds" zyx-click=${() => this.seekRelative(5)}>
+            <button
+                this="right_button"
+                class="ytp-sharetube-custom-button"
+                aria-label="Seek +5 seconds"
+                title="Seek +5 seconds"
+                zyx-click=${() => this.seekRelative(5)}
+            >
                 <div class="ytp-sharetube-extended-button-icon">
                     <img src=${seekForwardSVG} draggable="false" alt="Seek +5 seconds" />
                     <span class="ytp-sharetube-seek-text">5s</span>
@@ -106,8 +118,7 @@ export default class PlayerExtender {
         this.left_button;
         /** zyXSense @type {HTMLButtonElement} */
         this.right_button;
-
-        }
+    }
 
     bind() {
         this.injectButtons();

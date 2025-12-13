@@ -48,6 +48,15 @@ def get_user_id_from_socket() -> Optional[int]:
             return None
 
         return int(sub) if sub is not None else None
+    except jwt.exceptions.ExpiredSignatureError:
+        logging.warning(f"socket auth token expired for token: '{token[:50]}...'")
+        # Emit auth.expired event to notify client to clear sign-in state
+        try:
+            socketio.emit("auth.expired", {"reason": "token_expired"}, to=request.sid)
+        except Exception:
+            # If we can't emit (e.g., socket not fully connected), log and continue
+            logging.debug("Could not emit auth.expired event (socket may not be ready)")
+        return None
     except Exception as e:
         logging.exception(f"socket auth token decode failed for token: '{token}'")
         return None

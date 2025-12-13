@@ -34,7 +34,7 @@ export default class QRCodeComponent {
                         <div id="qr-code-container" class="qr-code-container" this="qr_code_container"></div>
                         <div class="qr-url-link">
                             <a href="${state.roomCode.interp(() => this.qrUrl())}" target="_blank" class="qr-url">
-                                sharetube.wumbl3.xyz/mobile-remote/${state.roomCode.interp((code) => code || "...")}
+                                sharetube.wumbl3.xyz/mobile-remote
                             </a>
                         </div>
                         <div class="qr-room-info">
@@ -56,11 +56,13 @@ export default class QRCodeComponent {
         if (!roomCode) return "#";
 
         // Create a simple base64 encoded auth token
-        const authToken = btoa(JSON.stringify({
-            room_code: roomCode,
-            timestamp: Date.now(),
-            type: "mobile_remote_auth"
-        }));
+        const authToken = btoa(
+            JSON.stringify({
+                room_code: roomCode,
+                timestamp: Date.now(),
+                type: "mobile_remote_auth",
+            })
+        );
 
         return `${state.backendUrl.get()}/mobile-remote/auth/${authToken}`;
     }

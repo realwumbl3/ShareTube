@@ -3,8 +3,7 @@ import { html, css, LiveVar } from "../@dep/zyx.js";
 import state from "../state.js";
 
 export default class Logo {
-    constructor(app) {
-        this.app = app;
+    constructor() {
         this.expanded = new LiveVar(false);
         html`
             <div

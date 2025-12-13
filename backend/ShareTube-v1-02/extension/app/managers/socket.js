@@ -49,6 +49,15 @@ export default class SocketManager {
                     console.warn("ShareTube: failed to reset room state on disconnect", e);
                 }
             });
+            // Handle authentication expiration
+            this.socket.on("auth.expired", async () => {
+                console.warn("ShareTube: Authentication token expired, clearing sign-in state");
+                try {
+                    await this.app.clearAuthState();
+                } catch (e) {
+                    console.warn("ShareTube: failed to clear auth state on token expiration", e);
+                }
+            });
             // Low-level channel diagnostics/ping
             this.socket.on("hello", (payload) => console.log("socket.io hello", payload));
             this.socket.on("hello", (payload) => console.log("socket.io hello", payload));
