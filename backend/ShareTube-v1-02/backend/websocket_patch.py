@@ -1,3 +1,6 @@
+from typing import Any
+
+
 import logging
 
 # Monkey patch geventwebsocket to fix KeyError: '' during disconnect
@@ -24,7 +27,7 @@ try:
         try:
             self.server.clients[self.client_address] = Client(
                 self.client_address, self.websocket)
-            list(self.application(self.environ, lambda s, h, e=None: []))
+            list[Any](self.application(self.environ, lambda s, h, e=None: []))
         finally:
             try:
                 del self.server.clients[self.client_address]

@@ -7,8 +7,6 @@ from flask import Flask
 # Import the SQLAlchemy instance so that future migrations can use it
 from .extensions import db
 
-from sqlalchemy import text
-
 # Run all database migrations required for the current application version
 def run_all_migrations(app: Flask) -> None:
     # Ensure we have an application context so SQLAlchemy metadata is bound
