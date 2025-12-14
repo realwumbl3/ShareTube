@@ -3,7 +3,8 @@
 from datetime import datetime, timedelta, timezone
 
 from .backend import logger
-from .shared_imports import db, User, Room, RoomMembership, Queue, QueueEntry, RoomAudit
+from server.extensions import db
+from server.models import User, Room, RoomMembership, Queue, QueueEntry, RoomAudit
 
 
 class DashboardAnalytics:

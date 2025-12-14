@@ -18,7 +18,7 @@ import secrets
 import json
 
 # Import database models and utilities
-from ..shared_imports import socketio, db, Room, Queue, QueueEntry, now_ms
+from server.models import Room
 
 def _generate_mobile_remote_auth_token(room_code: str) -> str:
     """Generate a one-time use auth token for mobile remote access to a specific room."""

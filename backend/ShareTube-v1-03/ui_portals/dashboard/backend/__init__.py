@@ -9,8 +9,9 @@ from flask import Blueprint, current_app, jsonify, render_template, request, mak
 
 # Import dependencies directly from the main app
 # from ....extensions import db
-from ..shared_imports import db, now_ms, User, Room, RoomMembership, Queue, RoomOperator, QueueEntry, RoomAudit, ChatMessage
 
+from server.models import User 
+from server.lib.utils import now_ms
 
 SECURE_DASHBOARD_UUID = "f4c6c472-3a2b-446e-a9a0-9e3a9f3ebf9e"
 SECURE_DASHBOARD_PREFIX = f"/dashboard-{SECURE_DASHBOARD_UUID}"
@@ -75,7 +76,7 @@ def require_auth(f):
 def register_socket_handlers():
     """Register Socket.IO event handlers for dashboard real-time updates."""
     # Import socketio directly from extensions to avoid import issues
-    from ....extensions import socketio
+    from server.extensions import socketio
 
     @socketio.on('dashboard.connect')
     def handle_dashboard_connect():
@@ -92,7 +93,7 @@ def emit_dashboard_update(update_type, data):
     """Emit a real-time update to connected dashboard clients."""
     try:
         # Import socketio directly from extensions to avoid import issues
-        from ....extensions import socketio
+        from server.extensions import socketio
         socketio.emit('dashboard.update', {
             'type': update_type,
             'data': data,

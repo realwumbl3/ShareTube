@@ -14,7 +14,7 @@ its own `static_folder` or `static_url_path`.
 from flask import Blueprint, jsonify, render_template, request
 
 # Import database models and utilities
-from ..shared_imports import db, Room, Queue, now_ms
+from server.models import Room, Queue
 
 # Create the homepage blueprint that encapsulates all related routes.
 homepage_bp = Blueprint(

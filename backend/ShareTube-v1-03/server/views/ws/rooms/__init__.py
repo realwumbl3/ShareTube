@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from .common import emit_presence
 from .heartbeat import start_heartbeat_if_needed
-from ....app import get_user_id_from_auth_header
+from .... import get_user_id_from_auth_header
 from ....extensions import db
 from ....models import Room, User
 

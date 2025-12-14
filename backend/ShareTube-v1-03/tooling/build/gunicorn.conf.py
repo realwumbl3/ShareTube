@@ -12,7 +12,7 @@ chdir = "&PROJECT_ROOT"
 # Add the backend version directory to Python path to handle dashes in directory name
 pythonpath = "&PROJECT_ROOT/backend/&VERSION"
 # WSGI app module path for Gunicorn to load
-wsgi_app = "server.app:app"
+wsgi_app = "server:app"
 
 # Kill and restart workers that block beyond this many seconds
 timeout = 120

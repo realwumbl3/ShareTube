@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 
 from .backend import logger
-from .shared_imports import db, User, Room, RoomMembership, Queue, QueueEntry, RoomAudit, ChatMessage
+from server.extensions import db
+from server.models import User, Room, RoomMembership, Queue, QueueEntry, RoomAudit
 
 class DashboardData:
     """Data retrieval and formatting for dashboard."""
