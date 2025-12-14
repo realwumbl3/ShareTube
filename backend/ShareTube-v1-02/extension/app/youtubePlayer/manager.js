@@ -34,6 +34,7 @@ export default class YoutubePlayerManager {
 
         this.playerControls = new PlayerControls(this);
         this.playerExtender = new PlayerExtender(this);
+        this.isStarted = false;
 
         this.video_listener_specs = [
             ["play", this.onPlay],
@@ -65,6 +66,8 @@ export default class YoutubePlayerManager {
 
     // Begin scanning for an active video element and bind to it
     start() {
+        if (this.isStarted) return;
+        this.isStarted = true;
         // Attempt immediate bind to main video player
         this.ensureBoundToActiveVideo();
         // Track recent user gestures to classify media events
@@ -73,6 +76,8 @@ export default class YoutubePlayerManager {
 
     // Stop scanning and unbind from any current video element
     stop() {
+        if (!this.isStarted) return;
+        this.isStarted = false;
         this.playerControls.toggleDocumentListeners(false);
         this.unbindFromVideo();
     }

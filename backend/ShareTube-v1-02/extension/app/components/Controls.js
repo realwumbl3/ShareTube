@@ -10,11 +10,7 @@ export default class Controls {
         html`
             <div
                 id="sharetube_controls"
-                zyx-if=${[
-                    state.roomCode,
-                    state.isOperator,
-                    (roomCode, isOperator) => roomCode && isOperator,
-                ]}
+                zyx-if=${[state.roomCode, state.isOperator, (roomCode, isOperator) => roomCode && isOperator]}
             >
                 <div class="control">
                     <button
@@ -28,7 +24,15 @@ export default class Controls {
                         />
                     </button>
                 </div>
-                <div class="control" zyx-if=${[state.nextUpItem, (v) => v !== null]}>
+                <div
+                    class="control"
+                    zyx-if=${[
+                        state.nextUpItem,
+                        state.roomState,
+                        (nextUpItem, roomState) =>
+                            nextUpItem !== null && ["playing", "starting", "idle"].includes(roomState),
+                    ]}
+                >
                     <button title="Skip to next video" class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>
                         <img src=${skipSVG} alt="Skip" />
                     </button>

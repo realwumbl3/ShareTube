@@ -1,0 +1,150 @@
+from __future__ import annotations
+
+import logging
+
+from ....extensions import db, socketio
+from ....models import Room, RoomMembership, User
+from ...middleware import require_room
+from .room_timeouts import cancel_starting_timeout
+from ....lib.utils import flush_with_retry, commit_with_retry, now_ms
+from ....ws.server import emit_function_after_delay
+from .common import emit_presence
+
+
+def register() -> None:
+    @socketio.on("user.ready")
+    @require_room
+    def _on_user_ready(room: Room, user_id: int, data: dict):
+        res, _rej = Room.emit(room.code, trigger="user.ready")
+        try:
+            logging.info(
+                "user.ready received: room=%s user_id=%s incoming_ready=%s room.state=%s",
+                room.code,
+                user_id,
+                bool((data or {}).get("ready")),
+                room.state,
+            )
+            membership = (
+                db.session.query(RoomMembership)
+                .join(User, RoomMembership.user_id == User.id)
+                .filter(RoomMembership.room_id == room.id, RoomMembership.user_id == user_id)
+                .filter(User.active.is_(True))
+                .first()
+            )
+            if not membership:
+                return
+
+            ready = bool((data or {}).get("ready"))
+            previous_ready = bool(membership.ready)
+            membership.set_ready(ready)
+            flush_with_retry(db.session)
+
+            socketio.emit(
+                "user.ready.update",
+                {"user_id": user_id, "ready": ready},
+                room=f"room:{room.code}",
+            )
+
+            midroll_payload = None
+
+            def _is_operator(user_id_to_check: int) -> bool:
+                if room.owner_id and room.owner_id == user_id_to_check:
+                    return True
+                return any(operator.user_id == user_id_to_check for operator in room.operators)
+
+            def _should_consider_midroll(mode: str) -> bool:
+                if mode == "pause_all":
+                    return room.state in ("playing", "starting")
+                if mode == "operators_only":
+                    return room.state == "playing" and _is_operator(user_id)
+                if mode == "starting_only":
+                    return room.state == "starting"
+                return False
+
+            should_eval_midroll = (
+                previous_ready
+                and not ready
+                and room.state != "midroll"
+                and room.current_queue
+                and room.current_queue.current_entry
+            )
+
+            if should_eval_midroll and _should_consider_midroll(room.ad_sync_mode):
+                paused_progress, pause_error = room.pause_playback(now_ms())
+                if pause_error:
+                    logging.warning(
+                        "user.ready: failed to pause playback for midroll (room=%s, user_id=%s, error=%s)",
+                        room.code,
+                        user_id,
+                        pause_error,
+                    )
+                else:
+                    current_entry = room.current_queue.current_entry
+                    if current_entry:
+                        room.state = "midroll"
+                        room.reset_ready_flags()
+                        emit_function_after_delay(emit_presence, room, 0.1)
+                        progress_ms = (
+                            paused_progress
+                            if paused_progress is not None
+                            else current_entry.progress_ms or 0
+                        )
+                        midroll_payload = {
+                            "state": "midroll",
+                            "playing_since_ms": None,
+                            "progress_ms": progress_ms,
+                            "current_entry": current_entry.to_dict(),
+                            "actor_user_id": user_id,
+                        }
+
+            current_entry = (
+                room.current_queue.current_entry
+                if room.current_queue and room.current_queue.current_entry
+                else None
+            )
+
+            all_users_ready = room.are_all_users_ready()
+            logging.info(
+                "user.ready: eval transition -> all_users_ready=%s room.state=%s this_user_ready=%s current_entry_id=%s",
+                all_users_ready,
+                room.state,
+                ready,
+                getattr(current_entry, "id", None),
+            )
+
+            should_transition = (
+                ready
+                and room.state in ("starting", "midroll")
+                and current_entry is not None
+                and all_users_ready
+            )
+            logging.info("user.ready: should_transition=%s", should_transition)
+            playback_payload = None
+            if should_transition:
+                cancel_starting_timeout(room.code)
+                _now_ms = now_ms()
+                room.state = "playing"
+                current_entry.status = "playing"
+                current_entry.playing_since_ms = _now_ms
+                current_entry.paused_at = None
+                playback_payload = {
+                    "state": "playing",
+                    "playing_since_ms": _now_ms,
+                    "progress_ms": current_entry.progress_ms if current_entry else 0,
+                    "current_entry": current_entry.to_dict(),
+                    "actor_user_id": user_id,
+                }
+
+            commit_with_retry(db.session)
+
+            if midroll_payload:
+                res("room.playback", midroll_payload)
+            elif playback_payload:
+                res("room.playback", playback_payload)
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            logging.exception("user.ready handler error")
+

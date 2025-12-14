@@ -1,20 +1,18 @@
-import { html, LiveVar, css } from "../@dep/zyx.js";
+import { html } from "../@dep/zyx.js";
 import state from "../state.js";
 import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } from "../getters.js";
-
 import { msDurationTimeStamp } from "../utils.js";
 
 import PlaybackControls from "./PlaybackControls.js";
+import { ShareTubeQueueComponent } from "./QueueEntry.js";
+import { ShareTubeQueueDrag } from "./QueueDragging.js";
 
 // Global drag state since dataTransfer doesn't work with zyx framework
 export default class ShareTubeQueue {
     constructor(app, { isMobileRemote = false } = {}) {
         this.app = app;
 
-        this.dragState = {
-            draggedItemId: null,
-            draggedItem: null,
-        };
+        this.dragManager = new ShareTubeQueueDrag();
 
         this.isMobileRemote = isMobileRemote;
 
@@ -58,7 +56,7 @@ export default class ShareTubeQueue {
                     <div class="current_playing_bg">
                         <img
                             class="current_playing_background"
-                            src=${state.currentPlaying.item.interp((v) => v?.thumbnail_url || null)}
+                            src=${state.currentPlaying.item.interp((v) => v?.thumbnailUrl("default") || null)}
                             loading="lazy"
                         />
                     </div>
@@ -67,8 +65,8 @@ export default class ShareTubeQueue {
                             <img
                                 class="thumb"
                                 alt=${state.currentPlaying.item.interp((v) => v?.title || "")}
-                                src=${state.currentPlaying.item.interp((v) => v?.thumbnail_url || null)}
-                                loading="lazy" draggable="false"
+                                src=${state.currentPlaying.item.interp((v) => v?.thumbnailUrl("default") || null)}
+                                loading="lazy" draggable="false" 
                             />
                             <div class="current_playing_duration">
                                 ${state.currentPlaying.item.interp((v) => msDurationTimeStamp(v?.duration_ms || 0))}
@@ -121,18 +119,17 @@ export default class ShareTubeQueue {
                     <div class="queue_container" zyx-radioview="queues.queued">
                         <div
                             zyx-if=${[state.queueQueued, (v) => v.length > 0]}
-                            class="queue-list"
+                            class="queue-list queued"
                             id="sharetube_queue_list"
-                            zyx-dragstart=${(e) => this.onListDragStart(e)}
-                            zyx-dragend=${(e) => this.onListDragEnd(e)}
-                            zyx-dragover=${(e) => this.onListDragOver(e)}
-                            zyx-dragenter=${(e) => this.onListDragEnter(e)}
-                            zyx-dragleave=${(e) => this.onListDragLeave(e)}
-                            zyx-drop=${(e) => this.onListDrop(e)}
+                            zyx-dragstart=${(e) => this.dragManager.onListDragStart(e)}
+                            zyx-dragend=${(e) => this.dragManager.onListDragEnd(e)}
+                            zyx-dragover=${(e) => this.dragManager.onListDragOver(e)}
+                            zyx-dragenter=${(e) => this.dragManager.onListDragEnter(e)}
+                            zyx-dragleave=${(e) => this.dragManager.onListDragLeave(e)}
+                            zyx-drop=${(e) => this.dragManager.onListDrop(e)}
                             zyx-live-list=${{
                                 list: state.queueQueued,
-                                compose: (item) => new ShareTubeQueueComponent(item, { draggable: true }),
-                                filter: (v) => v.status.get() === "queued",
+                                compose: ShareTubeQueueComponent,
                             }}
                         ></div>
                         <div zyx-else class="queue-empty">
@@ -147,7 +144,6 @@ export default class ShareTubeQueue {
                             zyx-live-list=${{
                                 list: state.queuePlayed,
                                 compose: ShareTubeQueueComponent,
-                                filter: (v) => v.status.get() === "played",
                             }}
                         ></div>
                         <div zyx-else class="queue-empty">
@@ -162,7 +158,6 @@ export default class ShareTubeQueue {
                             zyx-live-list=${{
                                 list: state.queueSkipped,
                                 compose: ShareTubeQueueComponent,
-                                filter: (v) => v.status.get() === "skipped",
                             }}
                         ></div>
                         <div zyx-else class="queue-empty">
@@ -177,7 +172,6 @@ export default class ShareTubeQueue {
                             zyx-live-list=${{
                                 list: state.queueDeleted,
                                 compose: ShareTubeQueueComponent,
-                                filter: (v) => v.status.get() === "deleted",
                             }}
                         ></div>
                         <div zyx-else class="queue-empty">
@@ -218,7 +212,6 @@ export default class ShareTubeQueue {
         this.current_playing_progress;
         /** zyXSense @type {HTMLDivElement} */
         this.footer;
-
         /** zyx-sense @type {HTMLDivElement} */
         this.current_playing;
         /** zyx-sense @type {HTMLDivElement} */
@@ -257,112 +250,6 @@ export default class ShareTubeQueue {
         state.queueVisible.set(!state.queueVisible.get());
     }
 
-    findQueueItemAtPosition(clientY) {
-        // Find which queue item is at the given Y position
-        const queueItems = document.querySelectorAll(".queue-item");
-        for (const item of queueItems) {
-            const rect = item.getBoundingClientRect();
-            if (clientY >= rect.top && clientY <= rect.bottom) {
-                return {
-                    element: item,
-                    id: item.dataset.id,
-                    rect: rect,
-                };
-            }
-        }
-        return null;
-    }
-
-    onListDragStart(e) {
-        // Find which queue item we're starting to drag from
-        const targetItem = this.findQueueItemAtPosition(e.e.clientY);
-        if (!targetItem) return;
-
-        // Store drag state globally
-        this.dragState.draggedItemId = targetItem.id;
-        this.dragState.draggedItem = state.queue.find((item) => item.id == targetItem.id);
-
-        // Add visual feedback to the dragged item
-        targetItem.element.classList.add("dragging");
-    }
-
-    onListDragEnd(e) {
-        // Clear global drag state
-        this.dragState.draggedItemId = null;
-        this.dragState.draggedItem = null;
-
-        // Remove all visual feedback
-        document
-            .querySelectorAll(".queue-item.dragging, .queue-item.drop-target-above, .queue-item.drop-target-below")
-            .forEach((el) => {
-                el.classList.remove("dragging", "drop-target-above", "drop-target-below");
-            });
-    }
-
-    onListDragEnter(e) {
-        e.e.preventDefault();
-    }
-
-    onListDragLeave(e) {
-        // Only remove indicators if we're actually leaving the list container
-        const rect = e.target.getBoundingClientRect();
-        const x = e.e.clientX;
-        const y = e.e.clientY;
-        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-            this.clearDropTargetIndicators();
-        }
-    }
-
-    onListDragOver(e) {
-        e.e.preventDefault();
-        e.e.dataTransfer.dropEffect = "move";
-
-        const draggedItemId = this.dragState.draggedItemId;
-        if (!draggedItemId) return;
-
-        // Find target item at mouse position
-        const clientY = e.e.clientY;
-        const targetItem = this.findQueueItemAtPosition(clientY);
-        if (!targetItem || targetItem.id === draggedItemId) {
-            // Remove indicators if not over a valid target
-            this.clearDropTargetIndicators();
-            return;
-        }
-
-        // Remove previous indicators
-        const midpoint = targetItem.rect.top + targetItem.rect.height / 2;
-        this.setDropTargetIndicator(targetItem.element, clientY >= midpoint);
-    }
-
-    async onListDrop(e) {
-        e.e.preventDefault();
-
-        const draggedItemId = this.dragState.draggedItemId;
-        const draggedItem = this.dragState.draggedItem;
-
-        if (!draggedItemId || !draggedItem) {
-            return;
-        }
-
-        // Find target item at drop position
-        const targetItem = this.findQueueItemAtPosition(e.e.clientY);
-        if (!targetItem || targetItem.id === draggedItemId) {
-            return;
-        }
-
-        // Determine position (before/after) based on mouse position
-        const midpoint = targetItem.rect.top + targetItem.rect.height / 2;
-        const insertBefore = e.e.clientY < midpoint;
-
-        this.clearDropTargetIndicators();
-
-        try {
-            await draggedItem.moveToPosition(targetItem.id, insertBefore ? "before" : "after");
-        } catch (error) {
-            console.error("Failed to move queue item:", error);
-        }
-    }
-
     async toggleAutoadvance() {
         const newValue = !state.roomAutoadvanceOnEnd.get();
         try {
@@ -374,108 +261,5 @@ export default class ShareTubeQueue {
             console.warn("Failed to toggle autoadvance:", error);
             // Could show a toast or error message here
         }
-    }
-
-    clearDropTargetIndicators() {
-        document.querySelectorAll(".queue-item.drop-target-above, .queue-item.drop-target-below").forEach((el) => {
-            el.classList.remove("drop-target-above", "drop-target-below");
-        });
-    }
-
-    setDropTargetIndicator(targetElement, isBelow) {
-        this.clearDropTargetIndicators();
-        if (isBelow) {
-            targetElement.classList.add("drop-target-below");
-        } else {
-            targetElement.classList.add("drop-target-above");
-        }
-    }
-}
-
-import { openInNewTabSVG, linkSVG, xSVG, requeueSVG } from "../@assets/svgs.js";
-
-// UI component representing a queued YouTube item
-export class ShareTubeQueueComponent {
-    /**
-     * @param {ShareTubeQueueItem} item
-     */
-    constructor(item, { draggable = false } = {}) {
-        this.item = item;
-        this.draggable = new LiveVar(draggable);
-        // Render queue item DOM structure and bind LiveVars
-        html`
-            <div class="queue-item" data-id=${this.item.id}>
-                <div zyx-if=${this.draggable} class="queue-item-drag-handle" title="Drag to reorder" draggable="true">
-                    ≡
-                </div>
-                <div class="queue-item-thumbnail">
-                    <img
-                        class="thumb"
-                        alt="${this.item.title || ""}"
-                        src="${this.item.thumbnail_url}"
-                        loading="lazy"
-                        draggable="false"
-                    />
-                    <div class="queue-item-duration">${msDurationTimeStamp(this.item.duration_ms)}</div>
-                </div>
-                <div class="meta">
-                    <div class="author" zyx-click=${() => this.item.openYoutubeAuthorUrl()}>
-                        ${this.item.youtube_author?.title}
-                    </div>
-                    <div class="url">
-                        <div class="title">${this.item.title}</div>
-                        <span
-                            class="link-drag-icon"
-                            draggable="true"
-                            title="Drag link or click to copy to clipboard."
-                            zyx-dragstart=${(e) => {
-                                e.e.dataTransfer.setData("text/plain", this.item.url);
-                                e.e.dataTransfer.effectAllowed = "copyLink";
-                            }}
-                            zyx-click=${(e) => {
-                                e.e.preventDefault();
-                                e.e.stopPropagation();
-                                // copy to clipboard
-                                navigator.clipboard.writeText(this.item.url);
-                            }}
-                        >
-                            <img src="${linkSVG}" alt="Drag link" />
-                        </span>
-                        <span class="external-link-icon" title="Open in new tab" zyx-click=${() => this.item.openUrl()}>
-                            <img src="${openInNewTabSVG}" alt="Open in new tab" />
-                        </span>
-                    </div>
-                </div>
-                <div class="queue-item-actions">
-                    <button
-                        class="x-button"
-                        type="button"
-                        aria-label="Remove from queue"
-                        title="Remove from queue"
-                        zyx-click=${() => this.removeFromQueue()}
-                    >
-                        <img src="${xSVG}" alt="Remove" />
-                    </button>
-                    <button
-                        zyx-if=${[this.item.status, (v) => v !== "queued"]}
-                        class="requeue-button"
-                        type="button"
-                        aria-label="Move back to top of queue"
-                        title="Move back to top of queue"
-                        zyx-click=${() => this.moveToTop()}
-                    >
-                        <img src="${requeueSVG}" alt="Requeue" />
-                    </button>
-                </div>
-            </div>
-        `.bind(this);
-    }
-
-    removeFromQueue() {
-        this.item.remove();
-    }
-
-    moveToTop() {
-        this.item.requeueToTop();
     }
 }

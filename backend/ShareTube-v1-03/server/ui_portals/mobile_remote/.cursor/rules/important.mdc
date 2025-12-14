@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+---
+
+Only active development version: ShareTube-v1-03.
+
+This is a sub-application for the main extension app ShareTube.
+
+Root directory (project root): /ShareTube/
+
+the main extension app is located at /ShareTube/backend/ShareTube-v1-03/extension/
+
+WE ARE HERE: IDE working directory is located at /ShareTube/backend/ShareTube-v1-03/pages/mobile_remote/
+
+Active development page: mobile_remote
+
+Take examples from these following other pages to help you understand how this type of app (page) should be built:
+
+-   ShareTube/backend/ShareTube-v1-03/pages/dashboard/
+
+DO NOT MAKE CHANGES THAT MIGHT BREAK THE MAIN EXTENSION APP.
+
+Any imports needed from the main app should be imported in /pages/{page_name}/shared_imports.py file found in the root directory of this sub-application.
+
+When opening any file, always try to open it from the working directory and not from "full path" directory.
+
+Do not attempt to run Python directly (e.g., do not run `python app.py`). The server is hot-reloaded automatically.
+
+It is possible to import code from the browser extension in this sub-application. Use the @extension/app/ prefix to import code from the browser extension.
+
+Example:
+
+```javascript
+import { io } from "/extension/app/@dep/socket.io.min.esm.js";
+import VirtualPlayer from "/extension/app/virtualPlayer.js";
+```

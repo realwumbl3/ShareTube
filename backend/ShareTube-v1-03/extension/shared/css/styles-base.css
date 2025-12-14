@@ -1,0 +1,17 @@
+:root {
+    /* Accent Colors */
+    --accent-primary: #ffffff;
+    /* Cyber Cyan */
+    --accent-secondary: #e3b8ff;
+    /* Neon Purple */
+    --accent-success: #00ff9d;
+    /* Matrix Green */
+    --accent-danger: #ff0055;
+    /* Laser Red */
+    --accent-warning: #ffb800;
+    /* Solar Yellow */
+}
+
+.st_reset * {
+    box-sizing: border-box;
+}

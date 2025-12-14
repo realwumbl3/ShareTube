@@ -1,0 +1,22 @@
+#sharetube_queue .queue_selector {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+#sharetube_queue .queue_selector .queue_selector_item {
+    cursor: pointer;
+    text-align: center;
+    user-select: none;
+    padding: 10px 5px;
+
+    &.zyx-radioview-active {
+        border-top: 2px solid var(--accent-primary);
+    }
+
+    #sharetube_main & {
+        padding: 12px 5px;
+    }
+}

@@ -1,0 +1,218 @@
+.splash_overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    z-index: 1000000001;
+    pointer-events: none;
+    overflow: hidden;
+    contain: strict;
+
+    /* Keep the overlay visually light and consistent */
+    --splash-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --splash-text: rgba(255, 255, 255, 0.92);
+    --splash-text-muted: rgba(255, 255, 255, 0.68);
+    --splash-border: rgba(255, 255, 255, 0.14);
+    --splash-surface: rgba(0, 0, 0, 0.63);
+    --splash-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    --splash-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+    --splash-avatar-border: rgba(255, 255, 255, 0.18);
+
+    & .badge_zone {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+
+        & .badge_container {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            gap: 8px;
+
+            & .badge {
+                position: absolute;
+                height: 92px;
+                aspect-ratio: 1 / 1;
+                background: rgba(0, 0, 0, 0.45);
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                font-weight: bold;
+                opacity: 0;
+                scale: 0.96;
+                border: 1px solid var(--splash-border);
+                box-shadow: var(--splash-shadow);
+                transition: opacity 140ms ease, scale 140ms ease;
+
+                & .large_icon {
+                    position: absolute;
+                    inset: 0;
+                    background-size: 60%;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    filter: none;
+                }
+
+                & .label {
+                    position: absolute;
+                    font-family: var(--splash-font);
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: var(--splash-text);
+                    letter-spacing: 0.3px;
+                    text-shadow: var(--splash-text-shadow);
+
+                    &.frame_step_label {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+
+                        &>.frame_step_icon {
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: var(--splash-text);
+                            letter-spacing: 0.2px;
+                            text-shadow: var(--splash-text-shadow);
+                        }
+                    }
+                }
+
+            }
+
+        }
+    }
+
+    & .actor_audit {
+        position: absolute;
+        top: 2em;
+        left: 2em;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
+        z-index: 1000000002;
+
+        & .actor_entry {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background-color: var(--splash-surface);
+            border-radius: 10px;
+            border: 1px solid var(--splash-border);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.425);
+            opacity: 0;
+            transform: translateX(-6px);
+            transition: background-color 240ms ease;
+
+            &>.actor_details {
+                display: flex;
+                flex-direction: column;
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            &>.actor_avatar {
+                width: 28px;
+                height: 28px;
+                object-fit: cover;
+                border-radius: 50%;
+                border: 1px solid var(--splash-avatar-border);
+                box-shadow: none;
+            }
+
+            &>.actor_details>.actor_name {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--splash-text);
+                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+                letter-spacing: 0.1px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            &>.actor_details>.action_label {
+                font-size: 11px;
+                color: var(--splash-text-muted);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            & .action_history {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                margin-top: 4px;
+                opacity: 0.92;
+                align-self: flex-end;
+            }
+
+            & .action_hist_icon {
+                width: 13px;
+                height: 13px;
+                background-size: 100% 100%;
+                background-position: center;
+                background-repeat: no-repeat;
+                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+            }
+        }
+    }
+
+}
+
+.splash_overlay .badge_zone .badge_container .badge .label.frame_step_label.forward>.frame_step_icon {
+    transform: rotate(0deg);
+}
+
+.splash_overlay .badge_zone .badge_container .badge .label.frame_step_label.backward>.frame_step_icon {
+    transform: rotate(180deg);
+}
+
+@keyframes spring_in {
+    0% {
+        opacity: 0;
+        scale: 0.96;
+    }
+
+    50% {
+        opacity: 1;
+        scale: 1;
+    }
+
+    100% {
+        opacity: 0;
+        scale: 1.04;
+    }
+}
+
+@keyframes actor_fade_in {
+    0% {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes actor_fade_out {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+}

@@ -1,0 +1,20 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Abstract Geometry - The Prism -->
+  <defs>
+     <linearGradient id="blue-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4285F4"/>
+      <stop offset="100%" stop-color="#0F9D58"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Interlocking shapes -->
+  <path d="M150 100 L350 100 L450 256 L350 412 L150 412 L50 256 Z" fill="url(#blue-grad)" opacity="0.1"/>
+  
+  <!-- Main shape: A stylized 'Play' arrow constructed of two parts -->
+  <path d="M180 150 L380 256 L180 362" fill="none" stroke="#4285F4" stroke-width="50" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M180 150 L180 362" fill="none" stroke="#EA4335" stroke-width="50" stroke-linecap="round"/>
+  
+  <!-- The 'Share' dot -->
+  <circle cx="380" cy="256" r="30" fill="#FBBC05"/>
+</svg>
+

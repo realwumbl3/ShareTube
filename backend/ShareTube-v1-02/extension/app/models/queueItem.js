@@ -25,8 +25,37 @@ export default class ShareTubeQueueItem {
         return await this.app.socket.emit("queue.move", {
             id: this.id,
             target_id: targetId,
-            position: position
+            position: position,
         });
+    }
+
+    /**
+     * Get the thumbnail URL for the queue item.
+     * @param {string} size - The size of the thumbnail to get. ["default", "small", "medium", "large", "huge"]
+     * @returns {string} The thumbnail URL.
+     */
+    thumbnailUrl(size = "default") {
+        if (!this.thumbnail_url) {
+            return "";
+        }
+
+        const sizeMap = {
+            default: "default.jpg",
+            small: "mqdefault.jpg",
+            medium: "hqdefault.jpg",
+            large: "sddefault.jpg",
+            huge: "maxresdefault.jpg",
+        };
+
+        const suffix = sizeMap[size];
+        if (suffix) {
+            return this.thumbnail_url.replace(
+                /(default|mqdefault|hqdefault|sddefault|maxresdefault)(\.(jpg|webp))?$/i,
+                suffix
+            );
+        }
+
+        return this.thumbnail_url;
     }
 
     /**

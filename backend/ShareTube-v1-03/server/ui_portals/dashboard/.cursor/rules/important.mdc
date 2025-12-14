@@ -1,0 +1,15 @@
+---
+alwaysApply: true
+---
+
+Root directory (project root): /home/wumbl3wsl/ShareTube/
+Working directory (this workspace): /home/wumbl3wsl/ShareTube/backend/ShareTube-v1-03/pages/dashboard/
+Active development version: ShareTube-v1-03
+Active development page: dashboard
+Any imports needed from the main app should be imported in the shared_imports.py file and imported from there.
+
+You may inspect other subdirectories under /home/wumbl3wsl/ShareTube/backend/, but do not modify them.
+
+When opening any file, always open it from the working directory and not from the root directory.
+
+Do not attempt to run Python directly (e.g., do not run `python app.py`). Instruct the user to use the restart.sh script instead.

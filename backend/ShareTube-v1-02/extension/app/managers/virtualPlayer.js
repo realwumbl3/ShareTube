@@ -121,8 +121,10 @@ export default class VirtualPlayer {
 
     updateNextUpItem() {
         const currentPlayingId = state.currentPlaying.item.get()?.id;
-        const nextUpEntry = state.queueQueued.find((entry) => entry.id !== currentPlayingId);
-        state.nextUpItem.set(nextUpEntry || null);
+        const nextUpEntry = state.queueQueued.find(
+            (entry) => entry.id !== currentPlayingId && entry.status.get() === "queued"
+        );
+        state.nextUpItem.set(new ShareTubeQueueItem(this.app, nextUpEntry));
     }
 
     async onRoomSettingsUpdate(data) {
@@ -132,10 +134,6 @@ export default class VirtualPlayer {
     }
 
     async onRoomError(data) {
-        // Handle autoadvance disabled error to show continue prompt
-        if (data.error === "queue.probe: autoadvance_disabled" && state.nextUpItem.get()) {
-            state.showContinueNextPrompt.set(true);
-        }
         // Handle authentication errors - clear auth state so user knows to re-sign in
         if (data.error === "Authentication required") {
             console.warn("ShareTube: Authentication required error, clearing sign-in state");
@@ -154,6 +152,7 @@ export default class VirtualPlayer {
         await this.performTimeSyncSamples(5);
         state.roomCode.set(result.code);
         state.inRoom.set(true);
+        this.app.youtubePlayer.start();
         state.adSyncMode.set(result.snapshot.ad_sync_mode);
         state.roomAutoadvanceOnEnd.set(result.snapshot.autoadvance_on_end ?? true);
 
@@ -164,8 +163,11 @@ export default class VirtualPlayer {
         state.isOperator.set(isOwner || isOperatorListed);
 
         const currentQueue = result.snapshot.current_queue;
-        this.updateCurrentPlayingFromEntry(currentQueue?.current_entry);
-        this.gotoVideoIfNotOnVideoPage(currentQueue?.current_entry);
+        const currentEntry = currentQueue?.current_entry;
+        if (currentEntry) {
+            this.updateCurrentPlayingFromEntry(currentEntry);
+            this.gotoVideoIfNotOnVideoPage(currentEntry);
+        }
 
         this.setRoomState(result.snapshot.state);
         this.loadQueueEntries(result.snapshot.current_queue);
@@ -248,12 +250,19 @@ export default class VirtualPlayer {
         if (data.current_entry !== undefined) {
             this.updateCurrentPlayingFromEntry(data.current_entry);
             this.gotoVideoIfNotOnVideoPage(data.current_entry);
+            // Hide continue prompt when a new video starts playing
+            state.showContinueNextPrompt.set(false);
         } else {
             this.updateCurrentPlayingTiming(data.playing_since_ms, data.progress_ms);
         }
 
         if (data.state) {
             this.setRoomState(data.state);
+        }
+
+        // Show continue prompt when playback event indicates it and there's a next item
+        if (data.show_continue_prompt && state.nextUpItem.get()) {
+            state.showContinueNextPrompt.set(true);
         }
 
         if (data.trigger === "room.control.seek" && !this.shouldSuppressTimestampUpdate(data)) this.applyTimestamp();
@@ -278,7 +287,11 @@ export default class VirtualPlayer {
     }
 
     updateCurrentPlayingFromEntry(entry) {
-        state.currentPlaying.item.set(entry);
+        if (entry === null) {
+            state.currentPlaying.item.set(null);
+            return;
+        }
+        state.currentPlaying.item.set(new ShareTubeQueueItem(this.app, entry));
         this.updateCurrentPlayingTiming(entry?.playing_since_ms, entry?.progress_ms);
     }
 

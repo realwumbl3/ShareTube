@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShareTube Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #080808;
+            color: #eee;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: transparent;
+        }
+
+        #app-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #080808;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease-out;
+        }
+
+        #app-loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: #00f3ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Hide app content initially */
+        .dashboard-app,
+        .login-container {
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+
+        .dashboard-app.visible,
+        .login-container.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body data-dashboard-api-base="{{ secure_prefix }}">
+    <div id="app-loader">
+        <div class="loader-spinner"></div>
+    </div>
+
+    <!-- Authentication check and app initialization -->
+    <script type="module">
+        window.__DASHBOARD_API_BASE__ = document.body.dataset.dashboardApiBase;
+        try {
+            const response = await fetch(`${window.__DASHBOARD_API_BASE__}/api/auth/status`);
+            const authData = await response.json();
+
+            if (authData.authenticated && authData.user?.role === 'super_admin') {
+                await import('/static/dashboard/js/main.js');
+            } else {
+                window.location.href = '/dashboard';
+            }
+        } catch (error) {
+            console.error('Secure auth check failed:', error);
+            window.location.href = '/dashboard';
+        }
+    </script>
+</body>
+
+</html>

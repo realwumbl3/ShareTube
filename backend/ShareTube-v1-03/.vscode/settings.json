@@ -1,0 +1,13 @@
+{
+    "python.formatting.provider": "autopep8",
+    "explorer.autoReveal": true,
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "database": "${workspaceFolder:ShareTube-v1-03}/.instance/ShareTube.db",
+            "name": "ShareTube.db"
+        }
+    ]
+}

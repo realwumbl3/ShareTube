@@ -21,9 +21,9 @@ export default class ContinueNextOverlay {
                     <div class="continue-next-author">${state.nextUpItem.interp((v) => v?.youtube_author?.title)}</div>
                 </div>
                 <button zyx-if=${state.isOperator} class="continue-next-btn" zyx-click=${() => this.continueToNext()}>
-                    Continue to next
+                    Advance queue
                 </button>
-                <button disabled zyx-else class="continue-next-btn">Waiting for operator...</button>
+                <button disabled zyx-else class="continue-next-btn">Waiting for operator.</button>
             </div>
         </div>`.bind(this);
     }
@@ -73,8 +73,10 @@ css`
     }
 
     .continue-next-content {
-        display: flex;
-        align-items: center;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas: "thumb meta" "thumb btn";
+        align-items: stretch;
         gap: 12px;
         min-width: 300px;
         position: relative;
@@ -88,6 +90,7 @@ css`
         overflow: hidden;
         background: rgba(0, 0, 0, 0.3);
         position: relative;
+        grid-area: thumb;
     }
 
     .continue-next-thumb .thumb {
@@ -99,7 +102,7 @@ css`
     }
 
     .continue-next-meta {
-        flex: 1;
+        grid-area: meta;
         min-width: 0;
     }
 
@@ -123,6 +126,8 @@ css`
     }
 
     .continue-next-btn {
+        grid-area: btn;
+        align-self: center;
         flex-shrink: 0;
         padding: 6px 12px;
         font-size: 12px;
@@ -133,6 +138,11 @@ css`
         cursor: pointer;
         font-weight: 500;
         transition: background 140ms ease, border-color 140ms ease, transform 80ms ease;
+
+        &[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     }
 
     .continue-next-btn:hover {

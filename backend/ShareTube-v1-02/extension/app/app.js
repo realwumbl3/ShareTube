@@ -69,6 +69,7 @@ export default class ShareTubeApp {
 
     resetRoomState() {
         state.resetRoomState();
+        this.youtubePlayer.stop();
         this.youtubePlayer.onRoomStateChange("");
     }
 
@@ -103,8 +104,6 @@ export default class ShareTubeApp {
         this.uiManager.setupDragAndDrop();
         this.bindSocketListeners();
         this.virtualPlayer.bindListeners(this.socket);
-
-        this.youtubePlayer.start();
     }
 
     bindSocketListeners() {

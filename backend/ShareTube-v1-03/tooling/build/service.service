@@ -1,0 +1,32 @@
+[Unit]
+Description=&APP_NAME Gunicorn (gevent)
+After=network.target
+
+[Service]
+User=&USERNAME
+Group=www-data
+WorkingDirectory=&PROJECT_ROOT
+
+Environment=APP_NAME=&APP_NAME
+Environment=VERSION=&VERSION
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=SOCKETIO_MESSAGE_QUEUE=redis://127.0.0.1:6379/0
+# Force gevent async mode for Flask-SocketIO
+Environment=SOCKETIO_ASYNC_MODE=gevent
+# Enable Flask template auto-reload
+Environment=TEMPLATES_AUTO_RELOAD=true
+UMask=007
+
+ExecStart=&PROJECT_ROOT/.venv/bin/gunicorn \
+  -c &PROJECT_ROOT/instance/&VERSION/deploy/gunicorn.conf.py
+
+Restart=always
+RestartSec=2
+TimeoutStartSec=10
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+

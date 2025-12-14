@@ -1,0 +1,188 @@
+#sharetube_queue .current_playing_header_title {
+    font-weight: 600;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#sharetube_queue .current_playing_header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#sharetube_queue .current_playing {
+    padding: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-direction: column;
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.06),
+            rgba(0, 0, 0, 0.4));
+    position: relative;
+}
+
+#sharetube_queue .current_playing .current_playing_bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: -1;
+}
+
+#sharetube_queue .current_playing .current_playing_bg .current_playing_background {
+    position: absolute;
+    --overdraw: 20%;
+    width: calc(100% + var(--overdraw) * 2);
+    height: calc(100% + var(--overdraw) * 2);
+    top: calc(var(--overdraw) * -1);
+    left: calc(var(--overdraw) * -1);
+    object-fit: cover;
+    filter: blur(5px) brightness(0.6) contrast(0.9);
+    visibility: hidden;
+    user-select: none;
+    transform-origin: center;
+
+    &[src] {
+        visibility: visible;
+    }
+}
+
+#sharetube_queue .current_playing .current_playing_title {
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#sharetube_queue .current_playing .current_playing_url {
+    font-size: 11px;
+    opacity: 0.7;
+    word-break: break-all;
+}
+
+#sharetube_queue .current_playing_container {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+#sharetube_queue .current_playing_thumbnail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    user-select: none;
+
+    &>img {
+        width: 96px;
+        height: 54px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #111;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+}
+
+#sharetube_queue .current_playing_thumbnail .current_playing_duration {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    font-size: 10px;
+    opacity: 0.9;
+    padding: 2px 4px;
+    margin: 3px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    user-select: none;
+}
+
+#sharetube_queue .current_playing_meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 100%;
+    overflow: auto;
+}
+
+#sharetube_queue .no_video_playing_label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    text-align: center;
+    opacity: 0.8;
+    font-size: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+#sharetube_queue .current_playing_placeholder_text {
+    font-size: 12px;
+    opacity: 0.8;
+    text-align: center;
+}
+
+#sharetube_queue .current_playing_progress {
+    --padding: 3px;
+    font-size: 9px;
+    opacity: 0.9;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 100vh;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    position: relative;
+}
+
+#sharetube_queue .current_playing_progress .progress_bar {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background: rgb(35 35 35 / 70%);
+    border-radius: inherit;
+    display: grid;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+#sharetube_queue .current_playing_progress .bar_inner {
+    position: relative;
+    background: rgb(0 0 0);
+    border-radius: 3px;
+    width: calc(var(--progress-int) * 100%);
+    transition: width 100ms ease;
+}
+
+#sharetube_queue .current_playing_progress_stamps {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 9px;
+    opacity: 0.9;
+    padding: 3px 16px;
+    user-select: none;
+}
+
+#sharetube_queue .current_playing_progress_stamps .timestamp-current,
+#sharetube_queue .current_playing_progress_stamps .timestamp-duration {
+    display: inline;
+}
+
+#sharetube_queue .current_playing_progress_stamps .timestamp-progress,
+#sharetube_queue .current_playing_progress_stamps .timestamp-playing-since {
+    display: none;
+}
+
+#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-current,
+#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-duration {
+    display: none;
+}
+
+#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-progress,
+#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-playing-since {
+    display: inline;
+}

@@ -1,0 +1,24 @@
+#sharetube_main {
+    position: fixed;
+    bottom: 0;
+    z-index: 10000000;
+    width: 100%;
+    display: grid;
+    justify-items: center;
+    align-items: center;
+    pointer-events: none;
+    background: #00000000;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 200ms ease;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+
+    &.visible {
+        opacity: 1;
+
+        &>* {
+            pointer-events: auto;
+        }
+    }
+}

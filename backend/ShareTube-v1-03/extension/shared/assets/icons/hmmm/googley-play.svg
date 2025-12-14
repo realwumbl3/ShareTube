@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="soft-shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10"/>
+      <feOffset dx="0" dy="10" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="220" fill="white" filter="url(#soft-shadow)"/>
+  
+  <!-- Google-colored segments forming a play button feel -->
+  <path d="M160 150 C160 150 300 256 360 256" stroke="#4285F4" stroke-width="60" stroke-linecap="round"/>
+  <path d="M160 362 C160 362 300 256 360 256" stroke="#34A853" stroke-width="60" stroke-linecap="round"/>
+  
+  <!-- The vertical bar or connection -->
+  <path d="M160 150 V362" stroke="#EA4335" stroke-width="60" stroke-linecap="round"/>
+  
+  <!-- A dot for connection -->
+  <circle cx="360" cy="256" r="25" fill="#FBBC05"/>
+</svg>

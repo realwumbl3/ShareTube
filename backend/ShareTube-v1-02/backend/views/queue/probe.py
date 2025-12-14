@@ -22,13 +22,46 @@ def register() -> None:
             if room.state in ("starting", "midroll"):
                 return rej("queue.probe: room.state is starting or midroll")
 
-            if not room.autoadvance_on_end:
-                return rej("queue.probe: autoadvance_disabled")
-
             completed_entry = current_entry
 
             if not current_entry.check_completion():
                 return rej("queue.probe: video not completed")
+
+            if not room.autoadvance_on_end:
+                # When auto_advance is off, mark current video as completed and set room to idle
+                # Keep current_entry_id pointing to the completed video until manually advanced
+                next_entry_query = db.session.query(QueueEntry).filter_by(
+                    queue_id=queue.id, status="queued"
+                ).filter(QueueEntry.id != current_entry.id).order_by(QueueEntry.position.asc()).first()
+                has_next_entry = next_entry_query is not None
+                
+                completed_entry.complete_and_rotate()
+                # Keep current_entry_id set to the completed entry (don't clear it)
+                room.state = "idle"
+                
+                try:
+                    db.session.refresh(completed_entry)
+                except Exception:
+                    completed_entry = None
+                if completed_entry:
+                    socketio.emit(
+                        "queue.moved",
+                        {
+                            "id": completed_entry.id,
+                            "position": completed_entry.position,
+                            "status": completed_entry.status,
+                        },
+                        room=f"room:{room.code}",
+                    )
+                res(
+                    "room.playback",
+                    {
+                        "state": "idle",
+                        "show_continue_prompt": has_next_entry,
+                    },
+                )
+                db.session.commit()
+                return
 
             next_entry, error = room.complete_and_advance()
             if error:

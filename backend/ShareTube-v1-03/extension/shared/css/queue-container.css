@@ -1,0 +1,23 @@
+#sharetube_queue {
+    min-width: 320px;
+    max-width: 520px;
+    max-height: min(480px, calc(95vh - 100px));
+    overflow: hidden;
+    color: var(--yt-spec-text-primary, #fff);
+    background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(1em) brightness(0.65) contrast(1.05);
+    border-radius: 14px;
+    pointer-events: auto;
+    display: grid;
+    grid-template-rows: max-content max-content auto max-content max-content;
+    justify-content: stretch;
+    font-size: 12px;
+    min-width: min(95vw, 550px);
+
+    #sharetube_main & {
+        aspect-ratio: 1 / 1;
+    }
+
+}

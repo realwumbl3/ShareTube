@@ -78,7 +78,7 @@ def main() -> None:
     args = parser.parse_args()
     repo_root = Path(__file__).parent.resolve()
 
-    BUILD_TEMPLATE_DIR = f"backend/{args.version}/build-template"
+    BUILD_TEMPLATE_DIR = f"backend/{args.version}/tooling/build"
 
     TEMPLATES = {
         # source -> destination relative to --output-dir
