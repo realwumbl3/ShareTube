@@ -2,11 +2,11 @@ import { getCurrentPlayingProgressMs } from "../../core/state/getters.js";
 import state from "../../core/state/state.js";
 
 const PLAYBACK_DRIFT_INTERVAL_MS = 500;
-const PLAYBACK_DRIFT_THRESHOLD_MS = 20;
-const PLAYBACK_DRIFT_FULL_ADJUST_MS = 3000;
-const PLAYBACK_DRIFT_MIN_RATE = 0.85;
-const PLAYBACK_DRIFT_MAX_RATE = 1.2;
-const PLAYBACK_DRIFT_SEEK_THRESHOLD_MS = 6000;
+const PLAYBACK_DRIFT_THRESHOLD_MS = 10;
+const PLAYBACK_DRIFT_FULL_ADJUST_MS = 2000;
+const PLAYBACK_DRIFT_MIN_RATE = 0.90;
+const PLAYBACK_DRIFT_MAX_RATE = 1.15;
+const PLAYBACK_DRIFT_SEEK_THRESHOLD_MS = 3000;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 

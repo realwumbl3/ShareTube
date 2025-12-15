@@ -4,12 +4,6 @@
 
 /* Import extension CSS files */
 @import "/extension/shared/css/styles-base.css";
-@import "/extension/shared/css/queue-header.css";
-@import "/extension/shared/css/queue-current-playing.css";
-@import "/extension/shared/css/queue-list.css";
-@import "/extension/shared/css/queue-footer.css";
-@import "/extension/shared/css/queue-selector.css";
-@import "/extension/shared/css/queue-container.css";
 @import "/extension/shared/css/splash.css";
 
 :root {

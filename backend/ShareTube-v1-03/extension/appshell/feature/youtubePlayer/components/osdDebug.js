@@ -1,6 +1,6 @@
-import { html, css, LiveList, LiveVar } from "../../../shared/dep/zyx.js";
+import { html, css, LiveList, LiveVar } from "../../../../shared/dep/zyx.js";
 
-import state from "../../core/state/state.js";
+import state from "../../../core/state/state.js";
 
 class PlayerOSDDebugItem {
     constructor(label, value) {
@@ -8,6 +8,59 @@ class PlayerOSDDebugItem {
         this.value = value;
     }
 }
+
+const shortcutIconSVG = html`<svg width="42" height="30" viewBox="0 0 42 30" class="shortcut-icon">
+    <defs>
+        <mask id="osd-shortcut-mask">
+            <rect width="100%" height="100%" fill="white" />
+
+            <!-- Top Row: D -->
+            <text
+                x="21"
+                y="11"
+                font-family="Roboto, sans-serif"
+                font-weight="700"
+                font-size="10"
+                text-anchor="middle"
+                fill="black"
+            >
+                D
+            </text>
+
+            <!-- Bottom Row: CTRL, ALT -->
+            <text
+                x="10"
+                y="26"
+                font-family="Roboto, sans-serif"
+                font-weight="700"
+                font-size="8"
+                text-anchor="middle"
+                fill="black"
+            >
+                CTRL
+            </text>
+            <text
+                x="32"
+                y="26"
+                font-family="Roboto, sans-serif"
+                font-weight="700"
+                font-size="8"
+                text-anchor="middle"
+                fill="black"
+            >
+                ALT
+            </text>
+        </mask>
+    </defs>
+    <g mask="url(#osd-shortcut-mask)">
+        <!-- Top Row: D (Centered) -->
+        <rect x="11" y="0" width="20" height="14" rx="3" fill="white" />
+
+        <!-- Bottom Row: CTRL, ALT -->
+        <rect x="0" y="16" width="20" height="14" rx="3" fill="white" />
+        <rect x="22" y="16" width="20" height="14" rx="3" fill="white" />
+    </g>
+</svg>`;
 
 export default class PlayerOSDDebug {
     constructor(youtubePlayer) {
@@ -20,7 +73,10 @@ export default class PlayerOSDDebug {
         state.debug_mode.subscribe(this.visibilityToggled);
 
         html`<div class="player_osd_debug" zyx-if=${state.debug_mode}>
-            <div class="timecode">${this.timecode.interp()}</div>
+            <div class="header-row">
+                <div class="timecode">${this.timecode.interp()}</div>
+                ${shortcutIconSVG}
+            </div>
             <div class="debug-list">
                 <span>ad_sync_mode: ${state.adSyncMode.interp()}</span>
                 <span>in_room: ${state.inRoom.interp()}</span>
@@ -34,7 +90,8 @@ export default class PlayerOSDDebug {
                 class="log-list"
                 zyx-live-list=${{
                     list: this.logList,
-                    compose: (item) => html`<span class="log-item">${item.label}${item.value ? `: ${item.value}` : ""}</span>`,
+                    compose: (item) =>
+                        html`<span class="log-item">${item.label}${item.value ? `: ${item.value}` : ""}</span>`,
                     range: [0, 20],
                 }}
             ></div>
@@ -94,6 +151,13 @@ css`
         font-size: 8px;
         font-family: "Roboto";
         color: #fff;
+
+        & .header-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+        }
 
         & .timecode {
             font-family: "Roboto Mono", "SFMono-Regular", Menlo, Consolas, monospace;

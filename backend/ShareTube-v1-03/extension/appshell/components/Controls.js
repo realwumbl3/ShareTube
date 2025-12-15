@@ -29,8 +29,7 @@ export default class Controls {
                     zyx-if=${[
                         state.nextUpItem,
                         state.roomState,
-                        (nextUpItem, roomState) =>
-                            nextUpItem !== null && ["playing", "starting", "idle"].includes(roomState),
+                        (nextUpItem, roomState) => nextUpItem !== null && !["idle"].includes(roomState),
                     ]}
                 >
                     <button title="Skip to next video" class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>
@@ -87,9 +86,7 @@ export default class Controls {
             this,
             "onMainButtonClick",
             async () => {
-                return await this.app.socket.emit(
-                    state.roomState.get() === "playing" ? "room.control.pause" : "room.control.play"
-                );
+                return await this.app.virtualPlayer.emitToggleRoomPlayPause();
             },
             1000
         );
@@ -100,7 +97,7 @@ export default class Controls {
             this,
             "onSkipButtonClick",
             async () => {
-                return await this.app.socket.emit("room.control.skip");
+                return await this.app.virtualPlayer.emitSkipVideo();
             },
             10000
         );

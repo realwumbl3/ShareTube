@@ -1,6 +1,6 @@
 import { html, css, LiveVar } from "../../shared/dep/zyx.js";
 import state from "../core/state/state.js";
-import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "../../shared/assets/svgs.js";
+import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG, previousSVG, seekBackwardSVG, seekForwardSimpleSVG } from "../../shared/assets/svgs.js";
 
 export default class PlaybackControls {
     constructor(app) {
@@ -10,27 +10,11 @@ export default class PlaybackControls {
             <div class="playback-controls" draggable="false">
                 <div class="control-buttons">
                     <button class="control-btn secondary-btn" title="Restart Video" zyx-click=${() => this.handlePrevious()}>
-                        <svg
-                            viewBox="0 0 24 24"
-                            width="24"
-                            height="24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            draggable="false"
-                        >
-                            <polygon points="19 20 9 12 19 4 19 20"></polygon>
-                            <line x1="5" y1="19" x2="5" y2="5"></line>
-                        </svg>
+                        <img src=${previousSVG} width="18" height="18" draggable="false" />
                     </button>
 
                     <button title="Seek -10s" class="control-btn seek-btn" zyx-click=${() => this.handleSeek(-10)}>
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M11 17l-5-5 5-5" />
-                            <path d="M6 12h9a6 6 0 0 1 6 6v1" />
-                        </svg>
+                        <img src=${seekBackwardSVG} width="18" height="18" draggable="false" />
                         <span class="seek-text">10</span>
                     </button>
 
@@ -41,18 +25,12 @@ export default class PlaybackControls {
                     </button>
 
                     <button title="Seek +10s" class="control-btn seek-btn" zyx-click=${() => this.handleSeek(10)}>
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M13 17l5-5-5-5" />
-                            <path d="M18 12H9a6 6 0 0 0-6 6v1" />
-                        </svg>
+                        <img src=${seekForwardSimpleSVG} width="18" height="18" draggable="false" />
                         <span class="seek-text">10</span>
                     </button>
 
                     <button title="Skip to Next" class="control-btn secondary-btn" zyx-click=${() => this.handleNext()}>
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="5 4 15 12 5 20 5 4"></polygon>
-                            <line x1="19" y1="5" x2="19" y2="19"></line>
-                        </svg>
+                        <img src=${skipSVG} width="18" height="18" draggable="false" />
                     </button>
                 </div>
             </div>

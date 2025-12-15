@@ -31,12 +31,6 @@ css`
     @import url(${chrome.runtime.getURL("shared/css/styles-animations.css")});
     @import url(${chrome.runtime.getURL("shared/css/pill.css")});
     @import url(${chrome.runtime.getURL("shared/css/adOverlay.css")});
-    @import url(${chrome.runtime.getURL("shared/css/queue-container.css")});
-    @import url(${chrome.runtime.getURL("shared/css/queue-header.css")});
-    @import url(${chrome.runtime.getURL("shared/css/queue-current-playing.css")});
-    @import url(${chrome.runtime.getURL("shared/css/queue-selector.css")});
-    @import url(${chrome.runtime.getURL("shared/css/queue-list.css")});
-    @import url(${chrome.runtime.getURL("shared/css/queue-footer.css")});
     @import url(${chrome.runtime.getURL("shared/css/firstParty.css")});
     @import url(${chrome.runtime.getURL("shared/css/splash.css")});
 `;

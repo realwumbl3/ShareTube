@@ -6,7 +6,7 @@ import state from "../../core/state/state.js";
 import PlaybackSyncer from "./syncer.js";
 import PlayerControls from "./controls.js";
 import PlayerExtender from "./extender.js";
-import PlayerOSDDebug from "./osdDebug.js";
+import PlayerOSDDebug from "./components/osdDebug.js";
 import Splash from "./components/Splash.js";
 import ContinueNextOverlay from "./components/ContinueNextOverlay.js";
 

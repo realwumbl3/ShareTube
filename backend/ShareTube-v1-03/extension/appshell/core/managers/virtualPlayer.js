@@ -11,8 +11,6 @@ export default class VirtualPlayer {
     constructor(app) {
         this.app = app;
         this.verbose = false;
-        this.timeSyncIntervalId = null;
-        this.startTimeSyncLoop();
     }
 
     bindListeners(socket) {
@@ -179,14 +177,6 @@ export default class VirtualPlayer {
         this.applyTimestamp();
     }
 
-    startTimeSyncLoop() {
-        if (this.timeSyncIntervalId) return;
-        // Periodic resync to handle route/DNS/latency shifts
-        this.timeSyncIntervalId = setInterval(() => {
-            if (!state.inRoom.get()) return;
-            this.performTimeSyncSamples(3).catch((err) => this.verbose && console.warn("time sync loop error", err));
-        }, 30000);
-    }
 
     async performTimeSyncSamples(sampleCount = 5) {
         const socket = await this.app.socket.ensureSocket();
@@ -232,8 +222,18 @@ export default class VirtualPlayer {
         state.serverNowMs.set(best.serverNowMs);
     }
 
+    async emitSkipVideo() {
+        return await this.app.socket.emit("room.control.skip");
+    }
+
     async emitRestartVideo() {
         return await this.app.socket.emit("room.control.restartvideo");
+    }
+
+    async emitToggleRoomPlayPause() {
+        return await this.app.socket.emit(
+            state.roomState.get() === "playing" ? "room.control.pause" : "room.control.play"
+        );
     }
 
     shouldSuppressTimestampUpdate(data) {
