@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 
-from ....extensions import socketio
+from ....extensions import db, socketio
+from ....lib.utils import commit_with_retry, now_ms
 from ....models import Room
 from ....ws.server import get_mobile_remote_session_id, is_mobile_remote_socket
-from ....lib.utils import now_ms
 from ...middleware import require_room_by_code
 from ..rooms.room_timeouts import cancel_starting_timeout
 
@@ -17,10 +17,23 @@ def register() -> None:
         res, rej = Room.emit(room.code, trigger="room.control.restartvideo")
         try:
             _now_ms = now_ms()
-            _, error = room.restart_video(_now_ms)
+            error = None
+            queue = room.current_queue
+            if not queue:
+                error = "room.restart_video: no current queue"
+            else:
+                current_entry = queue.current_entry
+                if not current_entry:
+                    error = "room.restart_video: no current entry"
+                else:
+                    current_entry.progress_ms = 0
+                    current_entry.playing_since_ms = _now_ms
+                    current_entry.paused_at = None
+                    room.state = "playing"
             if error:
                 rej(error)
                 return
+            commit_with_retry(db.session)
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
 

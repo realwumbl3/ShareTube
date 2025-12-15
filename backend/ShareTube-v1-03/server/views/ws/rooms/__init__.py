@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import time
+
 from flask import Blueprint, jsonify, request
 
 from .common import emit_presence
 from .heartbeat import start_heartbeat_if_needed
 from .... import get_user_id_from_auth_header
 from ....extensions import db
-from ....models import Room, User
+from ....models import Queue, Room, RoomMembership, User
 
 rooms_bp = Blueprint("rooms", __name__, url_prefix="/api")
 
@@ -23,7 +25,24 @@ def room_create():
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "user_not_found"}), 404
-    room = Room.create(owner_id=user_id)
+    room = Room(owner_id=user_id)
+    db.session.add(room)
+    db.session.flush()
+
+    queue = Queue(room_id=room.id, created_by_id=user_id)
+    room.current_queue = queue
+    db.session.add(queue)
+
+    user.last_seen = int(time.time())
+    user.active = True
+
+    membership = RoomMembership(
+        room_id=room.id,
+        user_id=user_id,
+        joined_at=int(time.time()),
+        role="owner",
+    )
+    db.session.add(membership)
     db.session.commit()
     return jsonify({"code": room.code})
 

@@ -1,7 +1,7 @@
-import { html, LiveVar } from "../../../shared/dep/zyx.js";
+import { html, LiveVar } from "../../shared/dep/zyx.js";
 
-import state from "../../core/state/state.js";
-import { googleSVG, lockSVG } from "../../../shared/assets/svgs.js";
+import state from "../core/state/state.js";
+import { googleSVG, lockSVG } from "../../shared/assets/svgs.js";
 import Controls from "./Controls.js";
 import UserIcons from "./UserIcons.js";
 import Logo from "./Logo.js";

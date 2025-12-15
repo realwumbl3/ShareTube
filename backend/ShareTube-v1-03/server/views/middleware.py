@@ -6,7 +6,7 @@ from functools import wraps
 from flask import request
 
 from ..extensions import db    
-from ..models import Room, RoomMembership, Queue
+from ..models import Room, RoomMembership, Queue, QueueEntry, User
 from ..ws.server import get_user_id_from_socket
 import logging
 
@@ -112,7 +112,17 @@ def require_room(handler: Callable) -> Callable:
                 list((data or {}).keys()),
             )
             return None, "require_room: no user_id"
-        room = RoomMembership.get_active_room_for_user(user_id)
+        user = db.session.get(User, user_id)
+        if not user or not user.active:
+            room = None
+        else:
+            membership = (
+                db.session.query(RoomMembership)
+                .filter_by(user_id=user_id)
+                .order_by(RoomMembership.joined_at.desc())
+                .first()
+            )
+            room = membership.room if membership else None
         if not room:
             _log(
                 logging.warning,
@@ -166,7 +176,20 @@ def require_queue_entry(handler: Callable) -> Callable:
             )
             return
         queue = room.current_queue
-        current_entry = queue.current_entry
+        # IMPORTANT:
+        # Don't rely on `queue.current_entry` relationship caching here.
+        # Socket handlers can run back-to-back in the same long-lived SQLAlchemy session,
+        # and `queue.current_entry` can be stale during rapid transitions (auto-advance,
+        # navigation, reconnect). Always resolve from the FK `current_entry_id`.
+        try:
+            db.session.refresh(queue)
+        except Exception:
+            pass
+        current_entry = (
+            db.session.get(QueueEntry, queue.current_entry_id)
+            if getattr(queue, "current_entry_id", None)
+            else None
+        )
         if not current_entry:
             logging.warning(
                 "require_queue_entry: no current entry for room=%s, queue_id=%s "

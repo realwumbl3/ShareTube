@@ -1,7 +1,7 @@
-import { html } from "../../../shared/dep/zyx.js";
-import state from "../../core/state/state.js";
-import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } from "../../core/state/getters.js";
-import { msDurationTimeStamp } from "../../core/utils/utils.js";
+import { html } from "../../shared/dep/zyx.js";
+import state from "../core/state/state.js";
+import { currentPlayingProgressMsPercentageToMs, getCurrentPlayingProgressMs } from "../core/state/getters.js";
+import { msDurationTimeStamp } from "../core/utils/utils.js";
 
 import PlaybackControls from "./PlaybackControls.js";
 import { ShareTubeQueueComponent } from "./QueueEntry.js";

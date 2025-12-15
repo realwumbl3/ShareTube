@@ -1,5 +1,5 @@
-import { html, css } from "../../../shared/dep/zyx.js";
-import state from "../../core/state/state.js";
+import { html, css } from "../../shared/dep/zyx.js";
+import state from "../core/state/state.js";
 
 export default class Intermission {
     constructor() {

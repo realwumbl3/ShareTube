@@ -1,4 +1,4 @@
-import state from "../../core/state/state.js";
+import state from "../core/state/state.js";
 
 export class ShareTubeQueueDrag {
     constructor() {

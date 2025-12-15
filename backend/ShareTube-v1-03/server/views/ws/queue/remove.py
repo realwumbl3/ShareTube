@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from ....extensions import db, socketio
+from ....lib.utils import commit_with_retry
 from ....models import QueueEntry, Room
 from ...middleware import require_room
 
@@ -29,7 +30,11 @@ def register() -> None:
                 )
                 return rej("queue.remove: no entry found for id")
             was_deleted = entry.status == "deleted"
-            entry.remove()
+            if was_deleted:
+                db.session.delete(entry)
+            else:
+                entry.status = "deleted"
+            commit_with_retry(db.session)
             db.session.refresh(room)
 
             payload = {"id": id}

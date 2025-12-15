@@ -1,6 +1,6 @@
-import { html, css } from "../../../shared/dep/zyx.js";
-import state from "../../core/state/state.js";
-import ShareTubeUser from "../../core/models/user.js";
+import { html, css } from "../../shared/dep/zyx.js";
+import state from "../core/state/state.js";
+import ShareTubeUser from "../core/models/user.js";
 
 export default class UserIcons {
     constructor(app) {

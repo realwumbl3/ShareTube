@@ -42,7 +42,19 @@ def handle_user_disconnect(user_id: int) -> None:
 
         room = membership.room
         logging.info("_handle_user_disconnect: removing user %s from room %s", user_id, room.code)
-        membership.leave()
+        user = db.session.get(User, membership.user_id)
+        if user:
+            user.last_seen = int(time.time())
+
+        db.session.delete(membership)
+
+        other_memberships = (
+            db.session.query(RoomMembership)
+            .filter_by(user_id=membership.user_id)
+            .first()
+        )
+        if not other_memberships and user:
+            user.active = False
         db.session.commit()
         emit_function_after_delay(emit_presence, room, 0.1)
     except Exception:
@@ -70,7 +82,19 @@ def handle_user_disconnect_delayed(user_id: int) -> None:
 
         room = membership.room
         logging.info("_handle_user_disconnect_delayed: removing user %s from room %s after verification timeout", user_id, room.code)
-        membership.leave()
+        user = db.session.get(User, membership.user_id)
+        if user:
+            user.last_seen = int(time.time())
+
+        db.session.delete(membership)
+
+        other_memberships = (
+            db.session.query(RoomMembership)
+            .filter_by(user_id=membership.user_id)
+            .first()
+        )
+        if not other_memberships and user:
+            user.active = False
         db.session.commit()
         emit_function_after_delay(emit_presence, room, 0.1)
     except Exception:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from ....extensions import db, socketio
-from ....models import Room, RoomMembership, User
+from ....models import QueueEntry, Room, RoomMembership, User
 from ...middleware import require_room
 from .room_timeouts import cancel_starting_timeout
 from ....lib.utils import flush_with_retry, commit_with_retry, now_ms
@@ -36,7 +36,7 @@ def register() -> None:
 
             ready = bool((data or {}).get("ready"))
             previous_ready = bool(membership.ready)
-            membership.set_ready(ready)
+            membership.ready = bool(ready)
             flush_with_retry(db.session)
 
             socketio.emit(
@@ -70,7 +70,40 @@ def register() -> None:
             )
 
             if should_eval_midroll and _should_consider_midroll(room.ad_sync_mode):
-                paused_progress, pause_error = room.pause_playback(now_ms())
+                paused_progress = None
+                pause_error = None
+                queue = room.current_queue
+                pause_now_ms = now_ms()
+                if not queue:
+                    pause_error = "room.pause_playback: no current queue"
+                elif not queue.current_entry:
+                    next_entry = (
+                        db.session.query(QueueEntry)
+                        .filter_by(queue_id=queue.id, status="queued")
+                        .order_by(QueueEntry.position.asc())
+                        .first()
+                    )
+                    if not next_entry:
+                        pause_error = "room.pause_playback: queue.load_next_entry: no entries in queue"
+                    else:
+                        queue.current_entry_id = next_entry.id
+                        next_entry.progress_ms = 0
+                        next_entry.playing_since_ms = None
+                        next_entry.paused_at = None
+                        next_entry.status = "queued"
+                        room.state = "paused"
+                        paused_progress = 0
+                else:
+                    current_entry_for_pause = queue.current_entry
+                    initial_progress_ms = current_entry_for_pause.progress_ms or 0
+                    paused_progress = (
+                        max(0, pause_now_ms - (current_entry_for_pause.playing_since_ms or 0))
+                        + initial_progress_ms
+                    )
+                    current_entry_for_pause.playing_since_ms = None
+                    current_entry_for_pause.progress_ms = paused_progress
+                    current_entry_for_pause.paused_at = pause_now_ms
+                    room.state = "paused"
                 if pause_error:
                     logging.warning(
                         "user.ready: failed to pause playback for midroll (room=%s, user_id=%s, error=%s)",
@@ -82,7 +115,18 @@ def register() -> None:
                     current_entry = room.current_queue.current_entry
                     if current_entry:
                         room.state = "midroll"
-                        room.reset_ready_flags()
+                        active_user_ids = (
+                            db.session.query(User.id).filter(User.active.is_(True)).subquery()
+                        )
+                        (
+                            db.session.query(RoomMembership)
+                            .filter(
+                                RoomMembership.room_id == room.id,
+                                RoomMembership.user_id.in_(db.session.query(active_user_ids.c.id)),
+                            )
+                            .update({RoomMembership.ready: False}, synchronize_session=False)
+                        )
+                        db.session.flush()
                         emit_function_after_delay(emit_presence, room, 0.1)
                         progress_ms = (
                             paused_progress
@@ -103,7 +147,13 @@ def register() -> None:
                 else None
             )
 
-            all_users_ready = room.are_all_users_ready()
+            memberships_ready = (
+                db.session.query(RoomMembership.ready)
+                .join(User, RoomMembership.user_id == User.id)
+                .filter(RoomMembership.room_id == room.id, User.active.is_(True))
+                .all()
+            )
+            all_users_ready = bool(memberships_ready) and all(bool(row[0]) for row in memberships_ready)
             logging.info(
                 "user.ready: eval transition -> all_users_ready=%s room.state=%s this_user_ready=%s current_entry_id=%s",
                 all_users_ready,

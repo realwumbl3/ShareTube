@@ -1,8 +1,8 @@
-import { html, css, throttle } from "../../../shared/dep/zyx.js";
+import { html, css, throttle } from "../../shared/dep/zyx.js";
 
-import state from "../../core/state/state.js";
+import state from "../core/state/state.js";
 
-import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "../../../shared/assets/svgs.js";
+import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG } from "../../shared/assets/svgs.js";
 
 export default class Controls {
     constructor(app) {

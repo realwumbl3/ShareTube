@@ -6,8 +6,6 @@ from __future__ import annotations
 
 import time
 import logging
-from typing import Any
-
 from flask import Flask
     
 from ....extensions import db, socketio
@@ -30,42 +28,53 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
             with app.app_context():
                 cutoff_time = int(time.time()) - pong_timeout
 
-                inactive_users = (
-                    db.session.query(User)
-                    .filter(User.active.is_(True))
-                    .filter(User.last_seen < cutoff_time)
-                    .all()
-                )
+                rooms = Room.query.all()
+                removed_by_room: dict[str, list[int]] = {}
 
-                if not inactive_users:
-                    socketio.sleep(interval)
-                    continue
+                for room in rooms:
+                    inactive_memberships = [
+                        membership
+                        for membership in room.memberships
+                        if membership.user.active and membership.user.last_seen < cutoff_time
+                    ]
+                    if not inactive_memberships:
+                        continue
 
-                affected_rooms = set[Any]()
+                    removed_user_ids: list[int] = []
+                    for membership in inactive_memberships:
+                        logging.info(
+                            "heartbeat: removing inactive user %s from room %s",
+                            membership.user_id,
+                            room.code,
+                        )
+                        user = db.session.get(User, membership.user_id)
+                        if user:
+                            user.last_seen = int(time.time())
 
-                for user in inactive_users:
-                    user_memberships = RoomMembership.query.filter_by(user_id=user.id).all()
+                        db.session.delete(membership)
 
-                    for membership in user_memberships:
-                        room = db.session.get(Room, membership.room_id)
-                        if room:
-                            affected_rooms.add(room.code)
-                            logging.info(
-                                "heartbeat: removing inactive user %s from room %s",
-                                user.id,
-                                room.code,
-                            )
-                            membership.leave()
+                        other_memberships = (
+                            db.session.query(RoomMembership)
+                            .filter_by(user_id=membership.user_id)
+                            .first()
+                        )
+                        if not other_memberships and user:
+                            user.active = False
 
-                if inactive_users:
+                        removed_user_ids.append(membership.user_id)
+
+                    if removed_user_ids:
+                        removed_by_room[room.code] = removed_user_ids
+
+                if removed_by_room:
                     db.session.commit()
                     logging.info(
                         "heartbeat: cleaned up %s inactive user(s) from %s room(s)",
-                        len(inactive_users),
-                        len(affected_rooms),
+                        sum(len(ids) for ids in removed_by_room.values()),
+                        len(removed_by_room),
                     )
 
-                for room_code in affected_rooms:
+                for room_code in removed_by_room.keys():
                     room = Room.query.filter_by(code=room_code).first()
                     if room:
                         emit_presence(room)

@@ -1,6 +1,6 @@
-import { html, LiveVar } from "../../../shared/dep/zyx.js";
-import { msDurationTimeStamp } from "../../core/utils/utils.js";
-import { openInNewTabSVG, linkSVG, xSVG, requeueSVG } from "../../../shared/assets/svgs.js";
+import { html, LiveVar } from "../../shared/dep/zyx.js";
+import { msDurationTimeStamp } from "../core/utils/utils.js";
+import { openInNewTabSVG, linkSVG, xSVG, requeueSVG } from "../../shared/assets/svgs.js";
 
 // UI component representing a queued YouTube item
 export class ShareTubeQueueComponent {

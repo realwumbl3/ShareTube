@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from flask import request
 from flask_socketio import leave_room
 
 from ....extensions import db, socketio
-from ....models import RoomMembership, Room
+from ....models import RoomMembership, Room, User
 from ....ws.server import (
     emit_function_after_delay,
     check_user_other_connections,
@@ -43,7 +44,19 @@ def register() -> None:
                 )
                 return
 
-            membership.leave()
+            user = db.session.get(User, membership.user_id)
+            if user:
+                user.last_seen = int(time.time())
+
+            db.session.delete(membership)
+
+            other_memberships = (
+                db.session.query(RoomMembership)
+                .filter_by(user_id=membership.user_id)
+                .first()
+            )
+            if not other_memberships and user:
+                user.active = False
             db.session.commit()
             db.session.refresh(room)
             leave_room(f"room:{room.code}")

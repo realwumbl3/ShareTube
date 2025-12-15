@@ -4,7 +4,7 @@ import { html, css, LiveVar, ZyXInput } from "../shared/dep/zyx.js";
 import state from "./core/state/state.js";
 
 import SocketManager from "./core/managers/socket.js";
-import DebugMenu from "./ui/components/DebugMenu.js";
+import DebugMenu from "./components/DebugMenu.js";
 import YoutubePlayerManager from "./feature/youtubePlayer/manager.js";
 import VirtualPlayer from "./core/managers/virtualPlayer.js";
 import RoomManager from "./core/managers/room.js";
@@ -13,13 +13,13 @@ import UIManager from "./core/managers/ui.js";
 import StorageManager from "./core/managers/storage.js";
 import ThumbnailExtAddToQueue from "./feature/youtubePlayer/addToST.js";
 
-import Queue from "./ui/components/Queue.js";
-import SearchBox from "./ui/components/SearchBox.js";
-import QRCodeComponent from "./ui/components/QRCode.js";
+import Queue from "./components/Queue.js";
+import SearchBox from "./components/SearchBox.js";
+import QRCodeComponent from "./components/QRCode.js";
 
 export const zyxInput = new ZyXInput();
 
-import ShareTubePill from "./ui/components/ShareTubePill.js";
+import ShareTubePill from "./components/ShareTubePill.js";
 
 css`
     @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap");

@@ -1,6 +1,6 @@
-import { html, css, LiveVar } from "../../../shared/dep/zyx.js";
+import { html, css, LiveVar } from "../../shared/dep/zyx.js";
 
-import state from "../../core/state/state.js";
+import state from "../core/state/state.js";
 
 export default class Logo {
     constructor() {

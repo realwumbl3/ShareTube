@@ -1,7 +1,7 @@
-import { html, css, LiveVar } from "../../../shared/dep/zyx.js";
-import state from "../../core/state/state.js";
+import { html, css, LiveVar } from "../../shared/dep/zyx.js";
+import state from "../core/state/state.js";
 
-import QRCode from "../../../shared/dep/qrcode.esm.js";
+import QRCode from "../../shared/dep/qrcode.esm.js";
 
 export default class QRCodeComponent {
     constructor(app) {

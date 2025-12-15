@@ -1,6 +1,6 @@
 import { css, html } from "/extension/shared/dep/zyx.js";
 
-import ShareTubeQueue from "/extension/appshell/ui/components/Queue.js";
+import ShareTubeQueue from "/extension/appshell/components/Queue.js";
 import state from "/extension/appshell/core/state/state.js";
 import { GyroscopeParallax } from "./utils.js";
 /**

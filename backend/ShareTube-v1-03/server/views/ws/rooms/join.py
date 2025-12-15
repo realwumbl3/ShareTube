@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from flask import request
 from flask_socketio import join_room
 
 from ....extensions import db, socketio
-from ....models import Room, RoomMembership
+from ....models import Room, RoomMembership, User
 from ....ws.server import (
     emit_function_after_delay,
     get_mobile_remote_room_code,
@@ -76,8 +77,39 @@ def register() -> None:
 
             track_socket_connection(user_id, request.sid)
             clear_user_verification(user_id)
-            RoomMembership.join_room(room, user_id)
+            membership = (
+                db.session.query(RoomMembership)
+                .filter_by(room_id=room.id, user_id=user_id)
+                .first()
+            )
+            now_ts = int(time.time())
+            room_in_starting = room.state in ("starting", "midroll")
+
+            user = db.session.get(User, user_id)
+            if user:
+                user.last_seen = now_ts
+                user.active = True
+
+            if not membership:
+                membership = RoomMembership(
+                    room_id=room.id,
+                    user_id=user_id,
+                    joined_at=now_ts,
+                    ready=False,
+                )
+                db.session.add(membership)
+            elif room_in_starting:
+                membership.ready = False
             db.session.commit()
+            # Re-fetch fresh state for snapshot (avoid "snap back" after auto-advance).
+            # Clients may navigate/reconnect immediately after a `room.playback` event,
+            # and the join snapshot is used to decide which video URL to load.
+            try:
+                db.session.refresh(room)
+                if room.current_queue:
+                    db.session.refresh(room.current_queue)
+            except Exception:
+                pass
 
             join_room(f"room:{room.code}")
             emit_function_after_delay(emit_presence, room, 0.1)

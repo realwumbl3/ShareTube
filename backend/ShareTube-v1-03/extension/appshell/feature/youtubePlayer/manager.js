@@ -1,7 +1,6 @@
 import { LiveVar, html, css } from "../../../shared/dep/zyx.js";
 import { throttle } from "../../core/utils/utils.js";
 import { getCurrentPlayingProgressMs } from "../../core/state/getters.js";
-
 import state from "../../core/state/state.js";
 
 import PlaybackSyncer from "./syncer.js";
