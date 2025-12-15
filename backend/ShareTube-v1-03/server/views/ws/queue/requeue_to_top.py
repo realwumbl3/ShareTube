@@ -1,7 +1,6 @@
-from server.models.room.queue_entry import QueueEntry
-
-
 from __future__ import annotations
+
+from server.models.room.queue_entry import QueueEntry
 
 import logging
 from typing import Any
