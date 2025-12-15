@@ -76,16 +76,6 @@ class Queue(db.Model):
         stable ordering regardless of how SQLAlchemy returns relationship rows.
         """
         ordered_entries = self.get_all_entries_ordered()
-        # Avoid relying on ORM relationship caching for the "current_entry" snapshot.
-        # During rapid transitions (auto-advance, navigation, reconnect), clients may
-        # re-join and use this snapshot to decide which YouTube URL to load. Using the
-        # FK `current_entry_id` as the source of truth prevents stale relationship data
-        # from briefly pointing at the previous entry and causing a "snap back".
-        current_entry = (
-            db.session.get(QueueEntry, self.current_entry_id)
-            if self.current_entry_id
-            else None
-        )
         return {
             "id": self.id,
             "room_id": self.room_id,
@@ -93,7 +83,9 @@ class Queue(db.Model):
             "creator": self.creator.to_dict() if self.creator else None,
             "created_at": self.created_at,
             "entries": [entry.to_dict() for entry in ordered_entries],
-            "current_entry": current_entry.to_dict() if current_entry else None,
+            "current_entry": (
+                self.current_entry.to_dict() if self.current_entry else None
+            ),
         }
 
     def get_all_entries_ordered(self) -> List["QueueEntry"]:

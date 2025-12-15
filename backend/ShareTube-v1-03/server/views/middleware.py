@@ -176,20 +176,7 @@ def require_queue_entry(handler: Callable) -> Callable:
             )
             return
         queue = room.current_queue
-        # IMPORTANT:
-        # Don't rely on `queue.current_entry` relationship caching here.
-        # Socket handlers can run back-to-back in the same long-lived SQLAlchemy session,
-        # and `queue.current_entry` can be stale during rapid transitions (auto-advance,
-        # navigation, reconnect). Always resolve from the FK `current_entry_id`.
-        try:
-            db.session.refresh(queue)
-        except Exception:
-            pass
-        current_entry = (
-            db.session.get(QueueEntry, queue.current_entry_id)
-            if getattr(queue, "current_entry_id", None)
-            else None
-        )
+        current_entry = queue.current_entry
         if not current_entry:
             logging.warning(
                 "require_queue_entry: no current entry for room=%s, queue_id=%s "

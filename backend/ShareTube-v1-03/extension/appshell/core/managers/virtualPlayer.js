@@ -154,24 +154,26 @@ export default class VirtualPlayer {
         state.roomCode.set(result.code);
         state.inRoom.set(true);
         this.app.youtubePlayer.start?.();
-        state.adSyncMode.set(result.snapshot.ad_sync_mode);
-        state.roomAutoadvanceOnEnd.set(result.snapshot.autoadvance_on_end ?? true);
+
+        const snapshot = result.snapshot;
+        state.adSyncMode.set(snapshot.ad_sync_mode);
+        state.roomAutoadvanceOnEnd.set(snapshot.autoadvance_on_end ?? true);
 
         // Calculate if current user is an operator
         const userId = state.userId.get();
-        const isOwner = result.snapshot.owner_id === userId;
-        const isOperatorListed = (result.snapshot.operators || []).includes(userId);
+        const isOwner = snapshot.owner_id === userId;
+        const isOperatorListed = (snapshot.operators || []).includes(userId);
         state.isOperator.set(isOwner || isOperatorListed);
 
-        const currentQueue = result.snapshot.current_queue;
+        const currentQueue = snapshot.current_queue;
         const currentEntry = currentQueue?.current_entry;
         if (currentEntry) {
             this.updateCurrentPlayingFromEntry(currentEntry);
             this.gotoVideoIfNotOnVideoPage(currentEntry);
         }
 
-        this.setRoomState(result.snapshot.state);
-        this.loadQueueEntries(result.snapshot.current_queue);
+        this.setRoomState(snapshot.state);
+        this.loadQueueEntries(currentQueue);
 
         this.app.roomManager.updateCodeHashInUrl(result.code);
         this.applyTimestamp();

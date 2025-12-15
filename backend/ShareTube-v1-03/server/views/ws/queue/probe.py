@@ -18,46 +18,10 @@ def register() -> None:
     ):
         res, rej = Room.emit(room.code, trigger="queue.probe")
         try:
-            logging.info("[[[[[[queue.probe]]]]]]")
-            logging.info(
-                "queue.probe: room=%s state=%s autoadvance=%s queue.current_entry_id=%s current_entry.id=%s current_entry.status=%s",
-                room.code,
-                room.state,
-                room.autoadvance_on_end,
-                getattr(queue, "current_entry_id", None),
-                getattr(current_entry, "id", None),
-                getattr(current_entry, "status", None),
-            )
-
             if room.state in ("starting", "midroll"):
                 return rej("queue.probe: room.state is starting or midroll")
 
             completed_entry = current_entry
-
-            # If auto-advance is off and we've already completed this entry (and reset its
-            # virtual clock fields), subsequent probe calls should be a no-op and keep the
-            # room in the "idle + continue prompt" state instead of erroring.
-            if (
-                not room.autoadvance_on_end
-                and room.state == "idle"
-                and current_entry.status == "played"
-            ):
-                next_entry_query = (
-                    db.session.query(QueueEntry)
-                    .filter_by(queue_id=queue.id, status="queued")
-                    .filter(QueueEntry.id != current_entry.id)
-                    .order_by(QueueEntry.position.asc())
-                    .first()
-                )
-                has_next_entry = next_entry_query is not None
-                res(
-                    "room.playback",
-                    {
-                        "state": "idle",
-                        "show_continue_prompt": has_next_entry,
-                    },
-                )
-                return
 
             _now_ms = now_ms()
             base_progress_ms = current_entry.progress_ms or 0
@@ -180,12 +144,6 @@ def register() -> None:
             db.session.refresh(room)
             if room.current_queue:
                 db.session.refresh(room.current_queue)
-            logging.info(
-                "queue.probe: advanced: completed_id=%s next_id=%s persisted_current_entry_id=%s",
-                getattr(current_entry_for_completion, "id", None),
-                getattr(next_entry, "id", None) if next_entry else None,
-                getattr(room.current_queue, "current_entry_id", None) if room.current_queue else None,
-            )
 
             try:
                 db.session.refresh(completed_entry)

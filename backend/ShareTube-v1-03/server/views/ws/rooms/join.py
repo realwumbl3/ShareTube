@@ -101,15 +101,6 @@ def register() -> None:
             elif room_in_starting:
                 membership.ready = False
             db.session.commit()
-            # Re-fetch fresh state for snapshot (avoid "snap back" after auto-advance).
-            # Clients may navigate/reconnect immediately after a `room.playback` event,
-            # and the join snapshot is used to decide which video URL to load.
-            try:
-                db.session.refresh(room)
-                if room.current_queue:
-                    db.session.refresh(room.current_queue)
-            except Exception:
-                pass
 
             join_room(f"room:{room.code}")
             emit_function_after_delay(emit_presence, room, 0.1)
