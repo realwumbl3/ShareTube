@@ -1,3 +1,6 @@
+from server.models.room.queue_entry import QueueEntry
+
+
 from __future__ import annotations
 
 import logging
@@ -42,7 +45,7 @@ def register() -> None:
 
             entry.status = "queued"
             queued_entries = queue.query_entries_by_status("queued").all()
-            queued_entries = list(queued_entries or [])
+            queued_entries = list[QueueEntry](queued_entries or [])
 
             if not any(e.id == entry.id for e in queued_entries):
                 queued_entries.append(entry)
@@ -51,7 +54,7 @@ def register() -> None:
             queued_entries.insert(0, entry)
 
             updates: list[dict[str, Any]] = []
-            for idx, e in enumerate(queued_entries, start=1):
+            for idx, e in enumerate[QueueEntry](queued_entries, start=1):
                 if e.position != idx or e.status != "queued":
                     e.position = idx
                     e.status = "queued"

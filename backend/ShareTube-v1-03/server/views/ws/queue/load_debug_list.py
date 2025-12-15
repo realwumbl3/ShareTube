@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import json
 import os
 
@@ -38,7 +40,7 @@ def register() -> None:
 
         playback_fields = ["playing_since_ms", "progress_ms", "paused_at"]
 
-        for i, entry_data in enumerate(debug_queue):
+        for i, entry_data in enumerate[dict[str, Any]](debug_queue):
             youtube_author = None
             if entry_data.get("youtube_author"):
                 author_data = entry_data["youtube_author"]

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from server.models.room.queue_entry import QueueEntry
+
 import logging
 from typing import Any
 
@@ -62,7 +64,7 @@ def register() -> None:
                 return rej("queue.move: can only reorder queued items")
 
             queued_entries = queue.query_entries_by_status("queued").all()
-            queued_entries = list(queued_entries or [])
+            queued_entries = list[QueueEntry](queued_entries or [])
 
             if not any(e.id == entry_to_move.id for e in queued_entries):
                 return rej("queue.move: entry_to_move not in queued list")
@@ -72,7 +74,7 @@ def register() -> None:
             queued_entries = [e for e in queued_entries if e.id != entry_to_move.id]
 
             target_idx = next(
-                (i for i, e in enumerate(queued_entries) if e.id == target_entry.id), None
+                (i for i, e in enumerate[QueueEntry](queued_entries) if e.id == target_entry.id), None
             )
             if target_idx is None:
                 return rej("queue.move: target index not found")
@@ -81,7 +83,7 @@ def register() -> None:
             queued_entries.insert(insert_idx, entry_to_move)
 
             updates: list[dict[str, Any]] = []
-            for idx, e in enumerate(queued_entries, start=1):
+            for idx, e in enumerate[QueueEntry](queued_entries, start=1):
                 if e.position != idx:
                     e.position = idx
                     updates.append({"id": e.id, "position": e.position, "status": e.status})
