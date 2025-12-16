@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from flask import Flask, current_app
 
 from ....extensions import db, socketio
-from ....lib.utils import get_redis_client, now_ms
+from ....lib.utils import get_redis_client, now_ms, playing_since_ms_with_buffer
 from ....models import Room
 
 
@@ -90,7 +90,6 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
                 if room.state != "starting":
                     return
 
-                _now_ms = now_ms()
                 room.state = "playing"
 
                 current_entry = (
@@ -98,8 +97,10 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
                     if room.current_queue and room.current_queue.current_entry
                     else None
                 )
+                playing_since_ms = None
                 if current_entry:
-                    current_entry.playing_since_ms = _now_ms
+                    playing_since_ms = playing_since_ms_with_buffer()
+                    current_entry.playing_since_ms = playing_since_ms
                     current_entry.paused_at = None
 
                 db.session.commit()
@@ -113,7 +114,7 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
                         "trigger": "starting_timeout",
                         "code": room_code,
                         "state": "playing",
-                        "playing_since_ms": _now_ms,
+                        "playing_since_ms": playing_since_ms,
                         "progress_ms": current_entry.progress_ms if current_entry else 0,
                         "actor_user_id": None,
                     },

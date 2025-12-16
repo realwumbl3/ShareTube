@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from ....extensions import db, socketio
-from ....lib.utils import commit_with_retry, now_ms
+from ....lib.utils import commit_with_retry, now_ms, playing_since_ms_with_buffer
 from ....models import Room
 from ....helpers.ws import get_mobile_remote_session_id, is_mobile_remote_socket
 from ...middleware import require_room_by_code
@@ -16,8 +16,8 @@ def register() -> None:
     def _on_room_control_restartvideo(room: Room, user_id: int, data: dict):
         res, rej = Room.emit(room.code, trigger="room.control.restartvideo")
         try:
-            _now_ms = now_ms()
             error = None
+            playing_since_ms = None
             queue = room.current_queue
             if not queue:
                 error = "room.restart_video: no current queue"
@@ -27,7 +27,8 @@ def register() -> None:
                     error = "room.restart_video: no current entry"
                 else:
                     current_entry.progress_ms = 0
-                    current_entry.playing_since_ms = _now_ms
+                    playing_since_ms = playing_since_ms_with_buffer()
+                    current_entry.playing_since_ms = playing_since_ms
                     current_entry.paused_at = None
                     room.state = "playing"
             if error:
@@ -45,7 +46,7 @@ def register() -> None:
                 {
                     "state": "playing",
                     "progress_ms": 0,
-                    "playing_since_ms": _now_ms,
+                    "playing_since_ms": playing_since_ms,
                     "paused_at": None,
                     "actor_user_id": actor_id,
                     "is_remote": is_remote,

@@ -251,6 +251,18 @@ def now_ms() -> int:
     return int(time.time() * 1000)
 
 
+def playing_since_ms_with_buffer() -> int:
+    """
+    Returns the current time in milliseconds plus a configurable buffer.
+    This buffer accounts for the delay between when playback is initiated
+    and when videos actually start playing, preventing players from needing
+    to speed up immediately after start.
+    """
+    from flask import current_app
+    buffer_ms = current_app.config.get("PLAYBACK_START_BUFFER_MS", 1000)
+    return now_ms() + buffer_ms
+
+
 # Commit a SQLAlchemy session with retries to mitigate SQLite 'database is locked' errors
 def commit_with_retry(
     session, retries: int = 5, initial_delay: float = 0.05, backoff: float = 2.0

@@ -6,7 +6,7 @@ from ....extensions import db, socketio
 from ....models import QueueEntry, Room, RoomMembership, User
 from ...middleware import require_room
 from .room_timeouts import cancel_starting_timeout
-from ....lib.utils import flush_with_retry, commit_with_retry, now_ms
+from ....lib.utils import flush_with_retry, commit_with_retry, now_ms, playing_since_ms_with_buffer
 from ....helpers.ws import emit_function_after_delay
 from .common import emit_presence
 
@@ -157,14 +157,14 @@ def register() -> None:
             playback_payload = None
             if should_transition:
                 cancel_starting_timeout(room.code)
-                _now_ms = now_ms()
                 room.state = "playing"
                 current_entry.status = "playing"
-                current_entry.playing_since_ms = _now_ms
+                playing_since_ms = playing_since_ms_with_buffer()
+                current_entry.playing_since_ms = playing_since_ms
                 current_entry.paused_at = None
                 playback_payload = {
                     "state": "playing",
-                    "playing_since_ms": _now_ms,
+                    "playing_since_ms": playing_since_ms,
                     "progress_ms": current_entry.progress_ms if current_entry else 0,
                     "current_entry": current_entry.to_dict(),
                     "actor_user_id": user_id,

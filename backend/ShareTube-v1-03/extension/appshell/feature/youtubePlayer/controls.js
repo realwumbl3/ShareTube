@@ -21,13 +21,12 @@ export default class PlayerControls {
         this.seek_bar_el = null;
 
         this.doc_listener_specs = [
-            ["pointerdown", this.onUserGesture.bind(this)],
-            ["pointerup", this.onBodyPointerUpCapture.bind(this)],
-            ["keydown", this.onUserGesture.bind(this)],
-            ["keydown", this.onControlKeydown.bind(this)],
-            ["keyup", this.onControlKeyup.bind(this)],
-            ["click", this.onBodyClickCapture.bind(this)],
-            ["dblclick", this.onBodyDoubleClickCapture.bind(this)],
+            ["click", this.onClickCapture.bind(this)],
+            ["pointerdown", this.onPointerDownCapture.bind(this)],
+            ["pointerup", this.onPointerUpCapture.bind(this)],
+            ["keydown", this.onKeyDownCapture.bind(this)],
+            ["keyup", this.onKeyUpCapture.bind(this)],
+            ["dblclick", this.onDoubleClickCapture.bind(this)],
         ];
     }
 
@@ -64,13 +63,14 @@ export default class PlayerControls {
         } catch {}
     }
 
-    onControlKeyup = () => {
+    onKeyUpCapture = () => {
         this.seek_key_start_time = 0;
     };
 
     // Override native YouTube controls with room controls
-    onControlKeydown = (e) => {
+    onKeyDownCapture = (e) => {
         if (e.altKey) return;
+        this.onUserGesture(e);
         // Ignore when typing in inputs or inside ShareTube UI
         const path = this.getEventPath(e);
         if (this.shouldIgnoreShareTube(path)) return;
@@ -125,7 +125,17 @@ export default class PlayerControls {
         }
     };
 
-    onBodyClickCapture = (e) => {
+    onUserGesture = (e) => {
+        const path = this.getEventPath(e);
+        if (this.shouldIgnoreShareTube(path)) {
+            if (this.verbose) console.log("onPointerDownCapture return: sharetube_main found in path");
+            return;
+        }
+        this.youtubePlayer.last_user_gesture_ms = Date.now();
+    };
+
+    onClickCapture = (e) => {
+        if (e.button !== 0) return;
         // Ignore clicks initiated within ShareTube UI
         const path = this.getEventPath(e);
         if (this.shouldIgnoreShareTube(path)) return;
@@ -140,7 +150,12 @@ export default class PlayerControls {
         this.onPlayerClick(e, path);
     };
 
-    onBodyPointerUpCapture = (e) => {
+    onPointerDownCapture = (e) => {
+        this.onUserGesture(e);
+    };
+
+    onPointerUpCapture = (e) => {
+        if (e.button !== 0) return;
         // Ignore pointerups initiated within ShareTube UI
         const path = this.getEventPath(e);
         if (this.shouldIgnoreShareTube(path)) return;
@@ -162,7 +177,7 @@ export default class PlayerControls {
         }
     };
 
-    onBodyDoubleClickCapture = (e) => {
+    onDoubleClickCapture = (e) => {
         // Ignore double-clicks initiated within ShareTube UI
         const path = this.getEventPath(e);
         if (this.shouldIgnoreShareTube(path)) return;
@@ -286,7 +301,6 @@ export default class PlayerControls {
             (el) => el instanceof Element && el.classList?.contains("sharetube-feature")
         );
         const isWithinButtonViewModel = path.find((el) => el instanceof Element && el.matches?.("button-view-model"));
-        console.log({ isWithinShareTubeFeature, isWithinButtonViewModel });
         if (isWithinShareTubeFeature || isWithinButtonViewModel) return;
         e.preventDefault();
         e.stopPropagation();
@@ -439,15 +453,6 @@ export default class PlayerControls {
             return false;
         }
     }
-
-    onUserGesture = (e) => {
-        const path = this.getEventPath(e);
-        if (this.shouldIgnoreShareTube(path)) {
-            if (this.verbose) console.log("onUserGesture return: sharetube_main found in path");
-            return;
-        }
-        this.youtubePlayer.last_user_gesture_ms = Date.now();
-    };
 
     isUserInitiatedMediaEvent(e) {
         const now = Date.now();

@@ -49,6 +49,7 @@ class ShareTubeState {
         };
 
         this.currentPlaybackRate = new LiveVar(1);
+        this.currentDriftMs = new LiveVar(0);
     }
 
     resetRoomState() {

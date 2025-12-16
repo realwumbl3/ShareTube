@@ -75,3 +75,8 @@ class Config:
     PONG_TIMEOUT_SECONDS = int(os.getenv("PONG_TIMEOUT_SECONDS", "20"))
     # Heartbeat interval in seconds for periodic cleanup of inactive users across all rooms
     HEARTBEAT_INTERVAL_SECONDS = int(os.getenv("HEARTBEAT_INTERVAL_SECONDS", "20"))
+
+    # Buffer time in milliseconds added to playing_since_ms when playback starts
+    # This accounts for the delay between when playback is initiated and when videos actually start playing
+    # Prevents players from needing to speed up to catch up immediately after start
+    PLAYBACK_START_BUFFER_MS = int(os.getenv("PLAYBACK_START_BUFFER_MS", "200"))

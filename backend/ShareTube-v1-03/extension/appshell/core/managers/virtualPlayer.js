@@ -312,23 +312,31 @@ export default class VirtualPlayer {
         const receiveTime = Date.now() + state.fakeTimeOffset.get();
         state.serverNowMs.set(serverNowMs);
 
+        const MS_PER_HOUR = 1000 * 60 * 60;
+
         // If we have the originating client timestamp, compute NTP-style offset:
         // offset = serverTimeAtSend - (clientSendTime + RTT/2)
         if (Number.isFinite(clientTimestamp)) {
             const rtt = receiveTime - clientTimestamp;
             const offset = serverNowMs - (clientTimestamp + rtt / 2);
-            state.serverMsOffset.set(offset);
+            // Round to nearest hour for timezone compensation
+            const offsetHours = Math.round(offset / MS_PER_HOUR);
+            state.serverMsOffset.set(offsetHours * MS_PER_HOUR);
             return;
         }
 
         // Fallback to naive offset when client timestamp is unavailable
         const offset = receiveTime - serverNowMs;
-        state.serverMsOffset.set(offset);
+        // Round to nearest hour for timezone compensation
+        const offsetHours = Math.round(offset / MS_PER_HOUR);
+        state.serverMsOffset.set(offsetHours * MS_PER_HOUR);
     }
 
     applyTimestamp() {
+        console.log("applyTimestamp");
         const { progress_ms } = getCurrentPlayingProgressMs();
         if (progress_ms === null) return;
+        console.log("applyTimestamp: progress_ms", progress_ms);
         setTimeout(() => this.app.youtubePlayer.setDesiredProgressMs(progress_ms), 1);
     }
 

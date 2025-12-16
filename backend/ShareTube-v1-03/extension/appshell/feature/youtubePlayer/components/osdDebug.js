@@ -84,6 +84,7 @@ export default class PlayerOSDDebug {
                 <span>enforced player state: ${this.youtubePlayer.desired_state.interp()}</span>
                 <span>ad_playing: ${this.youtubePlayer.ad_playing.interp()}</span>
                 <span>current_playback_rate: ${state.currentPlaybackRate.interp()}</span>
+                <span>current_drift_ms: ${state.currentDriftMs.interp((v) => (v > 0 ? `+${v}ms` : `${v}ms`))}</span>
             </div>
             <div class="log-header">Log</div>
             <div

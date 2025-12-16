@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from ....extensions import db, socketio
-from ....lib.utils import commit_with_retry, now_ms
+from ....lib.utils import commit_with_retry, now_ms, playing_since_ms_with_buffer
 from ....models import QueueEntry, Room, RoomMembership, User
 from ....helpers.ws import get_mobile_remote_session_id, is_mobile_remote_socket
 from ...middleware import require_room_by_code
@@ -61,13 +61,15 @@ def register() -> None:
             elif room.state in ("starting", "midroll"):
                 room.state = "playing"
                 current_entry = queue.current_entry
+                playing_since_ms = None
                 if current_entry:
                     current_entry.status = "playing"
-                    current_entry.playing_since_ms = _now_ms
+                    playing_since_ms = playing_since_ms_with_buffer()
+                    current_entry.playing_since_ms = playing_since_ms
                     current_entry.paused_at = None
                 result = {
                     "state": "playing",
-                    "playing_since_ms": _now_ms if current_entry else None,
+                    "playing_since_ms": playing_since_ms,
                     "progress_ms": current_entry.progress_ms if current_entry else 0,
                     "current_entry": current_entry.to_dict() if current_entry else None,
                 }
@@ -77,11 +79,13 @@ def register() -> None:
                     error = "room.start_playback: no current entry to resume"
                 else:
                     current_entry.status = "playing"
-                    current_entry.playing_since_ms = _now_ms
+                    playing_since_ms = playing_since_ms_with_buffer()
+                    current_entry.playing_since_ms = playing_since_ms
                     current_entry.paused_at = None
                     room.state = "playing"
                     result = {
                         "state": "playing",
+                        "playing_since_ms": playing_since_ms,
                         "progress_ms": current_entry.progress_ms,
                         "current_entry": current_entry.to_dict(),
                     }

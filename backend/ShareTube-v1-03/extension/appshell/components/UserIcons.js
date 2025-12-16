@@ -7,7 +7,7 @@ export default class UserIcons {
         this.app = app;
 
         html`
-            <div class="room_presence" zyx-if=${state.userId}>
+            <div class="room_presence" zyx-if=${state.roomCode}>
                 <div
                     class="presence"
                     zyx-if=${[state.users, (v) => v.length > 0]}
@@ -74,7 +74,7 @@ css`
         gap: 3px;
         outline: 1px solid rgba(255, 255, 255, 0.25);
         border-radius: 999px;
-        padding: 3px;
+        padding: 3px 5px;
         background: rgba(0, 0, 0, 0.35);
     }
 
