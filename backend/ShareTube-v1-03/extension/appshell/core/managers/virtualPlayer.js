@@ -109,6 +109,8 @@ export default class VirtualPlayer {
 
     async loadQueueEntries(queue) {
         if (!queue || !queue.entries) return;
+        // Clear the queue before populating to prevent duplicates when rejoining
+        state.queue.clear();
         for (const entry of queue.entries) {
             const item = new ShareTubeQueueItem(this.app, entry);
             state.queue.push(item);
