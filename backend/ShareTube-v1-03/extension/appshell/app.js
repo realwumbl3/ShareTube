@@ -86,9 +86,7 @@ export default class ShareTubeApp {
         this.storageManager.getLocalStorage("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
 
         html`
-            <div id="sharetube_main" class="st_reset">
-                ${this.queue} ${this.debugMenu} ${this.sharetubePill}
-            </div>
+            <div id="sharetube_main" class="st_reset">${this.queue} ${this.debugMenu} ${this.sharetubePill}</div>
             ${this.qrCode}
         `.bind(this);
 
@@ -108,7 +106,7 @@ export default class ShareTubeApp {
 
     setupKeypressListeners() {
         document.addEventListener("keydown", (e) => {
-            if (e.key.toLowerCase() === "d" && e.ctrlKey && e.altKey) {
+            if (e.key.toLowerCase() === "d" && e.altKey) {
                 state.debug_mode.set(!state.debug_mode.get());
                 this.storageManager.setLocalStorage("debug_mode", state.debug_mode.get());
                 return;
