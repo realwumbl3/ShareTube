@@ -5,7 +5,6 @@ import logging
 from ....extensions import db, socketio
 from ....lib.utils import commit_with_retry, now_ms, playing_since_ms_with_buffer
 from ....models import QueueEntry, Room, RoomMembership, User
-from ....helpers.ws import get_mobile_remote_session_id, is_mobile_remote_socket
 from ...middleware import require_room_by_code
 from ..rooms.room_timeouts import (
     cancel_starting_timeout,
@@ -125,10 +124,9 @@ def register() -> None:
             except Exception:
                 logging.exception("room.control.play queue broadcast error")
 
-            is_remote = is_mobile_remote_socket()
-            actor_id = get_mobile_remote_session_id() if is_remote else user_id
+            payload = {"actor_user_id": user_id, **result}
 
-            res("room.playback", {"actor_user_id": actor_id, "is_remote": is_remote, **result})
+            res("room.playback", payload)
         except Exception as e:
             logging.exception("room.control.play handler error")
             rej(f"room.control.play handler error: {e}")

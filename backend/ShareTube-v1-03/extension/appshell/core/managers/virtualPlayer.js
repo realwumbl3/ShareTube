@@ -146,10 +146,10 @@ export default class VirtualPlayer {
     }
 
     async onRoomJoinResult(result) {
+        console.log("onRoomJoinResult", result);
         if (!result.ok) return;
 
         this.updateServerClock(result);
-        // await this.performTimeSyncSamples(5);
         state.roomCode.set(result.code);
         state.inRoom.set(true);
         this.app.youtubePlayer.start?.();
@@ -176,50 +176,6 @@ export default class VirtualPlayer {
 
         this.app.roomManager.updateCodeHashInUrl(result.code);
         this.applyTimestamp();
-    }
-
-    async performTimeSyncSamples(sampleCount = 5) {
-        const socket = await this.app.socket.ensureSocket();
-        if (!socket) return;
-
-        const samples = [];
-
-        for (let i = 0; i < sampleCount; i++) {
-            const sampleId = `${Date.now()}-${Math.random()}`;
-            const clientTimestamp = Date.now();
-            const startMono = performance.now();
-
-            const result = await new Promise((resolve) => {
-                const handler = (payload) => {
-                    if (!payload || payload.sampleId !== sampleId) return;
-                    clearTimeout(timeout);
-                    socket.off("time.sync.response", handler);
-                    resolve({ ...payload, clientTimestamp, endMono: performance.now() });
-                };
-                const timeout = setTimeout(() => {
-                    socket.off("time.sync.response", handler);
-                    resolve(null);
-                }, 3000);
-                socket.on("time.sync.response", handler);
-                socket.emit("time.sync", { sampleId, clientTimestamp });
-            });
-
-            if (result && Number.isFinite(result.serverNowMs)) {
-                const rtt = result.endMono - startMono;
-                const offset = result.serverNowMs - (clientTimestamp + rtt / 2);
-                samples.push({ rtt, offset, serverNowMs: result.serverNowMs });
-            }
-
-            // Small delay between samples to avoid burst batching effects
-            await new Promise((r) => setTimeout(r, 25));
-        }
-
-        if (!samples.length) return;
-
-        samples.sort((a, b) => a.rtt - b.rtt);
-        const best = samples[0];
-        state.serverMsOffset.set(best.offset);
-        state.serverNowMs.set(best.serverNowMs);
     }
 
     async emitSkipVideo() {

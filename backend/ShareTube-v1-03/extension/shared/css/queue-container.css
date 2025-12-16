@@ -1,7 +1,7 @@
 #sharetube_queue {
     min-width: 320px;
     max-width: 520px;
-    max-height: min(480px, calc(95vh - 100px));
+    max-height: min(520px, calc(95vh - 100px));
     overflow: hidden;
     color: var(--yt-spec-text-primary, #fff);
     background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
@@ -11,7 +11,7 @@
     border-radius: 14px;
     pointer-events: auto;
     display: grid;
-    grid-template-rows: max-content max-content auto max-content max-content;
+    grid-template-rows: max-content max-content max-content auto max-content max-content;
     justify-content: stretch;
     font-size: 12px;
     min-width: min(95vw, 550px);

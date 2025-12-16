@@ -5,7 +5,6 @@ import logging
 from ....extensions import db, socketio
 from ....lib.utils import commit_with_retry
 from ....models import QueueEntry, Room, RoomMembership, User
-from ....helpers.ws import get_mobile_remote_session_id, is_mobile_remote_socket
 from ...middleware import require_room_by_code
 from ..rooms.room_timeouts import (
     cancel_starting_timeout,
@@ -151,35 +150,26 @@ def register() -> None:
             except Exception:
                 logging.exception("room.control.skip queue broadcast error")
 
-            is_remote = is_mobile_remote_socket()
-            actor_id = get_mobile_remote_session_id() if is_remote else user_id
-
             if next_entry:
                 db.session.refresh(next_entry)
-                res(
-                    "room.playback",
-                    {
-                        "state": "starting",
-                        "playing_since_ms": None,
-                        "progress_ms": next_entry.progress_ms,
-                        "current_entry": next_entry.to_dict(),
-                        "actor_user_id": actor_id,
-                        "is_remote": is_remote,
-                    },
-                )
+                payload = {
+                    "state": "starting",
+                    "playing_since_ms": None,
+                    "progress_ms": next_entry.progress_ms,
+                    "current_entry": next_entry.to_dict(),
+                    "actor_user_id": user_id,
+                }
+                res("room.playback", payload)
                 schedule_starting_to_playing_timeout(room.code, delay_seconds=30)
             else:
-                res(
-                    "room.playback",
-                    {
-                        "state": room.state,
-                        "playing_since_ms": None,
-                        "progress_ms": 0,
-                        "current_entry": None,
-                        "actor_user_id": actor_id,
-                        "is_remote": is_remote,
-                    },
-                )
+                payload = {
+                    "state": room.state,
+                    "playing_since_ms": None,
+                    "progress_ms": 0,
+                    "current_entry": None,
+                    "actor_user_id": user_id,
+                }
+                res("room.playback", payload)
         except Exception:
             logging.exception("room.control.skip handler error")
 

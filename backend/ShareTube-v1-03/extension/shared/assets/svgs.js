@@ -4,6 +4,7 @@ export const openInNewTabSVG = resolveAssetUrl("shared/assets/open-in-new-tab.sv
 export const linkSVG = resolveAssetUrl("shared/assets/link.svg");
 export const xSVG = resolveAssetUrl("shared/assets/x.svg");
 export const requeueSVG = resolveAssetUrl("shared/assets/requeue.svg");
+export const queuedSVG = resolveAssetUrl("shared/assets/queued.svg");
 export const playSVG = resolveAssetUrl("shared/assets/play.svg");
 export const pauseSVG = resolveAssetUrl("shared/assets/pause.svg");
 export const skipSVG = resolveAssetUrl("shared/assets/skip.svg");

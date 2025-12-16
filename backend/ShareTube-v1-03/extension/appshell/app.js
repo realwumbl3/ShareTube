@@ -5,13 +5,12 @@ import state from "./core/state/state.js";
 
 import SocketManager from "./core/managers/socket.js";
 import DebugMenu from "./components/DebugMenu.js";
-import YoutubePlayerManager from "./feature/youtubePlayer/manager.js";
 import VirtualPlayer from "./core/managers/virtualPlayer.js";
 import RoomManager from "./core/managers/room.js";
 import AuthManager from "./core/managers/auth.js";
+import YoutubePlayerManager from "./core/managers/youtubePlayer/manager.js";
 import UIManager from "./core/managers/ui.js";
 import StorageManager from "./core/managers/storage.js";
-import ThumbnailExtAddToQueue from "./feature/youtubePlayer/addToST.js";
 
 import Queue from "./components/Queue.js";
 import SearchBox from "./components/SearchBox.js";
@@ -24,14 +23,11 @@ import ShareTubePill from "./components/ShareTubePill.js";
 css`
     @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap");
     @import url(${chrome.runtime.getURL("shared/css/styles-base.css")});
-    @import url(${chrome.runtime.getURL("shared/css/styles-popup.css")});
     @import url(${chrome.runtime.getURL("shared/css/styles-forms.css")});
     @import url(${chrome.runtime.getURL("shared/css/styles-components.css")});
     @import url(${chrome.runtime.getURL("shared/css/styles-main.css")});
     @import url(${chrome.runtime.getURL("shared/css/styles-animations.css")});
     @import url(${chrome.runtime.getURL("shared/css/pill.css")});
-    @import url(${chrome.runtime.getURL("shared/css/adOverlay.css")});
-    @import url(${chrome.runtime.getURL("shared/css/firstParty.css")});
     @import url(${chrome.runtime.getURL("shared/css/splash.css")});
 `;
 
@@ -74,13 +70,11 @@ export default class ShareTubeApp {
         this.authManager = new AuthManager(this);
         this.uiManager = new UIManager(this);
         this.storageManager = new StorageManager(this);
-        this.thumbnailExtAddToQueue = new ThumbnailExtAddToQueue(this);
 
         // Components
         this.queue = new Queue(this);
         this.debugMenu = new DebugMenu(this);
         this.sharetubePill = new ShareTubePill(this);
-
         this.qrCode = new QRCodeComponent(this);
 
         this.storageManager.getLocalStorage("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));

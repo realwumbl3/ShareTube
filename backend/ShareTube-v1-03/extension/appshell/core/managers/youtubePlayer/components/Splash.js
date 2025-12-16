@@ -1,10 +1,9 @@
-import { html } from "../../../../shared/dep/zyx.js";
+import { html } from "../../../../../shared/dep/zyx.js";
 
-import { msDurationTimeStamp } from "../../../core/utils/utils.js";
+import { msDurationTimeStamp } from "../../../utils/utils.js";
 
 export default class Splash {
-    constructor(video) {
-        this.video = video;
+    constructor() {
         this.actorAudit = new ActorAudit();
         html`<div class="splash_overlay">
             <div this="badge_zone" class="badge_zone"></div>

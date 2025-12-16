@@ -5,7 +5,6 @@ import logging
 from ....extensions import db, socketio
 from ....lib.utils import commit_with_retry, now_ms
 from ....models import Room
-from ....helpers.ws import get_mobile_remote_session_id, is_mobile_remote_socket
 from ...middleware import require_room_by_code
 
 
@@ -65,27 +64,22 @@ def register() -> None:
                 db.session.refresh(room.current_queue.current_entry)
                 current_entry = room.current_queue.current_entry
 
-            is_remote = is_mobile_remote_socket()
-            actor_id = get_mobile_remote_session_id() if is_remote else user_id
-
             actual_progress_ms = (
                 current_entry.progress_ms if current_entry else None
             )
 
-            res(
-                "room.playback",
-                {
-                    "state": room.state,
-                    "delta_ms": delta_ms,
-                    "progress_ms": actual_progress_ms,
-                    "frame_step": frame_step,
-                    "playing_since_ms": (
-                        current_entry.playing_since_ms if current_entry else None
-                    ),
-                    "actor_user_id": actor_id,
-                    "is_remote": is_remote,
-                },
-            )
+            payload = {
+                "state": room.state,
+                "delta_ms": delta_ms,
+                "progress_ms": actual_progress_ms,
+                "frame_step": frame_step,
+                "playing_since_ms": (
+                    current_entry.playing_since_ms if current_entry else None
+                ),
+                "actor_user_id": user_id,
+            }
+
+            res("room.playback", payload)
         except Exception:
             logging.exception("room.control.seek handler error")
 

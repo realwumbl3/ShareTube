@@ -1,6 +1,6 @@
-import { css, html } from "../../../shared/dep/zyx.js";
-import state from "../../core/state/state.js";
-import { isYouTubeUrl } from "../../core/utils/utils.js";
+import { css, html } from "../../../../shared/dep/zyx.js";
+import state from "../../state/state.js";
+import { isYouTubeUrl } from "../../utils/utils.js";
 
 css`
     .sharetube-thumb-add-btn {
@@ -48,9 +48,6 @@ css`
 // enqueues the corresponding video into the current ShareTube room (or
 // creates one automatically, mirroring drag-and-drop behavior).
 export default class ThumbnailExtAddToQueue {
-    /**
-     * @param {import("../app.js").default} app
-     */
     constructor(app) {
         this.app = app;
         this.observer = null;

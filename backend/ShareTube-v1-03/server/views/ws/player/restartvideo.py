@@ -5,7 +5,6 @@ import logging
 from ....extensions import db, socketio
 from ....lib.utils import commit_with_retry, now_ms, playing_since_ms_with_buffer
 from ....models import Room
-from ....helpers.ws import get_mobile_remote_session_id, is_mobile_remote_socket
 from ...middleware import require_room_by_code
 from ..rooms.room_timeouts import cancel_starting_timeout
 
@@ -38,20 +37,15 @@ def register() -> None:
             if room.state == "starting":
                 cancel_starting_timeout(room.code)
 
-            is_remote = is_mobile_remote_socket()
-            actor_id = get_mobile_remote_session_id() if is_remote else user_id
+            payload = {
+                "state": "playing",
+                "progress_ms": 0,
+                "playing_since_ms": playing_since_ms,
+                "paused_at": None,
+                "actor_user_id": user_id,
+            }
 
-            res(
-                "room.playback",
-                {
-                    "state": "playing",
-                    "progress_ms": 0,
-                    "playing_since_ms": playing_since_ms,
-                    "paused_at": None,
-                    "actor_user_id": actor_id,
-                    "is_remote": is_remote,
-                },
-            )
+            res("room.playback", payload)
         except Exception as e:
             logging.exception("room.control.restartvideo handler error: %s", e)
             rej(f"room.control.restartvideo handler error: {e}")

@@ -76,8 +76,65 @@
             .mobile-remote-app.visible {
                 opacity: 1;
             }
+
+            .error-message {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                max-width: 90vw;
+                padding: 2rem;
+                background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                border-radius: 12px;
+                color: #fca5a5;
+                font-size: 1.125rem;
+                line-height: 1.6;
+                text-align: center;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
+                            0 10px 10px -5px rgba(0, 0, 0, 0.2);
+                backdrop-filter: blur(10px);
+                animation: errorSlideIn 0.3s ease-out;
+            }
+
+            .error-message::before {
+                content: '⚠️';
+                display: block;
+                font-size: 2.5rem;
+                margin-bottom: 1rem;
+                opacity: 0.8;
+            }
+
+            @keyframes errorSlideIn {
+                from {
+                    opacity: 0;
+                    transform: translate(-50%, -40%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translate(-50%, -50%);
+                }
+            }
+
+            /* Responsive adjustments */
+            @media (max-width: 480px) {
+                .error-message {
+                    padding: 1.5rem;
+                    font-size: 1rem;
+                }
+
+                .error-message::before {
+                    font-size: 2rem;
+                    margin-bottom: 0.75rem;
+                }
+            }
         </style>
     </head>
+    {% if error %}
+    <body>
+        <div class="error-message">{{ error }}</div>
+    </body>
+    {% else %}
     <body>
         <div id="app-loader">
             <div class="loader-spinner"></div>
@@ -93,4 +150,5 @@
         <!-- ES module entrypoint served from /mobile-remote/static/js/ -->
         <script type="module" src="/static/mobile_remote/js/main.js"></script>
     </body>
+    {% endif %}
 </html>

@@ -7,6 +7,8 @@ export default class QRCodeComponent {
     constructor(app) {
         this.app = app;
         this.visible = new LiveVar(false);
+        this.authUrl = new LiveVar("#");
+        this.qrGenerated = false;
 
         html`
             <div id="sharetube_qr_modal" zyx-if=${this.visible} zyx-click=${(e) => this.handleBackdropClick(e)}>
@@ -33,7 +35,12 @@ export default class QRCodeComponent {
                         </p>
                         <div id="qr-code-container" class="qr-code-container" this="qr_code_container"></div>
                         <div class="qr-url-link">
-                            <a href="${state.roomCode.interp(() => this.qrUrl())}" target="_blank" class="qr-url">
+                            <a
+                                href=${this.authUrl.interp((url) => url)}
+                                title=${this.authUrl.interp((url) => url)}
+                                target="_blank"
+                                class="qr-url"
+                            >
                                 sharetube.wumbl3.xyz/mobile-remote
                             </a>
                         </div>
@@ -49,22 +56,44 @@ export default class QRCodeComponent {
 
         }
 
-    qrUrl() {
-        // For now, use a simple approach. In production, this should call the backend API
-        // to generate proper JWT tokens. For development, we'll use base64 encoded tokens.
-        const roomCode = state.roomCode.get();
+    _fallbackAuthUrl(roomCode) {
         if (!roomCode) return "#";
+        const backendUrl = (state.backendUrl.get() || "").replace(/\/+$/, "");
+        return `${backendUrl}/mobile-remote/${encodeURIComponent(roomCode)}`;
+    }
 
-        // Create a simple base64 encoded auth token
-        const authToken = btoa(
-            JSON.stringify({
-                room_code: roomCode,
-                timestamp: Date.now(),
-                type: "mobile_remote_auth",
-            })
+    async requestAuthUrl(roomCode) {
+        const baseUrl = await this.app.backEndUrl();
+        const authToken = await this.app.authToken();
+        if (!authToken) {
+            throw new Error("No auth token available for mobile remote");
+        }
+
+        const response = await fetch(
+            `${baseUrl}/mobile-remote/api/generate-auth-url/${encodeURIComponent(roomCode)}`,
+            {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    Accept: "application/json",
+                },
+            }
         );
 
-        return `${state.backendUrl.get()}/mobile-remote/auth/${authToken}`;
+        if (!response.ok) {
+            const body = await response.text().catch(() => "");
+            throw new Error(
+                `Mobile remote auth URL request failed (${response.status}): ${body}`
+            );
+        }
+
+        const payload = await response.json();
+        if (!payload?.auth_url) {
+            throw new Error("Mobile remote auth URL response missing auth_url");
+        }
+
+        this.authUrl.set(payload.auth_url);
+        return payload.auth_url;
     }
 
     show() {
@@ -74,18 +103,42 @@ export default class QRCodeComponent {
             return;
         }
 
+        // Reset generation flag when showing
+        this.qrGenerated = false;
+
         console.log("QRCode.show() called, QRCode available:", !!window.QRCode);
         this.visible.set(true);
 
-        // QR code library is loaded via manifest.json content scripts
-        // Wait for modal to be visible, then generate QR code
-        setTimeout(() => {
-            this.generateQRCode();
-        }, 100);
+        const fallbackUrl = this._fallbackAuthUrl(roomCode);
+        
+        // Fetch auth URL first, then generate QR code once with the final URL
+        this.requestAuthUrl(roomCode)
+            .then((authUrl) => {
+                // Only generate if modal is still visible and not already generated
+                if (this.visible.get() && !this.qrGenerated) {
+                    this.authUrl.set(authUrl);
+                    setTimeout(() => {
+                        this.generateQRCode();
+                        this.qrGenerated = true;
+                    }, 100);
+                }
+            })
+            .catch((error) => {
+                console.warn("Failed to build authenticated mobile remote URL", error);
+                // Only generate if modal is still visible and not already generated
+                if (this.visible.get() && !this.qrGenerated) {
+                    this.authUrl.set(fallbackUrl);
+                    setTimeout(() => {
+                        this.generateQRCode();
+                        this.qrGenerated = true;
+                    }, 100);
+                }
+            });
     }
 
     hide() {
         this.visible.set(false);
+        this.qrGenerated = false;
     }
 
     handleBackdropClick(e) {
@@ -96,8 +149,8 @@ export default class QRCodeComponent {
 
     async generateQRCode() {
         console.log("generateQRCode() called");
-
-        const authUrl = this.qrUrl();
+        const fallbackUrl = this._fallbackAuthUrl(state.roomCode.get());
+        const authUrl = this.authUrl.get() || fallbackUrl;
 
         // Clear any existing QR code
         this.qr_code_container.innerHTML = "";

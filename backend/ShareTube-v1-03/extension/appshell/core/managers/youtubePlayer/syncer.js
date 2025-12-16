@@ -1,14 +1,14 @@
-import { getCurrentPlayingProgressMs } from "../../core/state/getters.js";
-import state from "../../core/state/state.js";
+import { getCurrentPlayingProgressMs } from "../../state/getters.js";
+import state from "../../state/state.js";
 
 // Optimized constants for faster, more responsive syncing
 const PLAYBACK_DRIFT_INTERVAL_MS = 250; // Reduced from 500ms for more responsive checks
-const PLAYBACK_DRIFT_THRESHOLD_MS = 15; // Reduced threshold for tighter sync
+const PLAYBACK_DRIFT_THRESHOLD_MS = 10; // Reduced threshold for tighter sync
 const PLAYBACK_DRIFT_FULL_ADJUST_MS = 1500; // Reduced from 4000ms for faster corrections
 const PLAYBACK_DRIFT_MIN_RATE = 0.85; // More aggressive correction range
 const PLAYBACK_DRIFT_MAX_RATE = 1.2;
 const PLAYBACK_DRIFT_SEEK_THRESHOLD_MS = 3000; // Reduced from 5000ms for quicker seeks
-const RATE_CHANGE_THRESHOLD = 0.005; // Minimum rate change to avoid micro-adjustments
+const RATE_CHANGE_THRESHOLD = 0.002; // Minimum rate change to avoid micro-adjustments
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 

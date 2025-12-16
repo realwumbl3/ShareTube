@@ -84,6 +84,45 @@ export function msDurationTimeStamp(ms) {
     return ms ? new Date(ms).toISOString().substr(11, 8) : "00:00:00";
 }
 
+/**
+ * Extract YouTube video ID from a URL or raw ID string
+ * Handles formats: youtube.com/watch?v=, youtu.be/, /shorts/
+ * @param {string} value - URL or video ID string
+ * @returns {string} - Video ID or empty string if not found
+ */
+export function extractVideoId(value) {
+    if (!value) return "";
+    
+    try {
+        const url = new URL(value);
+        const host = url.hostname.replace(/^www\./, "");
+        
+        // Short youtu.be links
+        if (host === "youtu.be") {
+            const vid = url.pathname.replace(/^\//, "");
+            return vid || "";
+        }
+        
+        // Full youtube.com links
+        if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+            // Shorts URLs: /shorts/{id}
+            if (url.pathname.startsWith("/shorts/")) {
+                const parts = url.pathname.split("/");
+                return parts[2] || "";
+            }
+            // Standard watch URLs: ?v={id}
+            const v = url.searchParams.get("v");
+            if (v) return v;
+        }
+    } catch (e) {
+        // If URL parsing fails, try regex fallback
+    }
+    
+    // Fallback: find any 11-char YouTube id-like token
+    const match = value.match(/[a-zA-Z0-9_-]{11}/);
+    return match ? match[0] : "";
+}
+
 // Generic helper to synchronize a local observable list with a remote list
 // of items identified by an id. It creates missing instances, optionally
 // updates existing ones, and removes instances no longer present remotely

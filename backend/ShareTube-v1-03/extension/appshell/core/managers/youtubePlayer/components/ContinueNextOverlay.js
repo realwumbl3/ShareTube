@@ -1,9 +1,8 @@
-import { html, css } from "../../../../shared/dep/zyx.js";
-import state from "../../../core/state/state.js";
+import { html, css } from "../../../../../shared/dep/zyx.js";
+import state from "../../../state/state.js";
 
 export default class ContinueNextOverlay {
-    constructor(video, app) {
-        this.video = video;
+    constructor(app) {
         this.app = app;
 
         html`<div

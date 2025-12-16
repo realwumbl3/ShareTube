@@ -14,9 +14,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.appendChild(mobileRemote.main);
 
     // Get room code and error from config (passed from backend)
-    const roomCode = window.mobileRemoteConfig?.roomCode;
+    let roomCode = window.mobileRemoteConfig?.roomCode;
     const token = window.mobileRemoteConfig?.token;
     const error = window.mobileRemoteConfig?.error;
+
+    // If no room code in config, try to extract from URL path or localStorage
+    if (!roomCode) {
+        console.log("Mobile Remote: Extracting room code from URL", { pathname: window.location.pathname });
+        // Check URL path for room code (after auth URL cleaning)
+        const pathMatch = window.location.pathname.match(/^\/mobile-remote\/([^/?#]+)/);
+        if (pathMatch) {
+            console.log("Mobile Remote: Path match", { match: pathMatch[1] });
+            // Only use the first segment after /mobile-remote/
+            roomCode = pathMatch[1].split('/')[0];
+            console.log("Mobile Remote: Extracted room code", { roomCode });
+        }
+
+        // Fall back to stored room code
+        if (!roomCode) {
+            roomCode = localStorage.getItem('mobile_remote_room_code');
+            console.log("Mobile Remote: Using stored room code", { roomCode });
+        }
+    }
 
     console.log('Mobile Remote: Config loaded:', {
         roomCode: roomCode ? `'${roomCode}'` : 'none',
@@ -26,13 +45,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (error) {
         console.log(`Mobile Remote: Error from backend: ${error}`);
-        mobileRemote.showError(error);
+        mobileRemote.handleRoomError(error);
     } else if (roomCode) {
         console.log(`Mobile Remote: Connecting to room ${roomCode}`);
         mobileRemote.connectToRoom(roomCode);
     } else {
         console.log("Mobile Remote: No room code provided");
-        mobileRemote.showError("No room code provided. Please scan a QR code from the ShareTube extension.");
+        mobileRemote.handleRoomError("No room code provided. Please scan a QR code from the ShareTube extension.");
     }
 
     // Reveal the app after initialization

@@ -1,6 +1,6 @@
-import { throttle } from "../../core/utils/utils.js";
-import state from "../../core/state/state.js";
-import { getCurrentPlayingProgressMs } from "../../core/state/getters.js";
+import { throttle } from "../../utils/utils.js";
+import state from "../../state/state.js";
+import { getCurrentPlayingProgressMs } from "../../state/getters.js";
 
 const SHARETUBE_ROOT_ID = "sharetube_main";
 const PLAYER_CONTAINER_SELECTORS = ["#ytp-player", ".html5-video-player"];

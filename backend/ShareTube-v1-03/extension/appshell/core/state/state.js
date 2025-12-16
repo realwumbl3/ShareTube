@@ -35,6 +35,7 @@ class ShareTubeState {
         this.queueDeleted = new LiveList([]);
 
         this.queueVisible = new LiveVar(false);
+        this.embeddedPlayerVisible = new LiveVar(false);
 
         // Continue next prompt
         this.showContinueNextPrompt = new LiveVar(false);

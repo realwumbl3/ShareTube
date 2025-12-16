@@ -1,7 +1,7 @@
-import { LiveVar, html, css } from "../../../shared/dep/zyx.js";
-import { throttle } from "../../core/utils/utils.js";
-import { getCurrentPlayingProgressMs } from "../../core/state/getters.js";
-import state from "../../core/state/state.js";
+import { LiveVar, html, css } from "../../../../shared/dep/zyx.js";
+import { throttle } from "../../utils/utils.js";
+import { getCurrentPlayingProgressMs } from "../../state/getters.js";
+import state from "../../state/state.js";
 
 import PlaybackSyncer from "./syncer.js";
 import PlayerControls from "./controls.js";
@@ -9,6 +9,8 @@ import PlayerExtender from "./extender.js";
 import PlayerOSDDebug from "./components/osdDebug.js";
 import Splash from "./components/Splash.js";
 import ContinueNextOverlay from "./components/ContinueNextOverlay.js";
+
+import ThumbnailExtAddToQueue from "./addToST.js";
 
 // Lightweight observer/controller around the active <video> element on YouTube
 export default class YoutubePlayerManager {
@@ -31,6 +33,7 @@ export default class YoutubePlayerManager {
         this.pending_frame_step_sync = null;
         this.pending_frame_step_position = null;
 
+        this.thumbnailExtAddToQueue = new ThumbnailExtAddToQueue(this.app);
         this.playerControls = new PlayerControls(this);
         this.playerExtender = new PlayerExtender(this);
         this.isStarted = false;
@@ -46,8 +49,8 @@ export default class YoutubePlayerManager {
             ["ended", this.onEnded],
         ];
 
-        this.splash = new Splash(this.video);
-        this.continueNextOverlay = new ContinueNextOverlay(this.video, this.app);
+        this.splash = new Splash();
+        this.continueNextOverlay = new ContinueNextOverlay(this.app);
         // this.intermission = new Intermission();
 
         this.playbackSyncer = new PlaybackSyncer(this);

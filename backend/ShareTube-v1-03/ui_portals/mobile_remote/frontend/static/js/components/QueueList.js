@@ -29,7 +29,7 @@ export default class QueueList extends ShareTubeQueue {
 
     async activateGyroThumbnailParallax() {
         // Initialize parallax effect on the current playing container
-        await this.parallax.init(this.current_playing);
+        await this.parallax.init(this.currentPlaying.current_playing);
     }
 }
 

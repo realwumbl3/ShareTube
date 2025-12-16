@@ -1,6 +1,6 @@
-import { html, css, LiveList, LiveVar } from "../../../../shared/dep/zyx.js";
+import { html, css, LiveList, LiveVar } from "../../../../../shared/dep/zyx.js";
 
-import state from "../../../core/state/state.js";
+import state from "../../../state/state.js";
 
 class PlayerOSDDebugItem {
     constructor(label, value) {
@@ -16,7 +16,7 @@ const shortcutIconSVG = html`<svg width="42" height="30" viewBox="0 0 42 30" cla
 
             <!-- Top Row: D -->
             <text
-                x="21"
+                x="32"
                 y="11"
                 font-family="Roboto, sans-serif"
                 font-weight="700"
@@ -27,20 +27,9 @@ const shortcutIconSVG = html`<svg width="42" height="30" viewBox="0 0 42 30" cla
                 D
             </text>
 
-            <!-- Bottom Row: CTRL, ALT -->
+            <!-- Bottom Row: ALT -->
             <text
                 x="10"
-                y="26"
-                font-family="Roboto, sans-serif"
-                font-weight="700"
-                font-size="8"
-                text-anchor="middle"
-                fill="black"
-            >
-                CTRL
-            </text>
-            <text
-                x="32"
                 y="26"
                 font-family="Roboto, sans-serif"
                 font-weight="700"
@@ -53,12 +42,11 @@ const shortcutIconSVG = html`<svg width="42" height="30" viewBox="0 0 42 30" cla
         </mask>
     </defs>
     <g mask="url(#osd-shortcut-mask)">
-        <!-- Top Row: D (Centered) -->
-        <rect x="11" y="0" width="20" height="14" rx="3" fill="white" />
+        <!-- Top Row: D -->
+        <rect x="22" y="0" width="20" height="14" rx="3" fill="white" />
 
-        <!-- Bottom Row: CTRL, ALT -->
+        <!-- Bottom Row: ALT -->
         <rect x="0" y="16" width="20" height="14" rx="3" fill="white" />
-        <rect x="22" y="16" width="20" height="14" rx="3" fill="white" />
     </g>
 </svg>`;
 
@@ -138,7 +126,7 @@ css`
         position: absolute;
         top: 4px;
         left: 4px;
-        backdrop-filter: blur(10px) brightness(2) contrast(0.5);
+        background-color: rgba(0, 0, 0, 0.8);
         color: #fff;
         z-index: 1000000000;
         min-width: 200px;
