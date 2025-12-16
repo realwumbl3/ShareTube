@@ -149,7 +149,7 @@ export default class VirtualPlayer {
         if (!result.ok) return;
 
         this.updateServerClock(result);
-        await this.performTimeSyncSamples(5);
+        // await this.performTimeSyncSamples(5);
         state.roomCode.set(result.code);
         state.inRoom.set(true);
         this.app.youtubePlayer.start?.();
