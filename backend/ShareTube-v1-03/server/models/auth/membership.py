@@ -2,14 +2,13 @@
 from __future__ import annotations
 
 import time
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped
 
 from ...extensions import db
 
 if TYPE_CHECKING:
-    from ...models.room.room import Room
     from ...models.auth.user import User
 
 

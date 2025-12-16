@@ -6,7 +6,14 @@ export default class ContinueNextOverlay {
         this.video = video;
         this.app = app;
 
-        html`<div class="continue-next-overlay" zyx-if=${[state.showContinueNextPrompt, (show) => show]}>
+        html`<div
+            class="continue-next-overlay"
+            zyx-if=${[
+                state.nextUpItem,
+                state.showContinueNextPrompt,
+                (nextUpItem, show) => nextUpItem !== null && show,
+            ]}
+        >
             <div class="continue-next-content">
                 <div class="continue-next-thumb">
                     <img

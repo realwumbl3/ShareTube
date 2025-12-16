@@ -23,7 +23,7 @@ from .config import Config
 from .extensions import db, socketio
 
 # Import migrations runner (currently placeholder)
-from .lib.migrations import run_all_migrations
+from .migrations import run_all_migrations
 
 # Configure a standard log format for file and console handlers
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

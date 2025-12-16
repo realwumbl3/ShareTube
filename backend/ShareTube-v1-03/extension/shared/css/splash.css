@@ -57,6 +57,7 @@
                     background-position: center;
                     background-repeat: no-repeat;
                     filter: none;
+                    transform: translateX(0.5px);
                 }
 
                 & .label {

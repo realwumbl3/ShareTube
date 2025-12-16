@@ -5,8 +5,8 @@ from __future__ import annotations
 from flask import Flask
 
 # Import the SQLAlchemy instance so that future migrations can use it
-from ..extensions import db
-from ..models import User
+from .extensions import db
+from .models import User
 
 # Run all database migrations required for the current application version
 def run_all_migrations(app: Flask) -> None:
@@ -19,3 +19,4 @@ def run_all_migrations(app: Flask) -> None:
             # if user:
             #     user.role = 'super_admin'
             #     db.session.commit()
+

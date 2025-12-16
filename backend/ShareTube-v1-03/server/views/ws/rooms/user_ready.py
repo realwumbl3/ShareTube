@@ -7,7 +7,7 @@ from ....models import QueueEntry, Room, RoomMembership, User
 from ...middleware import require_room
 from .room_timeouts import cancel_starting_timeout
 from ....lib.utils import flush_with_retry, commit_with_retry, now_ms
-from ....ws.server import emit_function_after_delay
+from ....helpers.ws import emit_function_after_delay
 from .common import emit_presence
 
 
@@ -17,13 +17,6 @@ def register() -> None:
     def _on_user_ready(room: Room, user_id: int, data: dict):
         res, _rej = Room.emit(room.code, trigger="user.ready")
         try:
-            logging.info(
-                "user.ready received: room=%s user_id=%s incoming_ready=%s room.state=%s",
-                room.code,
-                user_id,
-                bool((data or {}).get("ready")),
-                room.state,
-            )
             membership = (
                 db.session.query(RoomMembership)
                 .join(User, RoomMembership.user_id == User.id)
@@ -154,13 +147,6 @@ def register() -> None:
                 .all()
             )
             all_users_ready = bool(memberships_ready) and all(bool(row[0]) for row in memberships_ready)
-            logging.info(
-                "user.ready: eval transition -> all_users_ready=%s room.state=%s this_user_ready=%s current_entry_id=%s",
-                all_users_ready,
-                room.state,
-                ready,
-                getattr(current_entry, "id", None),
-            )
 
             should_transition = (
                 ready
@@ -168,7 +154,6 @@ def register() -> None:
                 and current_entry is not None
                 and all_users_ready
             )
-            logging.info("user.ready: should_transition=%s", should_transition)
             playback_payload = None
             if should_transition:
                 cancel_starting_timeout(room.code)

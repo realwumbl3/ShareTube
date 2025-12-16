@@ -5,7 +5,7 @@ import logging
 from ....extensions import db, socketio
 from ....lib.utils import commit_with_retry, now_ms
 from ....models import Room
-from ....ws.server import get_mobile_remote_session_id, is_mobile_remote_socket
+from ....helpers.ws import get_mobile_remote_session_id, is_mobile_remote_socket
 from ...middleware import require_room_by_code
 from ..rooms.room_timeouts import cancel_starting_timeout
 

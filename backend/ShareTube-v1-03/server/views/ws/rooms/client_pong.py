@@ -5,7 +5,7 @@ import time
 
 from ....extensions import db, socketio
 from ....models import User
-from ....ws.server import get_user_id_from_socket
+from ....helpers.ws import get_user_id_from_socket
 
 
 def register() -> None:

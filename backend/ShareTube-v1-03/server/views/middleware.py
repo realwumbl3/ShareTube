@@ -7,7 +7,7 @@ from flask import request
 
 from ..extensions import db    
 from ..models import Room, RoomMembership, Queue, QueueEntry, User
-from ..ws.server import get_user_id_from_socket
+from ..helpers.ws import get_user_id_from_socket
 import logging
 
 
@@ -212,25 +212,9 @@ def ensure_queue(handler: Callable) -> Callable:
     """
     @wraps(handler)
     def wrapper(room: Room, user_id: int, data: Optional[dict]) -> None:
-        event_name = None
-        try:
-            if getattr(request, "event", None):
-                event_name = request.event.get("message")
-        except Exception:
-            event_name = None
-
         if not room.current_queue:
             # Create a new queue for the room
             queue = Queue(room_id=room.id, created_by_id=user_id)
-            logging.info(
-                "ensure_queue: created new queue for room=%s, queue_id=%s "
-                "(handler=%s, event=%s, user_id=%s)",
-                room.code,
-                getattr(queue, "id", None),
-                handler.__name__,
-                event_name,
-                user_id,
-            )
             room.current_queue = queue
             db.session.add(queue)
             db.session.flush()  # Ensure queue gets an ID

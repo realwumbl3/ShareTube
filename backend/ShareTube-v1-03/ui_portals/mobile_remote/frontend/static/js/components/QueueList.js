@@ -42,6 +42,7 @@ css`
         outline: none;
         border: none;
         height: 100%;
+        border-radius: 0;
     }
 
     .remote-content .queue-section #sharetube_queue .queue-list {

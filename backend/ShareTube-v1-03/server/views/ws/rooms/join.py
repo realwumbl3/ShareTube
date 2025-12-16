@@ -8,14 +8,13 @@ from flask_socketio import join_room
 
 from ....extensions import db, socketio
 from ....models import Room, RoomMembership, User
-from ....ws.server import (
+from ....helpers.ws import (
     emit_function_after_delay,
     get_mobile_remote_room_code,
     get_user_id_from_socket,
     is_mobile_remote_socket,
-    track_socket_connection,
-    clear_user_verification,
 )
+from ....helpers.redis import track_socket_connection, clear_user_verification
 from ....lib.utils import now_ms
 from .common import emit_presence
 
@@ -24,17 +23,11 @@ def register() -> None:
     @socketio.on("room.join")
     def _on_join_room(data: dict):
         try:
-            logging.debug(
-                "room.join: data=%s, is_mobile_remote=%s",
-                data,
-                is_mobile_remote_socket(),
-            )
+
             client_timestamp = (data or {}).get("clientTimestamp")
 
             if is_mobile_remote_socket():
-                logging.debug("room.join: handling as mobile remote")
                 room_code = get_mobile_remote_room_code()
-                logging.debug(f"room.join: mobile remote room_code={room_code}")
                 if not room_code:
                     socketio.emit("room.error", {"error": "Invalid mobile remote token"})
                     return
@@ -58,9 +51,7 @@ def register() -> None:
                 )
                 return
 
-            logging.debug("room.join: handling as normal user")
             user_id = get_user_id_from_socket()
-            logging.debug(f"room.join: user_id={user_id}")
             if not user_id:
                 socketio.emit("room.error", {"error": "Authentication required"})
                 return

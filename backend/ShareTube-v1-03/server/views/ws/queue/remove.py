@@ -6,6 +6,7 @@ from ....extensions import db, socketio
 from ....lib.utils import commit_with_retry
 from ....models import QueueEntry, Room
 from ...middleware import require_room
+from .common import can_modify_any_entry
 
 
 def register() -> None:
@@ -17,11 +18,16 @@ def register() -> None:
             id = (data or {}).get("id")
             if not id:
                 return rej("queue.remove: no id provided")
-            entry = (
-                db.session.query(QueueEntry)
-                .filter_by(id=id, added_by_id=user_id)
-                .first()
-            )
+            
+            # Check if user can modify any entry
+            can_modify_any = can_modify_any_entry(room, user_id)
+            
+            # Build query filter: if can modify any, don't filter by added_by_id
+            query = db.session.query(QueueEntry).filter_by(id=id)
+            if not can_modify_any:
+                query = query.filter_by(added_by_id=user_id)
+            
+            entry = query.first()
             if not entry:
                 logging.warning(
                     "queue.remove: no entry found for id (id=%s) (user_id=%s)",

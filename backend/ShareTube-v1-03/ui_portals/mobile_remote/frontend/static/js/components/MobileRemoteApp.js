@@ -51,40 +51,6 @@ export default class MobileRemoteApp {
                 this="appElement"
                 class=${this.isReady.interp((r) => (r ? "mobile-remote-app visible" : "mobile-remote-app"))}
             >
-                <header class="remote-header glass-panel">
-                    <div class="header-row">
-                        <h1>ShareTube</h1>
-                        <div class="header-actions">
-                            <div class="room-status" zyx-if=${state.roomCode}>
-                                <span class="room-code">${state.roomCode.interp()}</span>
-                                <span class="connection-status" zyx-if=${state.inRoom}>
-                                    <span class="status-dot connected"></span>
-                                </span>
-                                <span class="connection-status" zyx-else>
-                                    <span class="status-dot disconnected"></span>
-                                </span>
-                            </div>
-                            <button
-                                class="fullscreen-toggle glass-button"
-                                zyx-click=${() => this.toggleFullscreen()}
-                                title=${this.isFullscreen.interp((fs) => (fs ? "Exit Fullscreen" : "Enter Fullscreen"))}
-                            >
-                                <img
-                                    class="fullscreen-icon"
-                                    src=${this.isFullscreen.interp((fs) => (fs ? exitFullscreenSVG : fullscreenSVG))}
-                                    alt=${this.isFullscreen.interp((fs) =>
-                                        fs ? "Exit Fullscreen" : "Enter Fullscreen"
-                                    )}
-                                    draggable="false"
-                                />
-                            </button>
-                        </div>
-                    </div>
-                    <div class="error-message" zyx-if=${this.error}>
-                        <span class="error-text">${this.error.interp()}</span>
-                    </div>
-                </header>
-
                 <main class="remote-content" zyx-if=${state.inRoom}>
                     <section class="queue-section glass-panel">${this.queueList}</section>
                 </main>
@@ -97,8 +63,7 @@ export default class MobileRemoteApp {
         `.bind(this);
         /** zyXSense @type {HTMLDivElement} */
         this.appElement;
-
-        }
+    }
 
     async backEndUrl() {
         const configured = (window.mobileRemoteConfig?.backendUrl || "").trim();
@@ -305,263 +270,43 @@ export default class MobileRemoteApp {
 }
 
 css`
-    /* Mobile Remote Specific Styles */
-
-    /* Main Container - Mobile Layout (Vertical Stack) */
     .mobile-remote-app {
-        padding: 1rem;
-        display: grid;
-        grid-template-areas:
-            "header"
-            "queue";
-        grid-template-rows: max-content 1fr;
-        gap: 10px;
-        max-width: 100%;
-        height: 100dvh;
         min-height: 100dvh;
-
-        & {
-            /* Fullscreen styles */
-            .mobile-remote-app:fullscreen {
-                padding: 1rem;
-                background-color: var(--bg-app);
-            }
-
-            /* Header */
-            .remote-header {
-                grid-area: header;
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-                padding: 0.75rem 1rem;
-                position: relative;
-                overflow: hidden;
-                text-align: left;
-                max-width: 800px;
-                /* Overrides to standard glass panel */
-                background: var(--bg-queue-header);
-                border-bottom: var(--border-queue-dim);
-                user-select: none;
-            }
-
-            .header-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .header-actions {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-            .remote-header h1 {
-                margin: 0;
-                font-size: 1.1rem;
-                font-weight: 700;
-                color: var(--text-primary);
-                position: relative;
-                z-index: 1;
-            }
-
-            /* Room Status & Connection */
-            .room-status {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                position: relative;
-                z-index: 1;
-                font-size: 0.9rem;
-                background: rgba(255, 255, 255, 0.05);
-                padding: 0.25rem 0.5rem;
-                border-radius: 4px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            .room-code {
-                color: var(--accent-primary, #6366f1);
-                font-weight: 600;
-                font-family: var(--font-mono, monospace);
-                letter-spacing: 0.05em;
-            }
-
-            .connection-status {
-                display: flex;
-                align-items: center;
-            }
-
-            .status-dot {
-                width: 6px;
-                height: 6px;
-                border-radius: 50%;
-            }
-
-            .status-dot.connected {
-                background: var(--accent-success, #10b981);
-                box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
-            }
-
-            .status-dot.disconnected {
-                background: var(--accent-danger, #ef4444);
-                box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
-            }
-
-            /* Fullscreen Toggle Button */
-            .fullscreen-toggle {
-                padding: 0.5rem 0.75rem;
-                font-size: 1.2rem;
-                line-height: 1;
-                min-width: 2.5rem;
-                height: 2.5rem;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-                z-index: 1;
-            }
-
-            .fullscreen-icon {
-                display: inline-block;
-                width: 1.2rem;
-                height: 1.2rem;
-                transition: transform 0.2s ease;
-                user-select: none;
-            }
-
-            .fullscreen-toggle:hover .fullscreen-icon {
-                transform: scale(1.1);
-            }
-
-            /* Error Handling */
-            .error-message {
-                position: relative;
-                z-index: 1;
-                margin-bottom: 0.5rem;
-            }
-
-            .error-text {
-                display: block;
-                color: var(--accent-danger, #ef4444);
-                font-size: 0.9rem;
-                background: rgba(239, 68, 68, 0.1);
-                padding: 0.5rem;
-                border-radius: 6px;
-                border: 1px solid rgba(239, 68, 68, 0.2);
-            }
-
-            /* Content Info */
-            .current-video {
-                position: relative;
-                z-index: 1;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .video-title {
-                font-size: 0.9rem;
-                color: var(--text-secondary);
-                opacity: 0.9;
-            }
-
-            /* Layout Sections */
-            .remote-content {
-                display: contents;
-            }
-
-            .playback-section {
-                grid-area: controls;
-                max-width: 800px;
-                position: relative;
-                padding: 1rem;
-                /* .glass-panel provides background */
-            }
-
-            .queue-section {
-                grid-area: queue;
-                position: relative;
-                padding: 0;
-                display: grid;
-                place-items: stretch;
-                overflow: hidden;
-                /* .glass-panel provides background */
-            }
-
-            .playback-section-unavailable {
-                grid-area: controls;
-                padding: 1rem;
-                text-align: center;
-                display: grid;
-                place-items: center;
-                place-content: center;
-                height: 100%;
-                width: 100%;
-            }
-
-            .playback-section > *,
-            .queue-section > * {
-                position: relative;
-                z-index: 1;
-            }
-
-            .playback-section h2,
-            .queue-section h2 {
-                margin: 0 0 1rem 0;
-                color: var(--text-primary);
-                font-size: 1.2rem;
-                font-weight: 600;
-            }
-
-            /* Desktop Layout - Header and Controls Side by Side */
-            @media (min-aspect-ratio: 1/1) and (min-width: 600px) {
-                .mobile-remote-app {
-                    grid-template-areas:
-                        "header controls"
-                        "queue queue";
-                    grid-template-columns: 1fr 1fr;
-                    grid-template-rows: max-content 1fr;
-                }
-
-                .playback-section {
-                    height: 100%;
-                }
-            }
-        }
-    }
-    /* Large Desktop Layout - Header and Controls Vertical on Left, Queue on Right */
-    @media (min-width: 900px), (min-aspect-ratio: 16/9) {
-        .mobile-remote-app {
-            grid-template-areas:
-                "header queue"
-                "controls queue";
-            grid-template-columns: minmax(300px, 1fr) 1fr;
-            grid-template-rows: max-content 1fr;
-            & {
-                .playback-section {
-                    height: max-content;
-                }
-            }
-        }
+        height: 100dvh;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-app);
     }
 
-    /* Responsive Adjustments */
-    @media (max-width: 480px) {
-        .mobile-remote-app {
-            padding: 0.5rem;
-            & {
-                .remote-header {
-                    padding: 1rem;
-                }
+    .remote-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
 
-                .remote-header h1 {
-                    font-size: 1.3rem;
-                }
+    .queue-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 0;
+        background: var(--bg-app);
+    }
 
-                .video-title {
-                    font-size: 1rem;
-                }
-            }
-        }
+    .queue-section > * {
+        flex: 1;
+        position: relative;
+        z-index: 1;
+    }
+
+    .playback-section-unavailable {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
     }
 `;

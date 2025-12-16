@@ -10,8 +10,6 @@ from flask import current_app
 from sqlalchemy.exc import OperationalError as SAOperationalError
 import time
 
-
-
 def check_url(url: str) -> bool:
     """Validate that the URL is well-formed and safe to process."""
     if not url or not isinstance(url, str):

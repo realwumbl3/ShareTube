@@ -122,8 +122,7 @@ export default class VirtualPlayer {
         const nextUpEntry = state.queueQueued.find(
             (entry) => entry.id !== currentPlayingId && entry.status.get() === "queued"
         );
-        if (!nextUpEntry) return;
-        state.nextUpItem.set(new ShareTubeQueueItem(this.app, nextUpEntry));
+        state.nextUpItem.set(!nextUpEntry ? null : new ShareTubeQueueItem(this.app, nextUpEntry));
     }
 
     async onRoomSettingsUpdate(data) {
@@ -176,7 +175,6 @@ export default class VirtualPlayer {
         this.app.roomManager.updateCodeHashInUrl(result.code);
         this.applyTimestamp();
     }
-
 
     async performTimeSyncSamples(sampleCount = 5) {
         const socket = await this.app.socket.ensureSocket();

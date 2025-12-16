@@ -40,6 +40,18 @@ def register() -> None:
             if not meta:
                 return rej("queue.add: no metadata found for video")
 
+            has_queued_entries = (
+                db.session.query(QueueEntry.id)
+                .filter_by(queue_id=queue.id, status="queued")
+                .first()
+                is not None
+            )
+            should_prompt_to_advance = (
+                not has_queued_entries
+                and room.state != "playing"
+                and not (queue.current_entry and queue.current_entry.status == "playing")
+            )
+
             author = None
             channel_id = meta.get("channel_id")
             if channel_id:
@@ -115,6 +127,8 @@ def register() -> None:
                 room=f"room:{room.code}",
             )
             res("queue.add.result", {"added": True})
+            if should_prompt_to_advance:
+                res("room.playback", {"state": room.state, "show_continue_prompt": True})
         except Exception:
             logging.exception("queue.add handler error")
 

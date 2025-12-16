@@ -8,6 +8,7 @@ from typing import Any
 from ....extensions import db, socketio
 from ....models import Queue, QueueEntry, Room
 from ...middleware import ensure_queue, require_room
+from .common import can_modify_any_entry
 
 
 def register() -> None:
@@ -21,7 +22,8 @@ def register() -> None:
         Move a queue entry back to the front of the queue and reset its status to queued.
 
         The entry must belong to the current room's active queue and have been added by
-        the current user (same permission model as queue.remove).
+        the current user (same permission model as queue.remove), unless the user is
+        owner, operator, admin, or super-admin.
         """
         id = (data or {}).get("id")
         res, rej = Room.emit(room.code, trigger="queue.requeue_to_top")
@@ -29,11 +31,15 @@ def register() -> None:
             return rej("queue.requeue_to_top: no id provided")
 
         try:
-            entry = (
-                db.session.query(QueueEntry)
-                .filter_by(id=id, queue_id=queue.id, added_by_id=user_id)
-                .first()
-            )
+            # Check if user can modify any entry
+            can_modify_any = can_modify_any_entry(room, user_id)
+            
+            # Build query filter: if can modify any, don't filter by added_by_id
+            query = db.session.query(QueueEntry).filter_by(id=id, queue_id=queue.id)
+            if not can_modify_any:
+                query = query.filter_by(added_by_id=user_id)
+            
+            entry = query.first()
             if not entry:
                 logging.warning(
                     "queue.requeue_to_top: no entry found for id (id=%s) (user_id=%s)",

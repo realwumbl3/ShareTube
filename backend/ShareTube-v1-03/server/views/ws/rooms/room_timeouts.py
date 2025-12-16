@@ -76,9 +76,6 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
                 if redis_client_inner:
                     try:
                         if not redis_client_inner.exists(timeout_key_inner):
-                            logging.info(
-                                f"room_timeout: timeout for room {room_code} was cancelled (Redis key missing)"
-                            )
                             return
                         redis_client_inner.delete(timeout_key_inner)
                     except Exception as e:
@@ -88,13 +85,9 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
 
                 room = Room.query.filter_by(code=room_code).first()
                 if not room:
-                    logging.info(f"room_timeout: room {room_code} not found, skipping transition")
                     return
 
                 if room.state != "starting":
-                    logging.info(
-                        f"room_timeout: room {room_code} state is '{room.state}', not 'starting', skipping transition"
-                    )
                     return
 
                 _now_ms = now_ms()
@@ -127,14 +120,10 @@ def schedule_starting_to_playing_timeout(room_code: str, delay_seconds: float = 
                     room=f"room:{room_code}",
                 )
 
-                logging.info(f"room_timeout: transitioned room {room_code} from 'starting' to 'playing'")
         except Exception:
             logging.exception(f"room_timeout: error transitioning room {room_code}")
 
     socketio.start_background_task(transition_task, app)
-    logging.info(
-        f"room_timeout: scheduled transition for room {room_code} in {delay_seconds} seconds"
-    )
 
 
 def cancel_starting_timeout(room_code: str) -> None:
@@ -146,11 +135,7 @@ def cancel_starting_timeout(room_code: str) -> None:
     timeout_key = _get_timeout_key(room_code)
     if redis_client:
         try:
-            deleted = redis_client.delete(timeout_key)
-            if deleted:
-                logging.info(
-                    f"room_timeout: cancelled pending timeout for room {room_code}"
-                )
+            redis_client.delete(timeout_key)
         except Exception as e:
             logging.warning(
                 f"room_timeout: failed to cancel timeout for {room_code}: {e}"

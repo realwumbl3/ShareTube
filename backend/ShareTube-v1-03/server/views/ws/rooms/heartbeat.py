@@ -42,11 +42,6 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
 
                     removed_user_ids: list[int] = []
                     for membership in inactive_memberships:
-                        logging.info(
-                            "heartbeat: removing inactive user %s from room %s",
-                            membership.user_id,
-                            room.code,
-                        )
                         user = db.session.get(User, membership.user_id)
                         if user:
                             user.last_seen = int(time.time())
@@ -68,11 +63,6 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
 
                 if removed_by_room:
                     db.session.commit()
-                    logging.info(
-                        "heartbeat: cleaned up %s inactive user(s) from %s room(s)",
-                        sum(len(ids) for ids in removed_by_room.values()),
-                        len(removed_by_room),
-                    )
 
                 for room_code in removed_by_room.keys():
                     room = Room.query.filter_by(code=room_code).first()
@@ -92,7 +82,6 @@ def start_heartbeat_if_needed(app: Flask) -> None:
             return
 
         interval = app.config.get("HEARTBEAT_INTERVAL_SECONDS", 20)
-        logging.info("starting global heartbeat cleanup thread (interval=%s seconds)", interval)
         socketio.start_background_task(_heartbeat_cleanup_forever, app)
         _heartbeat_thread_started = True
     except Exception:

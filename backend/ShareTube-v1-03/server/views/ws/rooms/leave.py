@@ -8,11 +8,8 @@ from flask_socketio import leave_room
 
 from ....extensions import db, socketio
 from ....models import RoomMembership, Room, User
-from ....ws.server import (
-    emit_function_after_delay,
-    check_user_other_connections,
-    remove_socket_connection,
-)
+from ....helpers.ws import emit_function_after_delay
+from ....helpers.redis import check_user_other_connections, remove_socket_connection
 from .common import emit_presence
 from ...middleware import require_room_by_code
 
@@ -22,14 +19,9 @@ def register() -> None:
     @require_room_by_code
     def _on_leave_room(room: Room, user_id: int, data: dict):
         try:
-            logging.info("room.leave: code=%s user_id=%s", room.code, user_id)
             remove_socket_connection(user_id, request.sid)
             has_other_connections = check_user_other_connections(user_id, request.sid)
             if has_other_connections:
-                logging.info(
-                    "room.leave: user %s has other active connections, keeping membership",
-                    user_id,
-                )
                 leave_room(f"room:{room.code}")
                 return
 
@@ -37,11 +29,6 @@ def register() -> None:
                 room_id=room.id, user_id=user_id
             ).first()
             if not membership:
-                logging.info(
-                    "room.leave: no membership found for user %s in room %s",
-                    user_id,
-                    room.code,
-                )
                 return
 
             user = db.session.get(User, membership.user_id)

@@ -33,7 +33,7 @@ css`
     }
 
     .sharetube-thumb-add-btn:active {
-        transform: translateY(1px) scale(0.97);
+        transform: scale(0.97);
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
     }
 
@@ -144,7 +144,7 @@ export default class ThumbnailExtAddToQueue {
             <button
                 type="button"
                 zyx-click=${() => this.onClickAddToQueue(url)}
-                class="sharetube-thumb-add-btn"
+                class="sharetube-thumb-add-btn sharetube-feature"
                 title="Add to ShareTube queue"
             >
                 +ST

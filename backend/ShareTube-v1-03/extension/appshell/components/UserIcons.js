@@ -8,15 +8,14 @@ export default class UserIcons {
 
         html`
             <div class="room_presence" zyx-if=${state.userId}>
-                <div class="presence_group" zyx-if=${[state.users, (v) => v.length > 0]}>
-                    <div
-                        class="presence"
-                        zyx-live-list=${{
-                            list: state.users,
-                            compose: UserIcon,
-                        }}
-                    ></div>
-                </div>
+                <div
+                    class="presence"
+                    zyx-if=${[state.users, (v) => v.length > 0]}
+                    zyx-live-list=${{
+                        list: state.users,
+                        compose: UserIcon,
+                    }}
+                ></div>
                 <button
                     class="rounded_btn"
                     id="sharetube_plus_button"
@@ -72,23 +71,17 @@ css`
     #sharetube_pill .room_presence {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 3px;
         outline: 1px solid rgba(255, 255, 255, 0.25);
         border-radius: 999px;
-        padding: 4px 6px;
+        padding: 3px;
         background: rgba(0, 0, 0, 0.35);
-    }
-
-    #sharetube_pill .room_presence .presence_group {
-        display: inline-flex;
-        align-items: stretch;
-        gap: 6px;
     }
 
     #sharetube_pill .presence {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
     }
 
     #sharetube_pill .presence_not_ready {
@@ -113,13 +106,13 @@ css`
     }
 
     #sharetube_pill .presence .user_icon_avatar {
-        width: 18px;
-        height: 18px;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         object-fit: cover;
         background: #222;
         border: 2px solid rgba(255, 255, 255, 0.25);
-
+        
         outline: 0px solid transparent;
         transition: outline-width 200ms ease;
 

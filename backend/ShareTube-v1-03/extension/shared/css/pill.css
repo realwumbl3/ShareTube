@@ -22,7 +22,7 @@
     margin-bottom: 12px;
     min-height: 2.5em;
     transform: translateY(100%);
-
+    
     >span {
         display: flex;
         align-items: center;
@@ -106,8 +106,8 @@
 }
 
 #sharetube_pill img.user_icon_avatar {
-    width: 27px;
-    height: 27px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     object-fit: cover;
     background: #222;

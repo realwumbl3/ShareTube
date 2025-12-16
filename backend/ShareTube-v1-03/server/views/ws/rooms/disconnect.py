@@ -6,11 +6,13 @@ import time
 from flask import request
 
 from ....extensions import socketio
-from ....ws.server import (
-    check_user_other_connections,
+from ....helpers.ws import (
     emit_function_after_delay,
     emit_to_user_sockets,
     get_user_id_from_socket,
+)
+from ....helpers.redis import (
+    check_user_other_connections,
     get_user_socket_connections,
     remove_socket_connection,
     clear_user_verification,
@@ -35,11 +37,6 @@ def register() -> None:
             has_other_connections = check_user_other_connections(user_id, request.sid)
 
             if has_other_connections:
-                logging.info(
-                    "disconnect: user %s has other active connections (%d total)",
-                    user_id,
-                    len(get_user_socket_connections(user_id)),
-                )
                 clear_user_verification(user_id)
                 emit_to_user_sockets(
                     user_id,
@@ -55,10 +52,6 @@ def register() -> None:
                     delay_seconds=5.0,
                 )
             else:
-                logging.info(
-                    "disconnect: user %s has no other connections, removing immediately",
-                    user_id,
-                )
                 handle_user_disconnect(user_id)
         except Exception:
             logging.exception("disconnect handler error")

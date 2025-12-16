@@ -282,13 +282,19 @@ export default class PlayerControls {
 
     onThumbnailClick(e, path) {
         if (!state.roomCode.get()) return;
+        const isWithinShareTubeFeature = path.find(
+            (el) => el instanceof Element && el.classList?.contains("sharetube-feature")
+        );
+        const isWithinButtonViewModel = path.find((el) => el instanceof Element && el.matches?.("button-view-model"));
+        console.log({ isWithinShareTubeFeature, isWithinButtonViewModel });
+        if (isWithinShareTubeFeature || isWithinButtonViewModel) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         const anchor =
             path.find((el) => el instanceof Element && el.tagName === "A") ||
             (e.target instanceof Element ? e.target.closest("a") : null);
         const href = anchor?.getAttribute?.("href") || null;
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
         if (href) window.open(href, "_blank");
     }
 
