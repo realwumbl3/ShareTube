@@ -199,33 +199,11 @@ export default class ThumbnailExtAddToQueue {
         // Mirror the drag-and-drop behavior from UIManager: if not in a room,
         // create one and join before enqueuing.
         try {
-            await this.ensureRoomAndEnqueue(url);
+            await this.app.virtualPlayer.enqueueUrlsOrCreateRoom(url);
         } catch (e) {
             try {
                 console.warn("[ShareTube] failed to enqueue from thumbnail", e);
             } catch (_) {}
-        }
-    }
-
-    async ensureRoomAndEnqueue(url) {
-        if (!state.inRoom.get()) {
-            const code = await this.app.createRoom();
-            if (code) {
-                this.app.updateCodeHashInUrl(code);
-                await this.app.tryJoinRoomFromUrl();
-
-                // Wait briefly for join to complete.
-                const start = Date.now();
-                while (!state.inRoom.get()) {
-                    if (Date.now() - start > 5000) break;
-                    // eslint-disable-next-line no-await-in-loop
-                    await new Promise((r) => setTimeout(r, 100));
-                }
-            }
-        }
-
-        if (state.inRoom.get()) {
-            await this.app.enqueueUrl(url);
         }
     }
 }

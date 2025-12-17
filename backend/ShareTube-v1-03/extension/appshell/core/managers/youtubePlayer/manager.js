@@ -9,7 +9,6 @@ import PlayerExtender from "./extender.js";
 import PlayerOSDDebug from "./components/osdDebug.js";
 import Splash from "./components/Splash.js";
 import ContinueNextOverlay from "./components/ContinueNextOverlay.js";
-
 import ThumbnailExtAddToQueue from "./addToST.js";
 
 // Lightweight observer/controller around the active <video> element on YouTube

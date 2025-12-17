@@ -103,8 +103,6 @@ def fetch_video_meta(video_id: str) -> dict:
             )
             if r2.status_code == 200:
                 data = r2.json()
-                for key, value in data.items():
-                    print(key, value)
                 items = data.get("items") or []
                 if len(items) == 0:
                     current_app.logger.warning(

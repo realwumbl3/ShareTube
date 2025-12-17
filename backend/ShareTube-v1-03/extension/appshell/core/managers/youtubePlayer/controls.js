@@ -10,6 +10,7 @@ export default class PlayerControls {
     constructor(youtubePlayer) {
         this.verbose = false;
         this.youtubePlayer = youtubePlayer;
+        this.app = youtubePlayer.app;
         this.seek_key_start_time = 0;
         this.seek_timings = {
             0: 5000,
@@ -21,11 +22,11 @@ export default class PlayerControls {
         this.seek_bar_el = null;
 
         this.doc_listener_specs = [
+            ["keydown", this.onKeyDownCapture.bind(this)],
+            ["keyup", this.onKeyUpCapture.bind(this)],
             ["click", this.onClickCapture.bind(this)],
             ["pointerdown", this.onPointerDownCapture.bind(this)],
             ["pointerup", this.onPointerUpCapture.bind(this)],
-            ["keydown", this.onKeyDownCapture.bind(this)],
-            ["keyup", this.onKeyUpCapture.bind(this)],
             ["dblclick", this.onDoubleClickCapture.bind(this)],
         ];
     }
@@ -63,8 +64,13 @@ export default class PlayerControls {
         } catch {}
     }
 
-    onKeyUpCapture = () => {
-        this.seek_key_start_time = 0;
+    onUserGesture = (e) => {
+        const path = this.getEventPath(e);
+        if (this.shouldIgnoreShareTube(path)) {
+            if (this.verbose) console.log("onPointerDownCapture return: sharetube_main found in path");
+            return;
+        }
+        this.youtubePlayer.last_user_gesture_ms = Date.now();
     };
 
     // Override native YouTube controls with room controls
@@ -91,14 +97,14 @@ export default class PlayerControls {
             case "KeyA":
                 e.preventDefault();
                 e.stopPropagation();
-                this.emitSeekRelative(-1, (e.ctrlKey ? 0.5 : 1) * (e.shiftKey ? 2 : 1));
+                this.keypressSeekRelative(-1, (e.ctrlKey ? 0.5 : 1) * (e.shiftKey ? 2 : 1));
                 break;
 
             case "ArrowRight":
             case "KeyD":
                 e.preventDefault();
                 e.stopPropagation();
-                this.emitSeekRelative(1, (e.ctrlKey ? 0.5 : 1) * (e.shiftKey ? 2 : 1));
+                this.keypressSeekRelative(1, (e.ctrlKey ? 0.5 : 1) * (e.shiftKey ? 2 : 1));
                 break;
 
             case "Comma":
@@ -125,13 +131,8 @@ export default class PlayerControls {
         }
     };
 
-    onUserGesture = (e) => {
-        const path = this.getEventPath(e);
-        if (this.shouldIgnoreShareTube(path)) {
-            if (this.verbose) console.log("onPointerDownCapture return: sharetube_main found in path");
-            return;
-        }
-        this.youtubePlayer.last_user_gesture_ms = Date.now();
+    onKeyUpCapture = () => {
+        this.seek_key_start_time = 0;
     };
 
     onClickCapture = (e) => {
@@ -326,13 +327,11 @@ export default class PlayerControls {
         );
     }
 
-    emitSeekRelative(direction, multiplier = 1) {
+    keypressSeekRelative(direction, multiplier = 1) {
         const delay = 500;
-
         if (this.seek_key_start_time === 0) {
             this.seek_key_start_time = Date.now();
         }
-
         throttle(
             this,
             "emitSeekRelative",
@@ -349,17 +348,8 @@ export default class PlayerControls {
                         increment = this.seek_timings[t];
                     }
                 }
-
                 const real_delta = direction * increment * multiplier;
-                const durMs = this.youtubePlayer.videoDurationMs;
-                const curMs = this.youtubePlayer.videoCurrentTimeMs;
-                let target = curMs + real_delta;
-                if (durMs > 0) target = Math.min(Math.max(0, target), durMs);
-                this.youtubePlayer.app.socket.emit("room.control.seek", {
-                    delta_ms: real_delta,
-                    progress_ms: Math.floor(target),
-                    play: state.roomState.get() === "playing",
-                });
+                this.app.virtualPlayer.emitRelativeSeek(real_delta);
             },
             delay
         );

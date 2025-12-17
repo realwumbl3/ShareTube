@@ -44,7 +44,7 @@ def require_room_by_code(handler: Callable) -> Callable:
                 handler.__name__,
                 event_name,
                 user_id,
-                list((data or {}).keys()),
+                list[Any]((data or {}).keys()),
             )
             return None, "require_room_by_code: no code"
         room = Room.query.filter_by(code=code).first()
@@ -56,7 +56,7 @@ def require_room_by_code(handler: Callable) -> Callable:
                 handler.__name__,
                 event_name,
                 user_id,
-                list((data or {}).keys()),
+                list[Any]((data or {}).keys()),
             )
             return None, "require_room_by_code: no room found"
         return handler(room, user_id, data)
@@ -88,28 +88,14 @@ def require_room(handler: Callable) -> Callable:
         except Exception:
             event_name = None
 
-        # For some high‑frequency socket events (notably ``user.ready``), it is
-        # expected that messages may arrive while the user is in the middle of
-        # navigation (old tab unloading / new tab joining the same room). In
-        # these cases we silently drop the event instead of emitting noisy
-        # warnings, since the server already treats them as no‑ops.
-        def _log(level_fn, msg, *args):
-            if event_name == "user.ready":
-                # Demote to debug to avoid confusing log noise when the client
-                # briefly reports readiness before a room join is fully
-                # established (or just after a leave).
-                logging.debug(msg, *args)
-            else:
-                level_fn(msg, *args)
 
         if not user_id:
-            _log(
-                logging.warning,
+            logging.warning(
                 "require_room: no user_id from socket "
                 "(handler=%s, event=%s, data_keys=%s)",
                 handler.__name__,
                 event_name,
-                list((data or {}).keys()),
+                list[Any]((data or {}).keys()),
             )
             return None, "require_room: no user_id"
         user = db.session.get(User, user_id)
@@ -124,14 +110,13 @@ def require_room(handler: Callable) -> Callable:
             )
             room = membership.room if membership else None
         if not room:
-            _log(
-                logging.warning,
+            logging.warning(
                 "require_room: no active room for user=%s "
                 "(handler=%s, event=%s, data_keys=%s)",
                 user_id,
                 handler.__name__,
                 event_name,
-                list((data or {}).keys()),
+                list[Any]((data or {}).keys()),
             )
             return None, "require_room: no active room"
         return handler(room, user_id, data)

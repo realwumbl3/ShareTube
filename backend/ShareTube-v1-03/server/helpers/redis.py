@@ -23,9 +23,8 @@ def set_user_verification_received(user_id: int) -> None:
         try:
             # Set verification flag with short expiration (longer than disconnect delay)
             redis_client.setex(key, 30, "verified")  # 30 seconds
-            logging.debug(f"set_user_verification_received: marked user {user_id} as verified")
-        except Exception as e:
-            logging.warning(f"Failed to set verification flag in Redis: {e}")
+        except Exception:
+            logging.exception("set_user_verification_received: failed to set verification flag in Redis")
 
 
 def clear_user_verification(user_id: int) -> None:
@@ -35,9 +34,8 @@ def clear_user_verification(user_id: int) -> None:
         key = _get_user_verification_key(user_id)
         try:
             redis_client.delete(key)
-            logging.debug(f"clear_user_verification: cleared verification for user {user_id}")
-        except Exception as e:
-            logging.warning(f"Failed to clear verification flag in Redis: {e}")
+        except Exception:
+            logging.exception("clear_user_verification: failed to clear verification flag in Redis")
 
 
 def has_user_been_verified(user_id: int) -> bool:
@@ -48,10 +46,9 @@ def has_user_been_verified(user_id: int) -> bool:
         try:
             result = redis_client.exists(key)
             verified = bool(result)
-            logging.debug(f"has_user_been_verified: user {user_id} verified={verified}")
             return verified
-        except Exception as e:
-            logging.warning(f"Failed to check verification flag in Redis: {e}")
+        except Exception:
+            logging.exception("has_user_been_verified: failed to check verification flag in Redis")
             return False
     return False
 
@@ -65,10 +62,8 @@ def track_socket_connection(user_id: int, socket_id: str) -> None:
             # Add socket_id to the set and set expiration to 24 hours
             redis_client.sadd(key, socket_id)
             redis_client.expire(key, 86400)  # 24 hours
-            connection_count = redis_client.scard(key)
-            logging.debug(f"track_socket_connection: user {user_id} now has {connection_count} connections")
-        except Exception as e:
-            logging.warning(f"Failed to track socket connection in Redis: {e}")
+        except Exception:
+            logging.exception("track_socket_connection: failed to track socket connection in Redis")
     else:
         logging.warning("track_socket_connection: Redis not available, socket tracking disabled")
 
@@ -83,12 +78,10 @@ def remove_socket_connection(user_id: int, socket_id: str) -> None:
             # If set is now empty, delete the key
             if redis_client.scard(key) == 0:
                 redis_client.delete(key)
-            connection_count = redis_client.scard(key)
-            logging.debug(f"remove_socket_connection: user {user_id} now has {connection_count} connections")
-        except Exception as e:
-            logging.warning(f"Failed to remove socket connection from Redis: {e}")
+        except Exception:
+            logging.exception("remove_socket_connection: failed to remove socket connection from Redis")
     else:
-        logging.warning("remove_socket_connection: Redis not available, socket tracking disabled")
+        logging.warning("remove_socket_connection: Redis not available, socket connection tracking disabled")
 
 
 def get_user_socket_connections(user_id: int) -> set[str]:
@@ -98,12 +91,12 @@ def get_user_socket_connections(user_id: int) -> set[str]:
         key = _get_user_connections_key(user_id)
         try:
             return redis_client.smembers(key)
-        except Exception as e:
-            logging.warning(f"Failed to get socket connections from Redis: {e}")
-            return set()
+        except Exception:
+            logging.exception("get_user_socket_connections: failed to get socket connections from Redis")
+            return set[str]()
     else:
-        logging.warning("get_user_socket_connections: Redis not available, returning empty set")
-        return set()
+        logging.warning("get_user_socket_connections: Redis not available, socket tracking disabled")
+        return set[str]()
 
 
 def check_user_other_connections(user_id: int, disconnecting_socket_id: str) -> bool:

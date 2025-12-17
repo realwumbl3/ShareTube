@@ -139,15 +139,12 @@ def mobile_remote_with_room_code(room_code):
     Authentication is handled client-side using stored tokens.
     This allows refreshing the page after initial auth.
     """
-    logging.info(f"Mobile remote: direct access to room_code='{room_code}'")
-
     # Validate room exists
     room = Room.query.filter_by(code=room_code).first()
     if not room:
         logging.warning(f"Mobile remote: room not found for code='{room_code}'")
         return render_template("mobile-remote.html", room_code=None, error="Room not found")
 
-    logging.info(f"Mobile remote: rendering template for room_code='{room_code}' (client-side auth)")
     return render_template("mobile-remote.html", room_code=room_code)
 
 
@@ -158,9 +155,7 @@ def mobile_remote_with_short_token(short_token, room_code):
     
     The short token is looked up in Redis to retrieve the full JWT token.
     This route provides shorter URLs for QR codes.
-    """
-    logging.info(f"Mobile remote: access with short token, room_code='{room_code}'")
-    
+    """    
     # Retrieve JWT token from Redis using short token
     jwt_token = retrieve_jwt_from_short_token(short_token)
     if not jwt_token:
@@ -176,7 +171,6 @@ def mobile_remote_with_short_token(short_token, room_code):
     if not user:
         return render_template("mobile-remote.html", room_code=None, error="User not found")
     
-    logging.info(f"Mobile remote: rendering template with room_code='{room_code}' and user token (from short token)")
     return render_template("mobile-remote.html", room_code=room_code, token=jwt_token)
 
 
@@ -222,11 +216,9 @@ def generate_auth_url(room_code):
     if store_short_token(short_token, token):
         # Successfully stored short token, use short URL format
         auth_url = f"{base_url}/mobile-remote/auth/{short_token}/{room_code}"
-        logging.info(f"Mobile remote: Generated short auth URL for room {room_code}")
     else:
         # Redis unavailable, fall back to long URL format
         auth_url = f"{base_url}/mobile-remote/{room_code}?token={token}"
-        logging.warning(f"Mobile remote: Redis unavailable, using fallback long URL for room {room_code}")
     
     return jsonify({"auth_url": auth_url, "room_code": room_code})
 

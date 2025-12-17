@@ -65,4 +65,5 @@ export default class RoomManager {
         if (!user || !user.ready) return;
         user.ready.set(Boolean(payload.ready));
     }
+
 }

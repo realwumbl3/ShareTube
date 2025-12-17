@@ -309,4 +309,40 @@ export default class VirtualPlayer {
             play: state.roomState.get() === "playing",
         });
     }
+
+    async emitRelativeSeek(deltaMs) {
+        const { progress_ms, duration_ms } = getCurrentPlayingProgressMs();
+        let target = progress_ms + deltaMs;
+        if (duration_ms > 0) target = Math.min(Math.max(0, target), duration_ms);
+        this.app.socket.emit("room.control.seek", {
+            delta_ms: deltaMs,
+            progress_ms: target,
+            play: state.roomState.get() === "playing",
+        });
+    }
+
+    async enqueueUrlsOrCreateRoom(urls) {
+        if (!urls) return;
+        const urlList = Array.isArray(urls) ? urls : [urls];
+        if (urlList.length === 0) return;
+
+        if (!state.inRoom.get()) {
+            const code = await this.app.createRoom();
+            if (code) {
+                this.app.updateCodeHashInUrl(code);
+                await this.app.tryJoinRoomFromUrl();
+                // Wait for join to complete
+                const start = Date.now();
+                while (!state.inRoom.get()) {
+                    if (Date.now() - start > 5000) break;
+                    // eslint-disable-next-line no-await-in-loop
+                    await new Promise((r) => setTimeout(r, 100));
+                }
+            }
+        }
+
+        if (state.inRoom.get()) {
+            urlList.forEach((u) => this.app.enqueueUrl(u));
+        }
+    }
 }

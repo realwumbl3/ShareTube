@@ -1,4 +1,4 @@
-import { html, css } from "../../shared/dep/zyx.js";
+import { html, css, LiveVar } from "../../shared/dep/zyx.js";
 import state from "../core/state/state.js";
 
 import QueueList from "./QueueList.js";
@@ -17,11 +17,11 @@ export default class ShareTubeQueue {
     constructor(app, { isMobileRemote = false } = {}) {
         this.app = app;
 
-        this.isMobileRemote = isMobileRemote;
+        this.isMobileRemote = new LiveVar(isMobileRemote);
 
         this.currentPlaying = new CurrentPlaying(app, { isMobileRemote });
         this.queueList = new QueueList();
-        this.embeddedPlayer = new EmbeddedPlayer(app);
+        this.embeddedPlayer = isMobileRemote ? new EmbeddedPlayer(app) : html`<div></div>`;
 
         html`
             <div
@@ -47,6 +47,7 @@ export default class ShareTubeQueue {
                         </button>
                         <button
                             class="rounded_btn"
+                            zyx-if=${this.isMobileRemote}
                             aria-label="Toggle embedded player"
                             title="Toggle embedded player"
                             zyx-click=${() => state.embeddedPlayerVisible.set(!state.embeddedPlayerVisible.get())}
@@ -55,7 +56,7 @@ export default class ShareTubeQueue {
                         </button>
                         <button
                             class="rounded_btn"
-                            ${this.isMobileRemote ? "style='display: none;'" : ""}
+                            zyx-if=${[this.isMobileRemote, (v) => !v]}
                             aria-label="Toggle queue visibility"
                             title="Toggle queue visibility"
                             zyx-click=${() => state.queueVisible.set(!state.queueVisible.get())}

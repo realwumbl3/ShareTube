@@ -27,10 +27,9 @@ def register() -> None:
     @socketio.on("disconnect")
     def _on_disconnect(*_args):
         try:
-            logging.debug("disconnect: client disconnected, sid=%s", request.sid)
             user_id = get_user_id_from_socket()
             if not user_id:
-                logging.debug("disconnect: no user_id found for disconnected socket")
+                logging.warning("disconnect: no user_id found for disconnected socket")
                 return
 
             remove_socket_connection(user_id, request.sid)

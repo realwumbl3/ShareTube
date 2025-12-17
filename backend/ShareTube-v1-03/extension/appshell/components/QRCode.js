@@ -12,7 +12,7 @@ export default class QRCodeComponent {
 
         html`
             <div id="sharetube_qr_modal" zyx-if=${this.visible} zyx-click=${(e) => this.handleBackdropClick(e)}>
-                <div class="qr-modal-content" zyx-click=${(e) => e.stopPropagation()}>
+                <div class="qr-modal-content" zyx-click=${(e) => e.e.stopPropagation()}>
                     <div class="qr-header">
                         <h3>Mobile Remote</h3>
                         <button class="qr-close-btn" zyx-click=${() => this.hide()}>
@@ -142,7 +142,7 @@ export default class QRCodeComponent {
     }
 
     handleBackdropClick(e) {
-        if (e.target.id === "sharetube_qr_modal") {
+        if (e.e.target.id === "sharetube_qr_modal") {
             this.hide();
         }
     }

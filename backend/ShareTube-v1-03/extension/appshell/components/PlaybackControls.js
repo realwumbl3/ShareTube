@@ -1,6 +1,17 @@
 import { html, css, LiveVar } from "../../shared/dep/zyx.js";
 import state from "../core/state/state.js";
-import { playSVG, pauseSVG, skipSVG, idleSVG, startingSVG, remoteSVG, errorSVG, previousSVG, seekBackwardSVG, seekForwardSimpleSVG } from "../../shared/assets/svgs.js";
+import {
+    playSVG,
+    pauseSVG,
+    skipSVG,
+    idleSVG,
+    startingSVG,
+    remoteSVG,
+    errorSVG,
+    previousSVG,
+    seekBackwardSVG,
+    seekForwardSimpleSVG,
+} from "../../shared/assets/svgs.js";
 
 export default class PlaybackControls {
     constructor(app) {
@@ -9,7 +20,11 @@ export default class PlaybackControls {
         html`
             <div class="playback-controls" draggable="false">
                 <div class="control-buttons">
-                    <button class="control-btn secondary-btn" title="Restart Video" zyx-click=${() => this.handlePrevious()}>
+                    <button
+                        class="control-btn secondary-btn"
+                        title="Restart Video"
+                        zyx-click=${() => this.handlePrevious()}
+                    >
                         <img src=${previousSVG} width="18" height="18" draggable="false" />
                     </button>
 
@@ -18,9 +33,16 @@ export default class PlaybackControls {
                         <span class="seek-text">10</span>
                     </button>
 
-                    <button title="Toggle Play/Pause" class="control-btn play-btn" zyx-click=${() => this.handleTogglePlayPause()}>
+                    <button
+                        title="Toggle Play/Pause"
+                        class="control-btn play-btn"
+                        zyx-click=${() => this.handleTogglePlayPause()}
+                    >
                         <div class="play-icon-container">
-                            <img src=${state.roomState.interp((status) => this.stateToButtonLabel(status))} draggable="false" />
+                            <img
+                                src=${state.roomState.interp((status) => this.stateToButtonLabel(status))}
+                                draggable="false"
+                            />
                         </div>
                     </button>
 
@@ -73,7 +95,7 @@ export default class PlaybackControls {
 css`
     .playback-controls {
         display: grid;
-        padding-top: 0.4rem;
+        padding-top: 4px;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         place-items: stretch;
         align-self: stretch;
@@ -102,8 +124,9 @@ css`
                 align-items: center;
                 justify-content: center;
                 position: relative;
-                transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
             /* Secondary buttons (Skip/Prev) slightly smaller/dimmer */

@@ -22,8 +22,6 @@ css`
         width: 100%;
         aspect-ratio: 16 / 9;
         background: #000;
-        border-radius: 14px;
-        overflow: hidden;
     }
 
     .embedded-player-container {
@@ -33,24 +31,78 @@ css`
         height: 100%;
     }
 
-    /* Force responsive sizing on YouTube's internal elements */
-    .embedded-player-container iframe,
-    .embedded-player-container .html5-video-container,
-    .embedded-player-container video {
-        width: 100% !important;
-        height: 100% !important;
-        max-width: 100% !important;
-        max-height: 100% !important;
-        border: none !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        object-fit: contain !important;
+    .embedded-player-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    .EmbeddedPlayer:hover .embedded-player-overlay {
+        opacity: 1;
+    }
+
+    .embedded-player-controls {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        pointer-events: auto;
+    }
+
+    .control-button {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        transition: background-color 0.2s ease;
+    }
+
+    .control-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .volume-control {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .volume-slider {
+        width: 60px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+        appearance: none;
+        width: 12px;
+        height: 12px;
+        background: white;
+        border-radius: 50%;
+        cursor: pointer;
     }
 
     .embedded-player-placeholder,
     .embedded-player-loading {
-        position: absolute;
         inset: 0;
         background: #000;
         color: #fff;
@@ -74,8 +126,12 @@ css`
     }
 
     @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
     }
 `;
 
@@ -89,22 +145,24 @@ export default class EmbeddedPlayer {
         this.apiReady = false;
         this.isLoading = new LiveVar(false);
         this.resizeHandler = null;
-
-        /** @type {HTMLDivElement} */
-        this.container = null;
-        /** @type {HTMLDivElement} */
-        this.player_container = null;
+        this.volumeSlider = null;
+        this.muteButton = null;
+        this.fullscreenButton = null;
 
         html`
             <div class="EmbeddedPlayer" this="container" zyx-if=${state.embeddedPlayerVisible}>
-                <div this="player_container" class="embedded-player-container"></div>
-                <div class="embedded-player-loading" zyx-if=${[this.isLoading, (v) => v]}>
-                    Loading player...
+                <div this="player_container" class="embedded-player-container">
+                    <div this="player_iframe"></div>
                 </div>
+                <div class="embedded-player-overlay">
+
+                </div>
+                <div class="embedded-player-loading" zyx-if=${[this.isLoading, (v) => v]}>Loading player...</div>
                 <div class="embedded-player-placeholder" zyx-if=${[state.currentPlaying.item, (item) => !item]}>
                     No video playing
                 </div>
             </div>
+            <div class="embedded-player-closed" zyx-else></div>
         `.bind(this);
 
         this.init();
@@ -113,6 +171,7 @@ export default class EmbeddedPlayer {
     async init() {
         await this.loadYouTubeAPI();
         this.setupStateListeners();
+        this.setupControlListeners();
     }
 
     loadYouTubeAPI() {
@@ -169,6 +228,67 @@ export default class EmbeddedPlayer {
         state.embeddedPlayerVisible.subscribe(this.handleVisibilityChange);
     }
 
+    setupControlListeners() {
+        if (this.muteButton) {
+            this.muteButton.addEventListener("click", () => this.toggleMute());
+        }
+
+        if (this.volumeSlider) {
+            this.volumeSlider.addEventListener("input", (e) => this.setVolume(e.target.value));
+            this.volumeSlider.addEventListener("change", (e) => this.setVolume(e.target.value));
+        }
+
+        if (this.fullscreenButton) {
+            this.fullscreenButton.addEventListener("click", () => this.toggleFullscreen());
+        }
+    }
+
+    toggleMute() {
+        if (!this.player) return;
+
+        const isMuted = this.player.isMuted();
+        if (isMuted) {
+            this.player.unMute();
+            this.muteButton.textContent = "🔊";
+        } else {
+            this.player.mute();
+            this.muteButton.textContent = "🔇";
+        }
+    }
+
+    setVolume(volume) {
+        if (!this.player) return;
+
+        this.player.setVolume(volume);
+        if (volume > 0 && this.player.isMuted()) {
+            this.player.unMute();
+            this.muteButton.textContent = "🔊";
+        }
+    }
+
+    toggleFullscreen() {
+        if (!this.player) return;
+
+        const container = this.container;
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().catch((err) => {
+                console.error("Error attempting to enable fullscreen:", err);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    initializeVolumeControl() {
+        if (!this.player || !this.volumeSlider) return;
+
+        const currentVolume = this.player.getVolume();
+        this.volumeSlider.value = currentVolume;
+
+        const isMuted = this.player.isMuted();
+        this.muteButton.textContent = isMuted ? "🔇" : "🔊";
+    }
+
     handleVideoChange = (item) => {
         if (!item) {
             this.destroyPlayer();
@@ -213,35 +333,18 @@ export default class EmbeddedPlayer {
     loadVideo(videoId) {
         if (!videoId) return;
 
+        console.log("Loading video", videoId);
+
         this.currentVideoId = videoId;
         this.isLoading.set(true);
-
-        if (!this.player_container || !document.contains(this.player_container)) {
-            // Wait for DOM
-            requestAnimationFrame(() => {
-                if (this.player_container && document.contains(this.player_container)) {
-                    this.loadVideo(videoId);
-                }
-            });
-            return;
-        }
-
-        if (!this.apiReady) {
-            this.pendingVideoId = videoId;
-            return;
-        }
-
-        if (this.player) {
-            this.player.loadVideoById({ videoId, startSeconds: 0 });
-            this.isLoading.set(false);
-        } else {
-            this.createPlayer(videoId);
-        }
+        this.destroyPlayer();
+        this.createPlayer(videoId);
     }
 
     createPlayer(videoId) {
         try {
-            this.player = new window.YT.Player(this.player_container, {
+            console.log("Creating player", { player_iframe: this.player_iframe });
+            this.player = new window.YT.Player(this.player_iframe, {
                 width: "100%",
                 height: "100%",
                 videoId: videoId,
@@ -258,6 +361,7 @@ export default class EmbeddedPlayer {
                     onReady: () => {
                         this.isLoading.set(false);
                         this.startSync();
+                        this.initializeVolumeControl();
                     },
                     onError: (e) => {
                         console.error("EmbeddedPlayer: YT error", e.data);
@@ -306,7 +410,12 @@ export default class EmbeddedPlayer {
             const playerState = this.player.getPlayerState();
             if (isPlaying && playerState !== YT_STATE.PLAYING && playerState !== YT_STATE.BUFFERING) {
                 this.player.playVideo();
-            } else if (!isPlaying && playerState !== YT_STATE.PAUSED && playerState !== YT_STATE.UNSTARTED && playerState !== YT_STATE.ENDED) {
+            } else if (
+                !isPlaying &&
+                playerState !== YT_STATE.PAUSED &&
+                playerState !== YT_STATE.UNSTARTED &&
+                playerState !== YT_STATE.ENDED
+            ) {
                 this.player.pauseVideo();
             }
         } catch (e) {
@@ -325,14 +434,8 @@ export default class EmbeddedPlayer {
             this.player = null;
         }
 
-        if (this.player_container) {
-            this.player_container.innerHTML = "";
+        if (this.player_iframe) {
+            this.player_iframe.innerHTML = "";
         }
-        
-        // Don't reset currentVideoId here strictly, 
-        // as we might want to resume same video if visibility toggles back
-        // But logic elsewhere handles "if id changed" well.
-        // Actually, if we destroy, we should probably reset to ensure full reload if needed.
-        this.currentVideoId = null;
     }
 }
