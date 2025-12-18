@@ -6,9 +6,9 @@
 @import "/extension/shared/css/styles-base.css";
 @import "/extension/shared/css/styles-components.css";
 @import "/extension/shared/css/styles-forms.css";
-@import "/extension/shared/css/queue-container.css";
-@import "/extension/shared/css/queue-header.css";
-@import "/extension/shared/css/queue-list.css";
+@import "/extension/shared/css/hub-container.css";
+@import "/extension/shared/css/hub-header.css";
+@import "/extension/shared/css/hub-queue-list.css";
 
 @property --gradient-angle {
     syntax: '<angle>';
@@ -21,14 +21,14 @@
     --bg-app: #050507;
 
     /* Queue-like Theme Variables */
-    --bg-queue-panel: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
-    --bg-queue-header: linear-gradient(to bottom, rgba(18, 18, 18, 0.98), rgba(18, 18, 18, 0.9));
-    --outline-queue: 1px solid rgba(255, 255, 255, 0.18);
-    --outline-queue-light: 1px solid rgba(255, 255, 255, 0.22);
-    --outline-queue-dim: 1px solid rgba(255, 255, 255, 0.12);
+    --bg-hub-panel: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
+    --bg-hub-header: linear-gradient(to bottom, rgba(18, 18, 18, 0.98), rgba(18, 18, 18, 0.9));
+    --outline-hub: 1px solid rgba(255, 255, 255, 0.18);
+    --outline-hub-light: 1px solid rgba(255, 255, 255, 0.22);
+    --outline-hub-dim: 1px solid rgba(255, 255, 255, 0.12);
 
     /* Legacy variables for compatibility */
-    --bg-panel: var(--bg-queue-panel);
+    --bg-panel: var(--bg-hub-panel);
     --bg-panel-hover: rgba(30, 30, 40, 0.7);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-shine: rgba(255, 255, 255, 0.03);
@@ -115,16 +115,16 @@ h6 {
 
 /* Utility Classes for Queue Theme */
 .glass-panel {
-    background: var(--bg-queue-panel);
+    background: var(--bg-hub-panel);
     backdrop-filter: blur(5em) ;
-    outline: var(--outline-queue);
+    outline: var(--outline-hub);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
 }
 
 .glass-button {
     background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(54, 54, 54, 0.9));
-    outline: var(--outline-queue-light);
+    outline: var(--outline-hub-light);
     border: none;
     color: var(--text-primary);
     border-radius: var(--radius-sm);

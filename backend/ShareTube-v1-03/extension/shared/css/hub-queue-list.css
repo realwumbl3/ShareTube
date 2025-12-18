@@ -1,12 +1,12 @@
-#sharetube_queue .queue_list_container {
+#sharetube_hub .queue_list_container {
     display: flex;
     flex-direction: row;
-    gap: 8px;
+    gap: 4px;
     flex: 1;
     min-height: 0;
 }
 
-#sharetube_queue .queues {
+#sharetube_hub .queues {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -15,14 +15,14 @@
     width: 100%;
 }
 
-#sharetube_queue .queues .queue_container {
+#sharetube_hub .queues .queue_container {
     display: flex;
     flex-direction: column;
     position: absolute;
     inset: 0;
 }
 
-#sharetube_queue .queue-list {
+#sharetube_hub .queue-list {
     position: absolute;
     inset: 0;
     overflow-y: scroll;
@@ -33,35 +33,36 @@
     -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 1em), transparent 100%);
 }
 
-#sharetube_queue .queue-list-header-title {
+#sharetube_hub .queue-list-header-title {
     font-size: 12px;
     font-weight: 600;
     color: var(--yt-spec-text-primary, #fff);
     letter-spacing: 0.3px;
     text-shadow: var(--splash-text-shadow);
+    
 }
 
-#sharetube_queue .queue-list .list-container {
+#sharetube_hub .queue-list .list-container {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-#sharetube_queue .queue-list::-webkit-scrollbar {
+#sharetube_hub .queue-list::-webkit-scrollbar {
     height: 8px;
     width: 8px;
 }
 
-#sharetube_queue .queue-list::-webkit-scrollbar-thumb {
+#sharetube_hub .queue-list::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.15);
     border-radius: 8px;
 }
 
-#sharetube_queue .queue-list::-webkit-scrollbar-track {
+#sharetube_hub .queue-list::-webkit-scrollbar-track {
     background: transparent;
 }
 
-#sharetube_queue .queue-item {
+#sharetube_hub .queue-item {
     display: grid;
     grid-template-columns: auto auto 1fr auto;
     grid-template-areas: "drag thumb meta actions";
@@ -77,7 +78,7 @@
     position: relative;
 }
 
-#sharetube_queue .queue-item:hover {
+#sharetube_hub .queue-item:hover {
     background: linear-gradient(135deg,
             rgba(255, 255, 255, 0.06),
             rgba(0, 0, 0, 0.7));
@@ -86,13 +87,13 @@
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
 }
 
-#sharetube_queue .queue-item.dragging {
+#sharetube_hub .queue-item.dragging {
     opacity: 0.5;
     transform: scale(.9);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
 }
 
-#sharetube_queue .queue-item.drop-target-above::before {
+#sharetube_hub .queue-item.drop-target-above::before {
     content: '';
     position: absolute;
     top: 0;
@@ -104,7 +105,7 @@
     z-index: 10;
 }
 
-#sharetube_queue .queue-item.drop-target-below::after {
+#sharetube_hub .queue-item.drop-target-below::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -116,7 +117,7 @@
     z-index: 10;
 }
 
-#sharetube_queue .queue-item .meta {
+#sharetube_hub .queue-item .meta {
     grid-area: meta;
     display: flex;
     flex-direction: column;
@@ -125,7 +126,7 @@
     margin-left: 4px;
 }
 
-#sharetube_queue .queue-item .meta .title {
+#sharetube_hub .queue-item .meta .title {
     grid-area: title;
     font-weight: 600;
     font-size: 12px;
@@ -134,40 +135,42 @@
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-box-orient: vertical;
+    user-select: text;
 }
 
-#sharetube_queue .queue-item .meta .author {
+#sharetube_hub .queue-item .meta .author {
     display: block;
     font-size: 11px;
     opacity: 0.7;
     cursor: pointer;
-    user-select: none;
+    user-select: text;
     transition: opacity 100ms ease;
 }
 
-#sharetube_queue .queue-item .meta .author:hover {
+#sharetube_hub .queue-item .meta .author:hover {
     opacity: 1;
 }
 
-#sharetube_queue .queue-item .meta .author-row {
+#sharetube_hub .queue-item .meta .author-row {
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
-#sharetube_queue .queue-item .meta .url {
+#sharetube_hub .queue-item .meta .url {
     opacity: 0.7;
     font-size: 11px;
     display: flex;
     align-items: center;
     gap: 4px;
+    
 }
 
-#sharetube_queue .queue-item .meta .url .title {
+#sharetube_hub .queue-item .meta .url .title {
     margin-bottom: 0;
 }
 
-#sharetube_queue .queue-item .meta .author-row .up-next-badge {
+#sharetube_hub .queue-item .meta .author-row .up-next-badge {
     display: none;
     align-items: center;
     justify-content: center;
@@ -181,15 +184,14 @@
     background: rgba(20, 192, 4, 0.432);
     border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
-    user-select: none;
     pointer-events: none;
 }
 
-#sharetube_queue .queue-list.queued .queue-item[list-index="0"] .meta .author-row .up-next-badge {
+#sharetube_hub .queue-list.queued .queue-item[list-index="0"] .meta .author-row .up-next-badge {
     display: inline-flex;
 }
 
-#sharetube_queue .queue-item .meta .url .link-drag-icon {
+#sharetube_hub .queue-item .meta .url .link-drag-icon {
     display: inline-flex;
     align-items: center;
     opacity: 0.6;
@@ -202,24 +204,23 @@
         width: 12px;
         height: 12px;
         display: block;
-        user-select: none;
     }
 }
 
-#sharetube_queue .queue-item .meta .url .link-drag-icon:active {
+#sharetube_hub .queue-item .meta .url .link-drag-icon:active {
     cursor: grabbing;
 }
 
-#sharetube_queue .queue-item .meta .url .link-drag-icon:hover {
+#sharetube_hub .queue-item .meta .url .link-drag-icon:hover {
     opacity: 1;
 }
 
-#sharetube_queue .queue-item .meta .url .external-link-icon:hover {
+#sharetube_hub .queue-item .meta .url .external-link-icon:hover {
     opacity: 1;
 }
 
 
-#sharetube_queue .queue-item .meta .url .external-link-icon {
+#sharetube_hub .queue-item .meta .url .external-link-icon {
     display: inline-flex;
     align-items: center;
     opacity: 0.6;
@@ -231,11 +232,10 @@
         width: 12px;
         height: 12px;
         display: block;
-        user-select: none;
     }
 }
 
-#sharetube_queue .queue-item-duration {
+#sharetube_hub .queue-item-duration {
     position: absolute;
     bottom: 0;
     right: 0;
@@ -246,46 +246,44 @@
     padding: 2px 4px;
     background: rgba(0, 0, 0, 0.7);
     border-radius: 3px;
-    user-select: none;
+    
 }
 
-#sharetube_queue .queue-item-drag-handle {
+#sharetube_hub .queue-item-drag-handle {
     grid-area: drag;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
+    width: 35px;
     align-self: stretch;
     height: 100%;
     padding: 0 6px;
     color: rgba(255, 255, 255, 0.4);
     font-size: 12px;
     font-weight: bold;
-    user-select: none;
     border-radius: 4px;
     transition: background 120ms ease, color 120ms ease, transform 80ms ease;
     position: relative;
     z-index: 1;
 }
 
-#sharetube_queue .queue-item:hover .queue-item-drag-handle {
+#sharetube_hub .queue-item:hover .queue-item-drag-handle {
     background: rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.7);
 }
 
-#sharetube_queue .queue-item.dragging .queue-item-drag-handle {
+#sharetube_hub .queue-item.dragging .queue-item-drag-handle {
     background: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.8);
     transform: scale(0.95);
 }
 
-#sharetube_queue .queue-item-thumbnail {
+#sharetube_hub .queue-item-thumbnail {
     grid-area: thumb;
     display: flex;
     flex-direction: column;
     gap: 4px;
     position: relative;
-    user-select: none;
 
     &>img {
         width: 100px;
@@ -297,7 +295,7 @@
     }
 }
 
-#sharetube_queue .queue-item .queue-item-actions {
+#sharetube_hub .queue-item .queue-item-actions {
     grid-area: actions;
     display: flex;
     flex-direction: column;
@@ -305,7 +303,7 @@
     gap: 4px;
 }
 
-#sharetube_queue .queue-item .x-button {
+#sharetube_hub .queue-item .x-button {
     position: absolute;
     top: 4px;
     right: 4px;
@@ -313,7 +311,6 @@
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
     cursor: pointer;
-    user-select: none;
     padding: 1px;
     display: grid;
     place-items: center;
@@ -322,7 +319,7 @@
     z-index: 10;
 }
 
-#sharetube_queue .queue-item .requeue-button {
+#sharetube_hub .queue-item .requeue-button {
     background: rgba(255, 255, 255, 0.08);
     color: var(--yt-spec-text-primary, #fff);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -330,7 +327,6 @@
     font-size: 10px;
     cursor: pointer;
     font-weight: 600;
-    user-select: none;
     height: 2em;
     width: 2em;
     padding: 0px;
@@ -340,38 +336,39 @@
     box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
-#sharetube_queue .queue-item .x-button img {
+#sharetube_hub .queue-item .x-button img {
     width: 11px;
     height: 11px;
     display: block;
     opacity: 0.9;
 }
 
-#sharetube_queue .queue-item .requeue-button img {
+#sharetube_hub .queue-item .requeue-button img {
     width: 14px;
     height: 14px;
     display: block;
     opacity: 0.9;
 }
 
-#sharetube_queue .queue-item .x-button:hover,
-#sharetube_queue .queue-item .requeue-button:hover {
+#sharetube_hub .queue-item .x-button:hover,
+#sharetube_hub .queue-item .requeue-button:hover {
     background: rgba(255, 255, 255, 0.16);
     border-color: rgba(255, 255, 255, 0.28);
     transform: translateY(-0.5px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
-#sharetube_queue .queue-item .x-button:focus-visible,
-#sharetube_queue .queue-item .requeue-button:focus-visible {
+#sharetube_hub .queue-item .x-button:focus-visible,
+#sharetube_hub .queue-item .requeue-button:focus-visible {
     outline: 2px solid rgba(255, 255, 255, 0.4);
     outline-offset: 1px;
 }
 
-#sharetube_queue .queue-empty {
+#sharetube_hub .queue-empty {
     padding: 10px;
     text-align: center;
     opacity: 0.8;
     font-size: 12px;
     border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    
 }

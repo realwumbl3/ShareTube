@@ -52,7 +52,7 @@ from .leave import register as register_room_leave
 from .user_ready import register as register_user_ready
 from .client_verification import register as register_client_verification
 from .client_pong import register as register_client_pong
-from .settings_autoadvance import register as register_settings_autoadvance
+from .settings import register as register_settings
 from .disconnect import register as register_disconnect
 
 __all__ = [
@@ -69,6 +69,6 @@ def register_socket_handlers() -> None:
     register_user_ready()
     register_client_verification()
     register_client_pong()
-    register_settings_autoadvance()
+    register_settings()
     register_disconnect()
 

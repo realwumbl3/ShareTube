@@ -71,7 +71,7 @@
     font-family: 'Roboto';
 }
 
-#sharetube_toggle_queue {
+#sharetube_toggle_hub {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -90,13 +90,13 @@
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
 }
 
-#sharetube_toggle_queue:hover {
+#sharetube_toggle_hub:hover {
     background: rgba(0, 0, 0, 0.55);
     border-color: rgba(255, 255, 255, 0.35);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
 }
 
-#sharetube_toggle_queue:active {
+#sharetube_toggle_hub:active {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 

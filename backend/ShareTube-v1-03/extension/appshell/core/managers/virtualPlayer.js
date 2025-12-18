@@ -128,8 +128,15 @@ export default class VirtualPlayer {
     }
 
     async onRoomSettingsUpdate(data) {
-        if (data.autoadvance_on_end !== undefined) {
-            state.roomAutoadvanceOnEnd.set(data.autoadvance_on_end);
+        const setting = data.setting;
+        const value = data.value;
+
+        if (setting === "autoadvance_on_end") {
+            state.roomAutoadvanceOnEnd.set(value);
+        } else if (setting === "is_private") {
+            state.roomIsPrivate.set(value);
+        } else if (setting === "ad_sync_mode") {
+            state.adSyncMode.set(value);
         }
     }
 
@@ -157,6 +164,7 @@ export default class VirtualPlayer {
         const snapshot = result.snapshot;
         state.adSyncMode.set(snapshot.ad_sync_mode);
         state.roomAutoadvanceOnEnd.set(snapshot.autoadvance_on_end ?? true);
+        state.roomIsPrivate.set(snapshot.is_private ?? true);
 
         // Calculate if current user is an operator
         const userId = state.userId.get();

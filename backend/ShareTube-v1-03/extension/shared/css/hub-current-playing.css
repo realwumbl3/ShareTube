@@ -1,17 +1,18 @@
-#sharetube_queue .current_playing_header_title {
+#sharetube_hub .current_playing_header_title {
     font-weight: 600;
     font-size: 12px;
     overflow: hidden;
     text-overflow: ellipsis;
+
 }
 
-#sharetube_queue .current_playing_header {
+#sharetube_hub .current_playing_header {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-#sharetube_queue .current_playing {
+#sharetube_hub .current_playing {
     padding: 4px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     display: flex;
@@ -24,14 +25,14 @@
     position: relative;
 }
 
-#sharetube_queue .current_playing .current_playing_bg {
+#sharetube_hub .current_playing .current_playing_bg {
     position: absolute;
     inset: 0;
     overflow: hidden;
     z-index: -1;
 }
 
-#sharetube_queue .current_playing .current_playing_bg .current_playing_background {
+#sharetube_hub .current_playing .current_playing_bg .current_playing_background {
     position: absolute;
     --overdraw: 20%;
     width: calc(100% + var(--overdraw) * 2);
@@ -41,7 +42,6 @@
     object-fit: cover;
     filter: blur(5px) brightness(0.6) contrast(0.9);
     visibility: hidden;
-    user-select: none;
     transform-origin: center;
 
     &[src] {
@@ -49,39 +49,40 @@
     }
 }
 
-#sharetube_queue .current_playing .current_playing_title {
+#sharetube_hub .current_playing .current_playing_title {
     font-weight: 600;
     font-size: 12px;
     line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
+
 }
 
-#sharetube_queue .current_playing .current_playing_url {
+#sharetube_hub .current_playing .current_playing_url {
     font-size: 11px;
     opacity: 0.7;
     word-break: break-all;
+
 }
 
-#sharetube_queue .current_playing_container {
+#sharetube_hub .current_playing_container {
     display: grid;
     grid-template-rows: 1fr max-content;
     align-items: center;
     width: 100%;
 }
 
-#sharetube_queue .current_playing_artwork {
+#sharetube_hub .current_playing_artwork {
     display: flex;
     flex-direction: column;
     gap: 4px;
     position: relative;
-    user-select: none;
     aspect-ratio: 16 / 9;
     width: 100%;
     max-height: 200px;
 }
 
-#sharetube_queue .current_playing_artwork .current_playing_thumb_click_area {
+#sharetube_hub .current_playing_artwork .current_playing_thumb_click_area {
     position: relative;
     width: 100%;
     height: 100%;
@@ -90,7 +91,7 @@
     overflow: hidden;
 }
 
-#sharetube_queue .current_playing_artwork .current_playing_thumb_click_area > img {
+#sharetube_hub .current_playing_artwork .current_playing_thumb_click_area>img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -100,7 +101,7 @@
     border-radius: 8px;
 }
 
-#sharetube_queue .current_playing_artwork .current_playing_meta_overlay {
+#sharetube_hub .current_playing_artwork .current_playing_meta_overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -113,7 +114,7 @@
     gap: 2px;
 }
 
-#sharetube_queue .current_playing_artwork .seekbar_container {
+#sharetube_hub .current_playing_artwork .seekbar_container {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -123,7 +124,7 @@
     border-radius: 0 0 8px 8px;
 }
 
-#sharetube_queue .current_playing_artwork .current_playing_title_overlay {
+#sharetube_hub .current_playing_artwork .current_playing_title_overlay {
     font-weight: 600;
     font-size: 12px;
     line-height: 1.2;
@@ -134,7 +135,7 @@
     white-space: nowrap;
 }
 
-#sharetube_queue .current_playing_artwork .current_playing_author_overlay {
+#sharetube_hub .current_playing_artwork .current_playing_author_overlay {
     font-size: 10px;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.9);
@@ -144,28 +145,29 @@
     white-space: nowrap;
 }
 
-#sharetube_queue .current_playing_thumb_click_area .current_playing_hover_icon {
+#sharetube_hub .current_playing_thumb_click_area .current_playing_hover_icon {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     opacity: 0;
     transition: opacity 0.2s ease;
-    pointer-events: none;
     z-index: 10;
+    display: flex;
+    gap: 4px;
 }
 
-#sharetube_queue .current_playing_thumb_click_area .current_playing_hover_icon img {
+#sharetube_hub .current_playing_thumb_click_area .current_playing_hover_icon img {
     width: 48px;
     height: 48px;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
 }
 
-#sharetube_queue .current_playing_thumb_click_area:hover .current_playing_hover_icon {
+#sharetube_hub .current_playing_thumb_click_area:hover .current_playing_hover_icon {
     opacity: 1;
 }
 
-#sharetube_queue .current_playing_artwork .current_playing_duration {
+#sharetube_hub .current_playing_artwork .current_playing_duration {
     position: absolute;
     bottom: 0;
     right: 0;
@@ -175,10 +177,9 @@
     margin: 3px;
     background: rgba(0, 0, 0, 0.7);
     border-radius: 4px;
-    user-select: none;
 }
 
-#sharetube_queue .current_playing_meta {
+#sharetube_hub .current_playing_meta {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -186,7 +187,7 @@
     overflow: auto;
 }
 
-#sharetube_queue .no_video_playing_label {
+#sharetube_hub .no_video_playing_label {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -195,15 +196,17 @@
     opacity: 0.8;
     font-size: 12px;
     border-top: 1px dashed rgba(255, 255, 255, 0.08);
+
 }
 
-#sharetube_queue .current_playing_placeholder_text {
+#sharetube_hub .current_playing_placeholder_text {
     font-size: 12px;
     opacity: 0.8;
     text-align: center;
+
 }
 
-#sharetube_queue .seekbar_container {
+#sharetube_hub .seekbar_container {
     display: grid;
     grid-template-columns: max-content auto max-content;
     align-items: center;
@@ -211,7 +214,7 @@
     width: 100%;
 }
 
-#sharetube_queue .seekbar_button {
+#sharetube_hub .seekbar_button {
     background: rgba(0, 0, 0, 0.8);
     border-radius: 100vh;
     opacity: 0.95;
@@ -224,11 +227,11 @@
     width: 24px;
 }
 
-#sharetube_queue .seekbar_button:hover {
+#sharetube_hub .seekbar_button:hover {
     opacity: 1;
 }
 
-#sharetube_queue .seekbar_button button {
+#sharetube_hub .seekbar_button button {
     all: unset;
     height: 100%;
     aspect-ratio: 1;
@@ -242,7 +245,7 @@
     }
 }
 
-#sharetube_queue .current_playing_progress {
+#sharetube_hub .current_playing_progress {
     --padding: 2px;
     font-size: 8px;
     opacity: 0.95;
@@ -256,51 +259,37 @@
 }
 
 
-#sharetube_queue .current_playing_progress .progress_bar {
+#sharetube_hub .current_playing_progress .progress_bar {
     position: absolute;
     height: 100%;
     width: 100%;
     background: rgb(35 35 35 / 70%);
+    outline: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: inherit;
     display: grid;
     align-items: stretch;
     overflow: hidden;
 }
 
-#sharetube_queue .current_playing_progress .bar_inner {
+#sharetube_hub .current_playing_progress .bar_inner {
     position: relative;
     background: rgb(0 0 0);
-    border-radius: 3px;
+    border-radius: 5px;
     width: calc(var(--progress-int) * 100%);
     transition: width 100ms ease;
 }
 
-#sharetube_queue .current_playing_progress_stamps {
+#sharetube_hub .current_playing_progress_stamps {
     display: flex;
     justify-content: space-between;
     width: 100%;
     font-size: 8px;
     opacity: 0.95;
     padding: 2px 8px;
-    user-select: none;
+
 }
 
-#sharetube_queue .current_playing_progress_stamps .timestamp-current,
-#sharetube_queue .current_playing_progress_stamps .timestamp-duration {
-    display: inline;
-}
-
-#sharetube_queue .current_playing_progress_stamps .timestamp-progress,
-#sharetube_queue .current_playing_progress_stamps .timestamp-playing-since {
-    display: none;
-}
-
-#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-current,
-#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-duration {
-    display: none;
-}
-
-#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-progress,
-#sharetube_queue .current_playing_progress:hover .current_playing_progress_stamps .timestamp-playing-since {
+#sharetube_hub .current_playing_progress_stamps .timestamp-current,
+#sharetube_hub .current_playing_progress_stamps .timestamp-duration {
     display: inline;
 }

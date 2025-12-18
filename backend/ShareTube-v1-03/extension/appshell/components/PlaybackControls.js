@@ -16,7 +16,6 @@ import {
 export default class PlaybackControls {
     constructor(app) {
         this.app = app;
-
         html`
             <div class="playback-controls" draggable="false">
                 <div class="control-buttons">
@@ -28,7 +27,7 @@ export default class PlaybackControls {
                         <img src=${previousSVG} width="18" height="18" draggable="false" />
                     </button>
 
-                    <button title="Seek -10s" class="control-btn seek-btn" zyx-click=${() => this.handleSeek(-10)}>
+                    <button title="Seek -10s" class="control-btn seek-btn" zyx-click=${() => this.handleSeek(-10000)}>
                         <img src=${seekBackwardSVG} width="18" height="18" draggable="false" />
                         <span class="seek-text">10</span>
                     </button>
@@ -46,7 +45,7 @@ export default class PlaybackControls {
                         </div>
                     </button>
 
-                    <button title="Seek +10s" class="control-btn seek-btn" zyx-click=${() => this.handleSeek(10)}>
+                    <button title="Seek +10s" class="control-btn seek-btn" zyx-click=${() => this.handleSeek(10000)}>
                         <img src=${seekForwardSimpleSVG} width="18" height="18" draggable="false" />
                         <span class="seek-text">10</span>
                     </button>
@@ -76,19 +75,19 @@ export default class PlaybackControls {
     }
 
     handleTogglePlayPause() {
-        this.app.togglePlayPause();
+        this.app.virtualPlayer.emitToggleRoomPlayPause();
     }
 
     handlePrevious() {
-        this.app.restartVideo();
+        this.app.virtualPlayer.emitRestartVideo();
     }
 
     handleNext() {
-        this.app.skipToNext();
+        this.app.virtualPlayer.emitSkipVideo();
     }
 
     handleSeek(delta) {
-        this.app.relativeSeek(delta);
+        this.app.virtualPlayer.emitRelativeSeek(delta);
     }
 }
 

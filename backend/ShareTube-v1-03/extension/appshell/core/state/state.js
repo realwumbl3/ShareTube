@@ -11,6 +11,7 @@ class ShareTubeState {
         this.roomState = new LiveVar("");
         this.adSyncMode = new LiveVar("");
         this.roomAutoadvanceOnEnd = new LiveVar(true);
+        this.roomIsPrivate = new LiveVar(true);
         this.isOperator = new LiveVar(false);
         // Whether this client currently considers itself joined to a room
         this.inRoom = new LiveVar(false);
@@ -34,7 +35,7 @@ class ShareTubeState {
         this.queueSkipped = new LiveList([]);
         this.queueDeleted = new LiveList([]);
 
-        this.queueVisible = new LiveVar(false);
+        this.hubVisible = new LiveVar(false);
         this.embeddedPlayerVisible = new LiveVar(false);
 
         // Continue next prompt
@@ -46,9 +47,9 @@ class ShareTubeState {
             item: new LiveVar(null),
             playing_since_ms: new LiveVar(0),
             progress_ms: new LiveVar(0),
-            timestamp: new LiveVar(0),
         };
-
+        
+        this.currentPlayingTimestamp = new LiveVar(0);
         this.currentPlaybackRate = new LiveVar(1);
         this.currentDriftMs = new LiveVar(0);
     }
@@ -59,6 +60,7 @@ class ShareTubeState {
         this.roomState.set("");
         this.adSyncMode.set("");
         this.roomAutoadvanceOnEnd.set(true);
+        this.roomIsPrivate.set(true);
         this.isOperator.set(false);
         this.showContinueNextPrompt.set(false);
         this.nextUpItem.set(null);

@@ -38,11 +38,11 @@ export default class Controls {
                 </div>
                 <div class="control">
                     <button
-                        title="Open remote control"
+                        title="Show remote QR code"
                         class="main_btn qr_btn"
                         zyx-click=${(e) => this.onQRButtonClick(e)}
                     >
-                        <img src=${remoteSVG} alt="Remote" />
+                        <img src=${remoteSVG} alt="QR Code" />
                     </button>
                 </div>
             </div>

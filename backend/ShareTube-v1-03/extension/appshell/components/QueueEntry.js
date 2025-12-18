@@ -48,10 +48,10 @@ export class ShareTubeQueueComponent {
                                 navigator.clipboard.writeText(this.item.url);
                             }}
                         >
-                            <img src="${linkSVG}" alt="Drag link" />
+                            <img src="${linkSVG}" alt="Drag link" draggable="false" />
                         </span>
                         <span class="external-link-icon" title="Open in new tab" zyx-click=${() => this.item.openUrl()}>
-                            <img src="${openInNewTabSVG}" alt="Open in new tab" />
+                            <img src="${openInNewTabSVG}" alt="Open in new tab" draggable="false" />
                         </span>
                     </div>
                 </div>
@@ -63,7 +63,7 @@ export class ShareTubeQueueComponent {
                         title="Remove from queue"
                         zyx-click=${() => this.removeFromQueue()}
                     >
-                        <img src="${xSVG}" alt="Remove" />
+                        <img src="${xSVG}" alt="Remove" draggable="false" />
                     </button>
                     <button
                         zyx-if=${[this.isQueued, (v) => !v]}
@@ -73,7 +73,7 @@ export class ShareTubeQueueComponent {
                         title="Move back to top of queue"
                         zyx-click=${() => this.moveToTop()}
                     >
-                        <img src="${requeueSVG}" alt="Requeue" />
+                        <img src="${requeueSVG}" alt="Requeue" draggable="false" />
                     </button>
                 </div>
             </div>

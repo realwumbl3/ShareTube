@@ -1,4 +1,4 @@
-#sharetube_queue .queue_selector {
+#sharetube_hub .queue_selector {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -6,9 +6,8 @@
     align-items: center;
 }
 
-#sharetube_queue .queue_selector .queue_selector_item {
+#sharetube_hub .queue_selector .queue_selector_item {
     cursor: pointer;
-    user-select: none;
     padding: 4px;
     border-radius: 8px;
     display: flex;
@@ -30,28 +29,29 @@
 
 }
 
-#sharetube_queue .queue_selector .queue_selector_item .queue_selector_icon {
+#sharetube_hub .queue_selector .queue_selector_item .queue_selector_icon {
     width: 20px;
     height: 20px;
     opacity: 0.8;
     transition: opacity 120ms ease;
 }
 
-#sharetube_queue .queue_selector .queue_selector_item:hover .queue_selector_icon,
-#sharetube_queue .queue_selector .queue_selector_item.zyx-radioview-active .queue_selector_icon {
+#sharetube_hub .queue_selector .queue_selector_item:hover .queue_selector_icon,
+#sharetube_hub .queue_selector .queue_selector_item.zyx-radioview-active .queue_selector_icon {
     opacity: 1;
 }
 
-#sharetube_queue .queue_selector .queue_selector_item .queue_selector_count {
+#sharetube_hub .queue_selector .queue_selector_item .queue_selector_count {
     font-size: 10px;
     font-weight: 600;
     color: var(--text-secondary);
     opacity: 0.7;
     transition: opacity 120ms ease, color 120ms ease;
+    
 }
 
-#sharetube_queue .queue_selector .queue_selector_item:hover .queue_selector_count,
-#sharetube_queue .queue_selector .queue_selector_item.zyx-radioview-active .queue_selector_count {
+#sharetube_hub .queue_selector .queue_selector_item:hover .queue_selector_count,
+#sharetube_hub .queue_selector .queue_selector_item.zyx-radioview-active .queue_selector_count {
     opacity: 1;
     color: var(--accent-primary);
 }

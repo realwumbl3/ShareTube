@@ -6,8 +6,8 @@ import { queuedSVG, playSVG, skipSVG, xSVG } from "../../shared/assets/svgs.js";
 import { resolveAssetUrl } from "../../shared/urlResolver.js";
 
 css`
-    @import url(${resolveAssetUrl("shared/css/queue-selector.css")});
-    @import url(${resolveAssetUrl("shared/css/queue-list.css")});
+    @import url(${resolveAssetUrl("shared/css/hub-queue-selector.css")});
+    @import url(${resolveAssetUrl("shared/css/hub-queue-list.css")});
 `;
 
 export default class QueueList {

@@ -48,9 +48,10 @@ def register() -> None:
             entry_to_move = query.first()
             if not entry_to_move:
                 logging.warning(
-                    "queue.move: no entry found for id (id=%s) (user_id=%s)",
+                    "queue.move: no entry found for id (id=%s) (user_id=%s) (can_modify_any=%s)",
                     id,
                     user_id,
+                    can_modify_any,
                 )
                 return rej("queue.move: no entry found for id")
 
@@ -61,8 +62,9 @@ def register() -> None:
             )
             if not target_entry:
                 logging.warning(
-                    "queue.move: no target entry found for id (target_id=%s)",
+                    "queue.move: no target entry found for id (target_id=%s) (can_modify_any=%s)",
                     target_id,
+                    can_modify_any,
                 )
                 return rej("queue.move: no target entry found")
 

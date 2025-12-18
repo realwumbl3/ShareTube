@@ -12,23 +12,25 @@ import YoutubePlayerManager from "./core/managers/youtubePlayer/manager.js";
 import UIManager from "./core/managers/ui.js";
 import StorageManager from "./core/managers/storage.js";
 
-import Queue from "./components/Queue.js";
 import SearchBox from "./components/SearchBox.js";
 import QRCodeComponent from "./components/QRCode.js";
 
 export const zyxInput = new ZyXInput();
 
 import ShareTubePill from "./components/ShareTubePill.js";
+import ShareTubeHub from "./components/Hub.js";
+
+import { resolveAssetUrl } from "../shared/urlResolver.js";
 
 css`
     @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap");
-    @import url(${chrome.runtime.getURL("shared/css/styles-base.css")});
-    @import url(${chrome.runtime.getURL("shared/css/styles-forms.css")});
-    @import url(${chrome.runtime.getURL("shared/css/styles-components.css")});
-    @import url(${chrome.runtime.getURL("shared/css/styles-main.css")});
-    @import url(${chrome.runtime.getURL("shared/css/styles-animations.css")});
-    @import url(${chrome.runtime.getURL("shared/css/pill.css")});
-    @import url(${chrome.runtime.getURL("shared/css/splash.css")});
+    @import url(${resolveAssetUrl("shared/css/styles-base.css")});
+    @import url(${resolveAssetUrl("shared/css/styles-forms.css")});
+    @import url(${resolveAssetUrl("shared/css/styles-components.css")});
+    @import url(${resolveAssetUrl("shared/css/styles-main.css")});
+    @import url(${resolveAssetUrl("shared/css/styles-animations.css")});
+    @import url(${resolveAssetUrl("shared/css/pill.css")});
+    @import url(${resolveAssetUrl("shared/css/splash.css")});
 `;
 
 export default class ShareTubeApp {
@@ -72,7 +74,7 @@ export default class ShareTubeApp {
         this.storageManager = new StorageManager(this);
 
         // Components
-        this.queue = new Queue(this);
+        this.hub = new ShareTubeHub(this);
         this.debugMenu = new DebugMenu(this);
         this.sharetubePill = new ShareTubePill(this);
         this.qrCode = new QRCodeComponent(this);
@@ -80,7 +82,7 @@ export default class ShareTubeApp {
         this.storageManager.getLocalStorage("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
 
         html`
-            <div id="sharetube_main" class="st_reset">${this.queue} ${this.debugMenu} ${this.sharetubePill}</div>
+            <div id="sharetube_main" class="st_reset">${this.hub} ${this.debugMenu} ${this.sharetubePill}</div>
             ${this.qrCode}
         `.bind(this);
 

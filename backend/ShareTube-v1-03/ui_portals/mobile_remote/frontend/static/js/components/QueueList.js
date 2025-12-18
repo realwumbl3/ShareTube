@@ -1,17 +1,17 @@
 import { css, html } from "/extension/shared/dep/zyx.js";
 
-import ShareTubeQueue from "/extension/appshell/components/Queue.js";
+import ShareTubeHub from "/extension/appshell/components/Hub.js";
 import state from "/extension/appshell/core/state/state.js";
 import { GyroscopeParallax } from "./utils.js";
 /**
- * Thin wrapper around the extension's ShareTubeQueue component so we can reuse
- * the full-featured queue UI inside the mobile remote experience.
+ * Thin wrapper around the extension's ShareTubeHub component so we can reuse
+ * the full-featured hub UI inside the mobile remote experience.
  */
-export default class QueueList extends ShareTubeQueue {
+export default class QueueList extends ShareTubeHub {
     constructor(app) {
-        // Ensure the queue starts visible on mobile remote; matches previous behaviour.
-        if (!state.queueVisible.get()) {
-            state.queueVisible.set(true);
+        // Ensure the hub starts visible on mobile remote; matches previous behaviour.
+        if (!state.hubVisible.get()) {
+            state.hubVisible.set(true);
         }
 
         super(app, { isMobileRemote: true });
@@ -34,7 +34,7 @@ export default class QueueList extends ShareTubeQueue {
 }
 
 css`
-    .remote-content .queue-section #sharetube_queue {
+    .remote-content .queue-section #sharetube_hub {
         width: 100%;
         max-width: unset;
         max-height: unset;
@@ -45,7 +45,7 @@ css`
         border-radius: 0;
     }
 
-    .remote-content .queue-section #sharetube_queue .queue-list {
+    .remote-content .queue-section #sharetube_hub .queue-list {
         max-height: 70vh;
     }
 

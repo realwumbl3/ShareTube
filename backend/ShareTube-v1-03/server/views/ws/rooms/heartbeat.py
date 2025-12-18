@@ -7,8 +7,9 @@ from __future__ import annotations
 import time
 import logging
 from flask import Flask
-    
+
 from ....extensions import db, socketio
+from ....lib.utils import commit_with_retry
 from ....models import Room, RoomMembership, User
 
 from .common import emit_presence
@@ -62,13 +63,17 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
                         removed_by_room[room.code] = removed_user_ids
 
                 if removed_by_room:
-                    db.session.commit()
+                    commit_with_retry(db.session)
 
                 for room_code in removed_by_room.keys():
                     room = Room.query.filter_by(code=room_code).first()
                     if room:
                         emit_presence(room)
         except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             logging.exception("heartbeat: error during cleanup cycle")
 
         socketio.sleep(interval)
