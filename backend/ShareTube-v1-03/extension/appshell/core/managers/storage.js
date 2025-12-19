@@ -9,7 +9,6 @@ export default class StorageManager {
 
     async get(key, defaultValue, area = "local") {
         if (this.isExtension) {
-            console.log("StorageManager: Getting local storage in extension", { key, defaultValue, area });
             const storage = area === "sync" ? chrome.storage.sync : chrome.storage.local;
             return new Promise((resolve) => {
                 storage.get(key, (result) => {
@@ -23,7 +22,6 @@ export default class StorageManager {
                 });
             });
         } else {
-            console.log("StorageManager: Getting local storage in browser", { key, defaultValue, area });
             const val = localStorage.getItem(key);
             if (val === null && defaultValue !== undefined) {
                 localStorage.setItem(key, JSON.stringify(defaultValue));
@@ -39,7 +37,6 @@ export default class StorageManager {
 
     async set(key, value, area = "local") {
         if (this.isExtension) {
-            console.log("StorageManager: Setting local storage in extension", { key, value, area });
             const storage = area === "sync" ? chrome.storage.sync : chrome.storage.local;
             return new Promise((resolve) => {
                 storage.set({ [key]: value }, () => {
@@ -47,7 +44,6 @@ export default class StorageManager {
                 });
             });
         } else {
-            console.log("StorageManager: Setting local storage in browser", { key, value, area });
             localStorage.setItem(key, JSON.stringify(value));
             return Promise.resolve();
         }
@@ -55,7 +51,6 @@ export default class StorageManager {
 
     async remove(keys, area = "local") {
         if (this.isExtension) {
-            console.log("StorageManager: Removing local storage in extension", { keys, area });
             const storage = area === "sync" ? chrome.storage.sync : chrome.storage.local;
             return new Promise((resolve) => {
                 storage.remove(keys, () => {
@@ -63,7 +58,6 @@ export default class StorageManager {
                 });
             });
         } else {
-            console.log("StorageManager: Removing local storage in browser", { keys, area });
             if (Array.isArray(keys)) {
                 keys.forEach((key) => localStorage.removeItem(key));
             } else {

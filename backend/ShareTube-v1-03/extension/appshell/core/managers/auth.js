@@ -7,11 +7,6 @@ export default class AuthManager {
         this.app = app;
     }
 
-    async backEndUrl() {
-        const backend_url = await this.app.storageManager.get("backend_url", "https://sharetube.wumbl3.xyz", "sync");
-        return backend_url.replace(/\/+$/, "");
-    }
-
     async authToken() {
         const auth_token = await this.app.storageManager.get("auth_token");
         if (!auth_token) {
@@ -22,8 +17,12 @@ export default class AuthManager {
     }
 
     async post(url, options = {}) {
-        const base = await this.backEndUrl();
+        const base = await this.app.backEndUrl();
         const auth_token = await this.authToken();
+        if (!auth_token) {
+            console.warn("ShareTube: missing auth token");
+            return null;
+        }
         const res = await fetch(`${base}${url}`, {
             method: options.method || "POST",
             headers: {
@@ -40,7 +39,6 @@ export default class AuthManager {
     }
 
     async applyAvatarFromToken() {
-        console.log("ShareTube: applyAvatarFromToken");
         try {
             const auth_token = await this.authToken();
             if (!auth_token) {
@@ -48,7 +46,6 @@ export default class AuthManager {
                 state.avatarUrl.set("");
                 return;
             }
-            console.log("ShareTube: applyAvatarFromToken", auth_token);
             const claims = decodeJwt(auth_token);
             const picture = claims && claims.picture;
             state.avatarUrl.set(picture || "");
@@ -63,7 +60,7 @@ export default class AuthManager {
     }
 
     async openSignInWithGooglePopup() {
-        const backendUrl = await this.backEndUrl();
+        const backendUrl = await this.app.backEndUrl();
 
         // Helper to open a centered popup window for OAuth flows
         const openCentered = (url, w, h) => {

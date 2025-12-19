@@ -56,15 +56,15 @@ export default class QRCodeComponent {
 
         }
 
-    _fallbackAuthUrl(roomCode) {
+    async _fallbackAuthUrl(roomCode) {
         if (!roomCode) return "#";
-        const backendUrl = (state.backendUrl.get() || "").replace(/\/+$/, "");
+        const backendUrl = await this.app.backEndUrl();
         return `${backendUrl}/mobile-remote/${encodeURIComponent(roomCode)}`;
     }
 
     async requestAuthUrl(roomCode) {
         const baseUrl = await this.app.backEndUrl();
-        const authToken = await this.app.authToken();
+        const authToken = await this.app.authManager.authToken();
         if (!authToken) {
             throw new Error("No auth token available for mobile remote");
         }
@@ -149,7 +149,7 @@ export default class QRCodeComponent {
 
     async generateQRCode() {
         console.log("generateQRCode() called");
-        const fallbackUrl = this._fallbackAuthUrl(state.roomCode.get());
+        const fallbackUrl = await this._fallbackAuthUrl(state.roomCode.get());
         const authUrl = this.authUrl.get() || fallbackUrl;
 
         // Clear any existing QR code

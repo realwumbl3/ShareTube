@@ -39,23 +39,8 @@ export default class ShareTubeApp {
     }
 
     async backEndUrl() {
-        return await this.authManager.backEndUrl();
-    }
-
-    async authToken() {
-        return await this.authManager.authToken();
-    }
-
-    get hashRoomCode() {
-        return this.roomManager.hashRoomCode;
-    }
-
-    stHash(code) {
-        return this.roomManager.stHash(code);
-    }
-
-    updateCodeHashInUrl(code) {
-        return this.roomManager.updateCodeHashInUrl(code);
+        const backend_url = await this.storageManager.get("backend_url", "https://sharetube.wumbl3.xyz", "sync");
+        return backend_url.replace(/\/+$/, "");
     }
 
     resetRoomState() {
@@ -91,6 +76,9 @@ export default class ShareTubeApp {
         this.uiManager.setupDragAndDrop();
         this.bindSocketListeners();
         this.virtualPlayer.bindListeners(this.socket);
+        this.virtualPlayer.on("virtualplayer.room-join-result", (data) => {
+            this.roomManager.updateCodeHashInUrl(data.code);
+        });
     }
 
     bindSocketListeners() {
@@ -122,20 +110,12 @@ export default class ShareTubeApp {
         return await this.roomManager.createRoom();
     }
 
-    async tryJoinRoomFromUrl() {
-        return await this.roomManager.tryJoinRoomFromUrl();
-    }
-
     async copyCurrentRoomCodeToClipboard() {
         return await this.roomManager.copyCurrentRoomCodeToClipboard();
     }
 
     async enqueueUrl(url) {
         return await this.socket.emit("queue.add", { url });
-    }
-
-    async applyAvatarFromToken() {
-        return await this.authManager.applyAvatarFromToken();
     }
 
     async clearAuthState() {
@@ -177,8 +157,8 @@ export default class ShareTubeApp {
         console.log("ShareTube Init");
         this.appendTo(document.body);
         this.attachBrowserListeners();
-        this.applyAvatarFromToken();
-        this.tryJoinRoomFromUrl();
+        this.authManager.applyAvatarFromToken();
+        this.roomManager.tryJoinRoomFromUrl();
         setTimeout(() => this.sharetube_main.classList.add("visible"), 1);
     }
 

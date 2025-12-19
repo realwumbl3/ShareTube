@@ -27,7 +27,7 @@ export default class SocketManager {
         // Read backend base URL from extension synced storage (user-configurable)
         // Normalize base by trimming trailing slashes; default to hosted backend
         const base = await this.app.backEndUrl();
-        const auth_token = await this.app.authToken();
+        const auth_token = await this.app.authManager.authToken();
         // Without a token, we cannot authenticate the websocket
         if (!auth_token) return null;
         try {

@@ -20,11 +20,8 @@ class MobileRemoteAppVirtualPlayer extends VirtualPlayer {
 
 export default class MobileRemoteApp {
     async backEndUrl() {
-        return await this.authManager.backEndUrl();
-    }
-
-    async authToken() {
-        return await this.authManager.authToken();
+        const backend_url = await this.storageManager.get("backend_url", "https://sharetube.wumbl3.xyz", "sync");
+        return backend_url.replace(/\/+$/, "");
     }
 
     constructor() {
@@ -44,6 +41,10 @@ export default class MobileRemoteApp {
         this.virtualPlayer = new MobileRemoteAppVirtualPlayer(this);
         this.virtualPlayer.bindListeners(this.socket);
         this.setupSocketHandlers();
+
+        this.virtualPlayer.on("virtualplayer.room-join-result", (data) => {
+            this.cleanAuthFromUrl();
+        });
 
         // Create sub-components
         this.queueList = new QueueList(this);
@@ -198,30 +199,6 @@ export default class MobileRemoteApp {
         }
     }
 
-    handleRoomJoined(data = {}) {
-        console.log("Mobile Remote: handleRoomJoined", { data });
-
-        const snapshot = data.snapshot || {};
-
-        if (data.code) {
-            console.log("Mobile Remote: Setting room code", { code: data.code });
-            state.roomCode.set(data.code);
-            this.pendingRoomCode = data.code;
-            // Store room code for future refreshes
-            this.storageManager.set("mobile_remote_room_code", data.code);
-        }
-
-        this.virtualPlayer.onRoomJoinResult({
-            ok: data.ok ?? true,
-            code: data.code,
-            snapshot,
-            serverNowMs: data.serverNowMs,
-            clientTimestamp: data.clientTimestamp,
-        });
-
-        this.cleanAuthFromUrl();
-    }
-
     handleRoomError(error) {
         console.error("Mobile Remote: Room error", { error });
     }
@@ -236,12 +213,15 @@ export default class MobileRemoteApp {
         const currentUrl = window.location.href;
         const roomCode = state.roomCode.get();
         // Only clean if we're on an auth URL and have a valid room code
+        console.log("Mobile Remote: Cleaning auth from URL", { currentUrl, roomCode });
         if (currentUrl.includes("/mobile-remote/auth/") && roomCode && !roomCode.includes("/")) {
+            console.log("Mobile Remote: Cleaning auth from URL", { currentUrl, roomCode });
             try {
                 const url = new URL(currentUrl);
                 const oldPathname = url.pathname;
                 url.pathname = `/mobile-remote/${roomCode}`;
                 const newUrl = url.toString();
+                console.log("Mobile Remote: New URL", { newUrl });
                 window.history.replaceState({}, "", newUrl);
             } catch (e) {
                 console.error("Mobile Remote: Failed to clean URL", e);

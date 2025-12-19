@@ -13,6 +13,7 @@ export default class VirtualPlayer {
         this.verbose = false;
         this.eventHandlers = {
             "virtualplayer.user-event": [],
+            "virtualplayer.room-join-result": [],
         };
     }
 
@@ -197,8 +198,8 @@ export default class VirtualPlayer {
         this.setRoomState(snapshot.state);
         this.loadQueueEntries(currentQueue);
 
-        this.app.roomManager.updateCodeHashInUrl(result.code);
         this.applyTimestamp();
+        this.emit("virtualplayer.room-join-result", result);
     }
 
     async emitSkipVideo() {
@@ -327,7 +328,9 @@ export default class VirtualPlayer {
         const videoId = current_entry?.video_id;
         if (!videoId) return;
         if (window.location.href.includes(videoId)) return;
-        window.location.href = `https://www.youtube.com/watch?v=${videoId}${this.app.stHash(state.roomCode.get())}`;
+        window.location.href = `https://www.youtube.com/watch?v=${videoId}${this.app.roomManager.stHash(
+            state.roomCode.get()
+        )}`;
     }
 
     async emitSeek(progressMs) {
@@ -356,8 +359,8 @@ export default class VirtualPlayer {
         if (!state.inRoom.get()) {
             const code = await this.app.createRoom();
             if (code) {
-                this.app.updateCodeHashInUrl(code);
-                await this.app.tryJoinRoomFromUrl();
+                this.app.roomManager.updateCodeHashInUrl(code);
+                await this.app.roomManager.tryJoinRoomFromUrl();
                 // Wait for join to complete
                 const start = Date.now();
                 while (!state.inRoom.get()) {

@@ -2,7 +2,6 @@ import { LiveVar, LiveList } from "../../../shared/dep/zyx.js";
 
 class ShareTubeState {
     constructor() {
-        this.backendUrl = new LiveVar("https://sharetube.wumbl3.xyz");
         this.debug_mode = new LiveVar(false);
         this.fakeTimeOffset = new LiveVar(1000 * 60 * 60 * 0); // 0 hours
 
