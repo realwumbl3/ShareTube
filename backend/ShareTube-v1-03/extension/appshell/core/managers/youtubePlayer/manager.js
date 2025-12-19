@@ -7,12 +7,15 @@ import PlaybackSyncer from "./syncer.js";
 import PlayerControls from "./controls.js";
 import PlayerExtender from "./extender.js";
 import PlayerOSDDebug from "./components/osdDebug.js";
-import Splash from "./components/Splash.js";
-import ContinueNextOverlay from "./components/ContinueNextOverlay.js";
 import ThumbnailExtAddToQueue from "./addToST.js";
+import ContinueNextOverlay from "../../../components/ContinueNextOverlay.js";
+import Splash from "../../../components/Splash.js";
 
 // Lightweight observer/controller around the active <video> element on YouTube
 export default class YoutubePlayerManager {
+    /**
+     * @param {import("../../../app.js").default} app
+     */
     constructor(app) {
         this.app = app;
         this.verbose = false;
@@ -49,6 +52,11 @@ export default class YoutubePlayerManager {
         ];
 
         this.splash = new Splash();
+
+        this.app.virtualPlayer.on("virtualplayer.user-event", (data) => {
+            this.splash.call(data);
+        });
+
         this.continueNextOverlay = new ContinueNextOverlay(this.app);
         // this.intermission = new Intermission();
 

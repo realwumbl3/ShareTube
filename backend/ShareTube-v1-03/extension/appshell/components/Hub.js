@@ -74,7 +74,7 @@ css`
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, 0.22);
         background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), rgba(54, 54, 54, 0.9));
-        color: var(--yt-spec-text-primary, #fff);
+        color: var(--text-primary, #fff);
         cursor: pointer;
         white-space: nowrap;
         transition: background 140ms ease, border-color 140ms ease, transform 80ms ease;

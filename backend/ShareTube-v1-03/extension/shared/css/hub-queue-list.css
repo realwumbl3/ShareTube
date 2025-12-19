@@ -36,7 +36,7 @@
 #sharetube_hub .queue-list-header-title {
     font-size: 12px;
     font-weight: 600;
-    color: var(--yt-spec-text-primary, #fff);
+    color: var(--text-primary, #fff);
     letter-spacing: 0.3px;
     text-shadow: var(--splash-text-shadow);
     
@@ -180,7 +180,7 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     border-radius: 999px;
-    color: var(--yt-spec-text-primary, #fff);
+    color: var(--text-primary, #fff);
     background: rgba(20, 192, 4, 0.432);
     border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
@@ -321,7 +321,7 @@
 
 #sharetube_hub .queue-item .requeue-button {
     background: rgba(255, 255, 255, 0.08);
-    color: var(--yt-spec-text-primary, #fff);
+    color: var(--text-primary, #fff);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
     font-size: 10px;

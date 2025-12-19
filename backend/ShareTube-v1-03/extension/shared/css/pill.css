@@ -11,7 +11,7 @@
     padding: 3px 6px;
     border-radius: 21px;
     background: rgba(255, 255, 255, 0.18);
-    color: var(--yt-spec-text-primary, #fff);
+    color: var(--text-primary, #fff);
     outline: 1px solid rgba(255, 255, 255, 0.26);
     outline-offset: -1px;
     user-select: none;
@@ -78,7 +78,7 @@
     padding: 0 8px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.45);
-    color: var(--yt-spec-text-primary, #fff);
+    color: var(--text-primary, #fff);
     border: 1px solid rgba(255, 255, 255, 0.28);
     font-size: 12px;
     cursor: pointer;
@@ -140,7 +140,7 @@
     padding: 4px 6px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.45);
-    color: var(--yt-spec-text-primary, #fff);
+    color: var(--text-primary, #fff);
     border: 1px solid rgba(255, 255, 255, 0.28);
     font-size: 14px;
     cursor: pointer;

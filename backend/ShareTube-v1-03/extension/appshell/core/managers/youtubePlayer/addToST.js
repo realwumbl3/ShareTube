@@ -12,7 +12,7 @@ css`
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, 0.35);
         background: rgba(0, 0, 0, 0.55);
-        color: var(--yt-spec-text-primary, #fff);
+        color: var(--text-primary, #fff);
         font-family: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         font-size: 11px;
         line-height: 18px;

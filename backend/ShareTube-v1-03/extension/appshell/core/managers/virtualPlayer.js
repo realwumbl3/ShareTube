@@ -11,6 +11,21 @@ export default class VirtualPlayer {
     constructor(app) {
         this.app = app;
         this.verbose = false;
+        this.eventHandlers = {
+            "virtualplayer.user-event": [],
+        };
+    }
+
+    on(event, handler) {
+        if (this.eventHandlers[event]) {
+            this.eventHandlers[event].push(handler);
+        }
+    }
+
+    emit(event, ...args) {
+        if (this.eventHandlers[event]) {
+            this.eventHandlers[event].forEach((handler) => handler(...args));
+        }
     }
 
     bindListeners(socket) {
@@ -211,7 +226,11 @@ export default class VirtualPlayer {
         if (!this.isForCurrentRoom(data.code)) return;
 
         if (data.actor_user_id) {
-            this.app.youtubePlayer.splash.call(data, state.getUserById(data.actor_user_id));
+            const user = state.getUserById(data.actor_user_id);
+            this.emit("virtualplayer.user-event", {
+                ...data,
+                user: user,
+            });
         }
 
         if (data.current_entry !== undefined) {

@@ -12,11 +12,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Create and mount the main mobile remote app
     const mobileRemote = new MobileRemoteApp();
     document.body.appendChild(mobileRemote.main);
-
+    
     // Get room code and error from config (passed from backend)
     let roomCode = window.mobileRemoteConfig?.roomCode;
-    const token = window.mobileRemoteConfig?.token;
+    let token = window.mobileRemoteConfig?.token;
     const error = window.mobileRemoteConfig?.error;
+
+    // Extract token from URL if not in config (fallback for direct room URLs with token param)
+    if (!token || token === "") {
+        console.log("Mobile Remote: No token in config, checking URL");
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get("token");
+        if (urlToken) {
+            console.log("Mobile Remote: Using token from URL query parameter");
+            token = urlToken;
+        }
+    }
 
     // If no room code in config, try to extract from URL path or localStorage
     if (!roomCode) {
@@ -32,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Fall back to stored room code
         if (!roomCode) {
-            roomCode = localStorage.getItem('mobile_remote_room_code');
+            roomCode = await mobileRemote.storageManager.get("mobile_remote_room_code");
             console.log("Mobile Remote: Using stored room code", { roomCode });
         }
     }
@@ -42,6 +53,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         token: token ? `'${token.substring(0, 20)}...'` : 'none',
         error: error || 'none'
     });
+
+    // Initialize auth with token from config/URL or from storage
+    await mobileRemote.initializeAuth(token);
 
     if (error) {
         console.log(`Mobile Remote: Error from backend: ${error}`);

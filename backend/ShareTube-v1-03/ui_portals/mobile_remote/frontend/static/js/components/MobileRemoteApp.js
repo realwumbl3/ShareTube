@@ -3,8 +3,10 @@ import QueueList from "./QueueList.js";
 
 import SocketManager from "/extension/appshell/core/managers/socket.js";
 import VirtualPlayer from "/extension/appshell/core/managers/virtualPlayer.js";
+import RoomManager from "/extension/appshell/core/managers/room.js";
+import AuthManager from "/extension/appshell/core/managers/auth.js";
+import StorageManager from "/extension/appshell/core/managers/storage.js";
 import state from "/extension/appshell/core/state/state.js";
-import { decodeJwt } from "/extension/appshell/core/utils/utils.js";
 import { fullscreenSVG, exitFullscreenSVG } from "/extension/shared/assets/svgs.js";
 import { extractUrlsFromDataTransfer, isYouTubeUrl } from "/extension/appshell/core/utils/utils.js";
 
@@ -17,6 +19,14 @@ class MobileRemoteAppVirtualPlayer extends VirtualPlayer {
 }
 
 export default class MobileRemoteApp {
+    async backEndUrl() {
+        return await this.authManager.backEndUrl();
+    }
+
+    async authToken() {
+        return await this.authManager.authToken();
+    }
+
     constructor() {
         // Local-only status
         this.isReady = new LiveVar(false);
@@ -26,33 +36,27 @@ export default class MobileRemoteApp {
         this.socketHandlersInitialized = false;
 
         this.socket = new SocketManager(this);
-
-        this.youtubePlayer = {
-            setDesiredState: noop,
-            setDesiredProgressMs: noop,
-            onRoomStateChange: noop,
-            splash: { call: noop },
-        };
-
-        this.roomManager = {
-            updateCodeHashInUrl: (code) => this.updateRoomCodeInUrl(code),
-            stHash: () => "",
-        };
+        this.storageManager = new StorageManager(this);
+        this.authManager = new AuthManager(this);
+        this.roomManager = new RoomManager(this);
 
         // Extension compatibility layer
         this.virtualPlayer = new MobileRemoteAppVirtualPlayer(this);
         this.virtualPlayer.bindListeners(this.socket);
         this.setupSocketHandlers();
 
-        // Set user ID from JWT token (same as extension)
-        this.applyUserIdFromToken();
-
         // Create sub-components
         this.queueList = new QueueList(this);
 
+        this.youtubePlayer = {
+            setDesiredState: noop,
+            setDesiredProgressMs: noop,
+            onRoomStateChange: noop,
+        };
+
         html`
             <div
-                this="appElement"
+                this="main"
                 class=${this.isReady.interp((r) => (r ? "mobile-remote-app visible" : "mobile-remote-app"))}
             >
                 <main class="remote-content" zyx-if=${state.inRoom}>
@@ -66,9 +70,42 @@ export default class MobileRemoteApp {
             </div>
         `.bind(this);
         /** zyXSense @type {HTMLDivElement} */
-        this.appElement;
+        this.main;
 
         this.setupDragAndDrop();
+        this.bindSocketListeners();
+    }
+
+    bindSocketListeners() {
+        this.socket.on("presence.update", this.roomManager.onSocketPresenceUpdate.bind(this.roomManager));
+        this.socket.on("user.ready.update", this.roomManager.onSocketUserReadyUpdate.bind(this.roomManager));
+        this.socket.on("client.verify_connection", this.onClientVerifyConnection.bind(this));
+        this.socket.setupBeforeUnloadHandler();
+    }
+
+    onClientVerifyConnection(data) {
+        // When we receive this event, it means another client connection for this user
+        // has disconnected. We should respond to confirm we're still active.
+        // The server will use this to determine whether to keep the user in the room.
+        try {
+            this.socket.emit("client.verification_response", {
+                ts: Date.now(),
+                disconnected_socket_id: data.disconnected_socket_id,
+            });
+        } catch (err) {
+            console.warn("ShareTube: failed to emit verification response", err);
+        }
+    }
+
+    async initializeAuth(token) {
+        console.log("Mobile Remote: Initializing auth", { token });
+        if (token && token.trim() !== "") {
+            console.log("Mobile Remote: Initializing auth with provided token");
+            await this.storageManager.set("auth_token", token);
+        } else {
+            console.log("Mobile Remote: No token provided, checking storage");
+        }
+        await this.authManager.applyAvatarFromToken();
     }
 
     setupDragAndDrop() {
@@ -107,48 +144,12 @@ export default class MobileRemoteApp {
         }
     }
 
-    async backEndUrl() {
-        const configured = (window.mobileRemoteConfig?.backendUrl || "").trim();
-        const base = configured || window.location.origin;
-        return base.replace(/\/$/, "");
-    }
-
-    async authToken() {
-        // First check for token in config (from auth URL)
-        const configToken = (window.mobileRemoteConfig?.token || "").trim();
-        if (configToken) {
-            // Store the token for future refreshes
-            localStorage.setItem("mobile_remote_token", configToken);
-            return configToken;
-        }
-
-        // Fall back to stored token
-        return localStorage.getItem("mobile_remote_token") || "";
+    async post(url, options = {}) {
+        return await this.authManager.post(url, options);
     }
 
     async enqueueUrl(url) {
         return await this.socket.emit("queue.add", { url });
-    }
-
-    async applyUserIdFromToken() {
-        try {
-            const auth_token = await this.authToken();
-            if (!auth_token) {
-                state.userId.set(0);
-                state.avatarUrl.set("");
-                return;
-            }
-            const claims = decodeJwt(auth_token);
-            const picture = claims && claims.picture;
-            state.avatarUrl.set(picture || "");
-            try {
-                state.userId.set(claims && (claims.sub != null ? Number(claims.sub) : 0));
-            } catch {
-                state.userId.set(0);
-            }
-        } catch (e) {
-            console.warn("Mobile Remote applyUserIdFromToken failed", e);
-        }
     }
 
     setupSocketHandlers() {
@@ -175,7 +176,7 @@ export default class MobileRemoteApp {
         state.roomCode.set(roomCode);
         this.pendingRoomCode = roomCode;
 
-        const token = await this.authToken();
+        const token = await this.authManager.authToken();
 
         if (!token || token.trim() === "") {
             this.handleRoomError("No authentication token found. Please scan the QR code again.");
@@ -207,7 +208,7 @@ export default class MobileRemoteApp {
             state.roomCode.set(data.code);
             this.pendingRoomCode = data.code;
             // Store room code for future refreshes
-            localStorage.setItem("mobile_remote_room_code", data.code);
+            this.storageManager.set("mobile_remote_room_code", data.code);
         }
 
         this.virtualPlayer.onRoomJoinResult({
@@ -326,14 +327,14 @@ export default class MobileRemoteApp {
     }
 
     async toggleFullscreen() {
-        const appElement = this.appElement;
-        if (!appElement) return;
+        const main = this.main;
+        if (!main) return;
 
         try {
             if (document.fullscreenElement) {
                 await document.exitFullscreen();
             } else {
-                await appElement.requestFullscreen();
+                await main.requestFullscreen();
             }
         } catch (err) {
             console.error("Fullscreen toggle error:", err);

@@ -8,12 +8,12 @@ export default class AuthManager {
     }
 
     async backEndUrl() {
-        const { backend_url } = await chrome.storage.sync.get(["backend_url"]);
-        return (backend_url || "https://sharetube.wumbl3.xyz").replace(/\/+$/, "");
+        const backend_url = await this.app.storageManager.get("backend_url", "https://sharetube.wumbl3.xyz", "sync");
+        return backend_url.replace(/\/+$/, "");
     }
 
     async authToken() {
-        const { auth_token } = await chrome.storage.local.get(["auth_token"]);
+        const auth_token = await this.app.storageManager.get("auth_token");
         if (!auth_token) {
             console.warn("ShareTube: missing auth token");
             return null;
@@ -80,7 +80,7 @@ export default class AuthManager {
             const data = evt.data || {};
             if (data.type === "newapp_auth" && data.token) {
                 // Store the token
-                await chrome.storage.local.set({ auth_token: data.token });
+                await this.app.storageManager.set("auth_token", data.token);
 
                 // Apply avatar from the new token
                 await this.applyAvatarFromToken();

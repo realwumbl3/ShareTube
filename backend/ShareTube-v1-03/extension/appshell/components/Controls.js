@@ -131,7 +131,7 @@ css`
         padding: 4px 8px;
         border-radius: 999px;
         background: rgba(255, 255, 255, 0.08);
-        color: var(--yt-spec-text-primary, #fff);
+        color: var(--text-primary, #fff);
         border: 1px solid rgba(255, 255, 255, 0.12);
         cursor: pointer;
         &:hover {

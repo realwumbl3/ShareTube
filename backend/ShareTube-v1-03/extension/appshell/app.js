@@ -66,12 +66,12 @@ export default class ShareTubeApp {
 
     constructor() {
         this.socket = new SocketManager(this);
-        this.youtubePlayer = new YoutubePlayerManager(this);
         this.virtualPlayer = new VirtualPlayer(this);
         this.roomManager = new RoomManager(this);
         this.authManager = new AuthManager(this);
         this.uiManager = new UIManager(this);
         this.storageManager = new StorageManager(this);
+        this.youtubePlayer = new YoutubePlayerManager(this);
 
         // Components
         this.hub = new ShareTubeHub(this);
@@ -140,7 +140,7 @@ export default class ShareTubeApp {
 
     async clearAuthState() {
         // Clear auth token from storage
-        await chrome.storage.local.remove(["auth_token"]);
+        await this.storageManager.remove(["auth_token"]);
         // Clear user state
         state.userId.set(0);
         state.avatarUrl.set("");

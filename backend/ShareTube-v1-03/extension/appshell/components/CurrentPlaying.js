@@ -12,6 +12,8 @@ import {
 } from "../../shared/assets/svgs.js";
 import PlaybackControls from "./PlaybackControls.js";
 import { resolveAssetUrl } from "../../shared/urlResolver.js";
+import ContinueNextOverlay from "./ContinueNextOverlay.js";
+import Splash from "./Splash.js";
 
 css`
     @import url(${resolveAssetUrl("shared/css/hub-current-playing.css")});
@@ -73,6 +75,13 @@ export default class CurrentPlaying {
 
         // this.playbackControls = isMobileRemote ? new PlaybackControls(app) : null;
 
+        this.continueNextOverlay = new ContinueNextOverlay(app);
+        this.splash = new Splash();
+
+        this.app.virtualPlayer.on("virtualplayer.user-event", (data) => {
+            this.splash.call(data);
+        });
+
         html`
             <div this="current_playing" class="current_playing">
                 <div class="current_playing_bg">
@@ -112,7 +121,7 @@ export default class CurrentPlaying {
                                     />
                                     <img
                                         title="Seek forward 10 seconds"
-                                        zyx-click=${(e) => this.handleSeek(e, -10000)}
+                                        zyx-click=${(e) => this.handleSeek(e, 10000)}
                                         src=${seekForwardSimpleSVG}
                                         alt="Seek forward"
                                         draggable="false"
@@ -181,6 +190,7 @@ export default class CurrentPlaying {
                             ${state.embeddedPlayerVisible.interp((v) => (v ? "Hide Player" : "Show Player"))}
                         </button>
                     </div>
+                    ${this.continueNextOverlay} ${this.splash}
                 </div>
                 <div class="no_video_playing_label" zyx-else>
                     <span class="current_playing_placeholder_text">No video playing</span>

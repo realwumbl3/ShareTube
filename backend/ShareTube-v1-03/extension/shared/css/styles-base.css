@@ -10,6 +10,36 @@
     /* Laser Red */
     --accent-warning: #ffb800;
     /* Solar Yellow */
+    /* Color Palette - Deep Space & Neon */
+    --bg-app: #050507;
+
+    /* Queue-like Theme Variables */
+    --bg-hub-panel: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
+    --bg-hub-header: linear-gradient(to bottom, rgba(18, 18, 18, 0.98), rgba(18, 18, 18, 0.9));
+    --border-hub: 1px solid rgba(255, 255, 255, 0.18);
+    --border-hub-light: 1px solid rgba(255, 255, 255, 0.22);
+    --border-hub-dim: 1px solid rgba(255, 255, 255, 0.12);
+
+    /* Text */
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b0;
+    --text-muted: #606070;
+
+    /* Shadows & Glows */
+    --glow-primary: 0 0 20px rgba(0, 243, 255, 0.15);
+    --glow-secondary: 0 0 20px rgba(188, 19, 254, 0.15);
+    --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.45);
+
+    /* Typography */
+    --font-main: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+
+    /* Spacing */
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    /* Matched to queue */
+    --radius-lg: 24px;
 }
 
 .st_reset * {

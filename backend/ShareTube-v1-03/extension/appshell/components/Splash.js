@@ -1,6 +1,7 @@
-import { html } from "../../../../../shared/dep/zyx.js";
+import { html } from "../../shared/dep/zyx.js";
 
-import { msDurationTimeStamp } from "../../../utils/utils.js";
+import { msDurationTimeStamp } from "../core/utils/utils.js";
+import { resolveAssetUrl } from "../../shared/urlResolver.js";
 
 export default class Splash {
     constructor() {
@@ -13,7 +14,9 @@ export default class Splash {
         this.badge_zone;
     }
 
-    call(playbackData, actor) {
+    call(playbackData) {
+        console.log("Splash: call", playbackData);
+        const actor = playbackData.user;
         const action = getActionFromPlaybackData(playbackData);
         const badgeClass = BADGE_BY_ACTION[action];
         if (!badgeClass) {
@@ -21,7 +24,7 @@ export default class Splash {
             return;
         }
         // Add actor to audit trail
-        if (actor) this.actorAudit.addActor(playbackData, actor);
+        if (actor) this.actorAudit.addActor(playbackData);
         this.animate(badgeClass, playbackData);
     }
 
@@ -118,7 +121,8 @@ class ActorAudit {
         this.actor_audit;
     }
 
-    addActor(playbackData, actor) {
+    addActor(playbackData) {
+        const actor = playbackData.user;
         if (!actor) return;
 
         this.#pruneDisconnected();
@@ -137,7 +141,7 @@ class ActorAudit {
         }
 
         const entry = new ActorAuditEntry(playbackData, actor, () => this.#onEntryRemoved(entry));
-        entry.appendTo(this.actor_audit);
+        entry.prependTo(this.actor_audit);
         this.actorAuditTrail.push(entry);
         this.#setLastEntry(entry);
 
@@ -362,8 +366,8 @@ const ICON_KEY_BY_ACTION = {
 };
 
 const ICON_URL_BY_KEY = {
-    play: chrome.runtime.getURL("shared/assets/play.svg"),
-    pause: chrome.runtime.getURL("shared/assets/pause.svg"),
-    "seek-forward": chrome.runtime.getURL("shared/assets/seek-forward.svg"),
-    "seek-rewind": chrome.runtime.getURL("shared/assets/seek-rewind.svg"),
+    play: resolveAssetUrl("shared/assets/play.svg"),
+    pause: resolveAssetUrl("shared/assets/pause.svg"),
+    "seek-forward": resolveAssetUrl("shared/assets/seek-forward.svg"),
+    "seek-rewind": resolveAssetUrl("shared/assets/seek-rewind.svg"),
 };

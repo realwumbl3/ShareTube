@@ -145,7 +145,8 @@ def mobile_remote_with_room_code(room_code):
         logging.warning(f"Mobile remote: room not found for code='{room_code}'")
         return render_template("mobile-remote.html", room_code=None, error="Room not found")
 
-    return render_template("mobile-remote.html", room_code=room_code)
+    token = request.args.get('token')
+    return render_template("mobile-remote.html", room_code=room_code, token=token)
 
 
 @mobile_remote_bp.route("/auth/<short_token>/<room_code>")

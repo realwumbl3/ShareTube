@@ -1,5 +1,5 @@
-import { html, css } from "../../../../../shared/dep/zyx.js";
-import state from "../../../state/state.js";
+import { html, css } from "../../shared/dep/zyx.js";
+import state from "../core/state/state.js";
 
 export default class ContinueNextOverlay {
     constructor(app) {
@@ -52,7 +52,6 @@ css`
         position: absolute;
         top: 10px;
         left: 50%;
-        height: 80px;
         transform: translateX(-50%);
         z-index: 1000;
         pointer-events: auto;
@@ -117,7 +116,7 @@ css`
         font-size: 13px;
         line-height: 1.3;
         margin-bottom: 2px;
-        color: var(--yt-spec-text-primary, #fff);
+        color: var(--text-primary, #fff);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
