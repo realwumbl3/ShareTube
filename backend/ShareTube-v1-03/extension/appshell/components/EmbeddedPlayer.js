@@ -22,6 +22,13 @@ css`
         width: 100%;
         aspect-ratio: 16 / 9;
         background: #000;
+
+        &.closed {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+        }
     }
 
     .embedded-player-container {
@@ -159,7 +166,7 @@ export default class EmbeddedPlayer {
                     No video playing
                 </div>
             </div>
-            <div class="embedded-player-closed" zyx-else></div>
+            <div class="EmbeddedPlayer closed" zyx-else></div>
         `.bind(this);
 
         this.init();
@@ -347,7 +354,7 @@ export default class EmbeddedPlayer {
                 videoId: videoId,
                 playerVars: {
                     autoplay: 0,
-                    controls: 1,
+                    controls: 0,
                     enablejsapi: 1,
                     modestbranding: 1,
                     rel: 0,

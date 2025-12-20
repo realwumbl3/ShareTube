@@ -14,15 +14,10 @@ import PlaybackControls from "./PlaybackControls.js";
 import { resolveAssetUrl } from "../../shared/urlResolver.js";
 import ContinueNextOverlay from "./ContinueNextOverlay.js";
 import Splash from "./Splash.js";
+import EmbeddedPlayer from "./EmbeddedPlayer.js";
 
 css`
     @import url(${resolveAssetUrl("shared/css/hub-current-playing.css")});
-
-    .current_playing_thumb_container {
-        position: relative;
-        width: 100%;
-        height: 100%;
-    }
 
     .seek-back-btn,
     .seek-forward-btn {
@@ -52,8 +47,8 @@ css`
         filter: brightness(0) invert(1);
     }
 
-    .current_playing_thumb_container:hover .seek-back-btn,
-    .current_playing_thumb_container:hover .seek-forward-btn {
+    .current_playing_container:hover .seek-back-btn,
+    .current_playing_container:hover .seek-forward-btn {
         opacity: 1;
     }
 
@@ -81,6 +76,9 @@ export default class CurrentPlaying {
         this.app.virtualPlayer.on("virtualplayer.user-event", (data) => {
             this.splash.call(data);
         });
+        this.embeddedPlayer = isMobileRemote
+            ? new EmbeddedPlayer(app)
+            : html`<div title="Embedded Player disabled outside of mobile remote"></div>`;
 
         html`
             <div this="current_playing" class="current_playing">
@@ -91,13 +89,15 @@ export default class CurrentPlaying {
                         loading="lazy"
                     />
                 </div>
-                <div class="current_playing_container" zyx-if=${state.currentPlaying.item}>
+                <div
+                    class="current_playing_container"
+                    embeded-player-visible=${state.embeddedPlayerVisible.interp((v) => (v ? "true" : "false"))}
+                    zyx-if=${state.currentPlaying.item}
+                >
                     <div class="currently_playing_header">
-                        <div class="current_playing_meta_overlay">
-                            <span class="current_playing_title_overlay"
-                                >${state.currentPlaying.item.interp((v) => v?.title)}</span
-                            >
-                            <span class="current_playing_author_overlay"
+                        <div class="meta">
+                            <span class="title">${state.currentPlaying.item.interp((v) => v?.title)}</span>
+                            <span class="author"
                                 >${state.currentPlaying.item.interp(
                                     (v) => v?.youtube_author?.title || "Unknown Author"
                                 )}</span
@@ -113,42 +113,41 @@ export default class CurrentPlaying {
                             ${state.embeddedPlayerVisible.interp((v) => (v ? "Hide Player" : "Show Player"))}
                         </button>
                     </div>
-                    <div class="current_playing_artwork">
-                        <div class="current_playing_thumb_container">
-                            <div
-                                class="current_playing_thumb_click_area"
-                                zyx-click=${() => this.app.virtualPlayer.emitToggleRoomPlayPause()}
-                            >
+                    <div class="current_playing_content">
+                        <div
+                            class="cover_content_container"
+                            zyx-click=${() => this.app.virtualPlayer.emitToggleRoomPlayPause()}
+                        >
+                            <img
+                                class="cover_content_image"
+                                alt=${state.currentPlaying.item.interp((v) => v?.title || "")}
+                                src=${state.currentPlaying.item.interp((v) => v?.thumbnailUrl("large") || null)}
+                                loading="lazy"
+                                draggable="false"
+                            />
+                            ${this.embeddedPlayer || ""}
+                            <div class="current_playing_hover_icon">
                                 <img
-                                    class="thumb"
-                                    alt=${state.currentPlaying.item.interp((v) => v?.title || "")}
-                                    src=${state.currentPlaying.item.interp((v) => v?.thumbnailUrl("large") || null)}
-                                    loading="lazy"
+                                    title="Seek back 10 seconds"
+                                    zyx-click=${(e) => this.handleSeek(e, -10000)}
+                                    src=${seekBackwardSVG}
+                                    alt="Seek back"
                                     draggable="false"
                                 />
-                                <div class="current_playing_hover_icon">
-                                    <img
-                                        title="Seek back 10 seconds"
-                                        zyx-click=${(e) => this.handleSeek(e, -10000)}
-                                        src=${seekBackwardSVG}
-                                        alt="Seek back"
-                                        draggable="false"
-                                    />
-                                    <img
-                                        src=${state.currentPlaying.playing_since_ms.interp((v) =>
-                                            v > 0 ? pauseSVG : playSVG
-                                        )}
-                                        alt="Play/Pause"
-                                        draggable="false"
-                                    />
-                                    <img
-                                        title="Seek forward 10 seconds"
-                                        zyx-click=${(e) => this.handleSeek(e, 10000)}
-                                        src=${seekForwardSimpleSVG}
-                                        alt="Seek forward"
-                                        draggable="false"
-                                    />
-                                </div>
+                                <img
+                                    src=${state.currentPlaying.playing_since_ms.interp((v) =>
+                                        v > 0 ? pauseSVG : playSVG
+                                    )}
+                                    alt="Play/Pause"
+                                    draggable="false"
+                                />
+                                <img
+                                    title="Seek forward 10 seconds"
+                                    zyx-click=${(e) => this.handleSeek(e, 10000)}
+                                    src=${seekForwardSimpleSVG}
+                                    alt="Seek forward"
+                                    draggable="false"
+                                />
                             </div>
                         </div>
                         <div class="seekbar_container">
@@ -163,7 +162,7 @@ export default class CurrentPlaying {
                             </div>
                             <div
                                 this="current_playing_progress"
-                                class="current_playing_progress" 
+                                class="current_playing_progress"
                                 zyx-if=${state.currentPlaying.item}
                             >
                                 <div class="progress_bar">
@@ -202,11 +201,6 @@ export default class CurrentPlaying {
                 ${this.playbackControls || ""}
             </div>
         `.bind(this);
-
-        /** zyXSense @type {HTMLDivElement} */
-        this.current_playing;
-        /** zyXSense @type {HTMLDivElement} */
-        this.current_playing_progress;
 
         this.secondTimerInterval = null;
         this.startSecondTimer();

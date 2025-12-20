@@ -24,7 +24,7 @@ export default class QueueList extends ShareTubeHub {
             scale: 0.3,
         });
 
-        this.activateGyroThumbnailParallax();
+        // this.activateGyroThumbnailParallax();
     }
 
     async activateGyroThumbnailParallax() {

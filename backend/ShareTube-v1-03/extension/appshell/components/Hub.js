@@ -22,9 +22,6 @@ export default class ShareTubeHub {
 
         this.queueList = new QueueList();
         this.roomSettings = new RoomSettings(app);
-        this.embeddedPlayer = isMobileRemote
-            ? new EmbeddedPlayer(app)
-            : html`<div title="Embedded Player disabled outside of mobile remote"></div>`;
 
         html`
             <div
@@ -34,7 +31,7 @@ export default class ShareTubeHub {
                 aria-label="ShareTube Hub"
                 zyx-if=${[state.hubVisible, (v) => v]}
             >
-                ${this.embeddedPlayer || ""} ${this.currentPlaying || ""}
+                ${this.currentPlaying || ""}
                 <div class="hub-pages">
                     <div class="hub-view">
                         <div class="hub-page" zyx-radioview="pages.queueList">${this.queueList || ""}</div>
