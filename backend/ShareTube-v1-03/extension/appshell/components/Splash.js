@@ -3,6 +3,54 @@ import { html } from "../../shared/dep/zyx.js";
 import { msDurationTimeStamp } from "../core/utils/utils.js";
 import { resolveAssetUrl } from "../../shared/urlResolver.js";
 
+const BADGE_ANIMATION_IN = "spring_in";
+const BADGE_ANIMATION_IN_DURATION_MS = 900;
+const BADGE_ANIMATION_IN_EASING = "cubic-bezier(0.34, 1.56, 0.64, 1)";
+
+function getActionFromPlaybackData(playbackData) {
+    if (playbackData?.frame_step != null) {
+        return playbackData.frame_step > 0 ? "action-frame-forward" : "action-frame-backward";
+    }
+
+    const mapped = TRIGGER_TO_ACTION[playbackData?.trigger];
+    return typeof mapped === "function" ? mapped(playbackData) : mapped || "action-unknown";
+}
+
+function getActionLabel(actionClass) {
+    if (!actionClass) return "";
+    return actionClass.replace("action-", "").replaceAll("-", " ");
+}
+
+function actionClassToIconKey(actionClass) {
+    return ICON_KEY_BY_ACTION[actionClass] || null;
+}
+
+const TRIGGER_TO_ACTION = {
+    "room.control.pause": "action-pause",
+    "room.control.play": "action-play",
+    "room.control.restartvideo": "action-restart",
+    "room.control.seek": (pd) =>
+        pd.delta_ms === null ? "action-seek" : pd.delta_ms > 0 ? "action-seek-forward" : "action-seek-backward",
+};
+
+const ICON_KEY_BY_ACTION = {
+    "action-pause": "pause",
+    "action-play": "play",
+    "action-restart": "play",
+    "action-seek": "seek-forward",
+    "action-seek-forward": "seek-forward",
+    "action-seek-backward": "seek-rewind",
+    "action-frame-forward": "seek-forward",
+    "action-frame-backward": "seek-rewind",
+};
+
+const ICON_URL_BY_KEY = {
+    play: resolveAssetUrl("shared/assets/play.svg"),
+    pause: resolveAssetUrl("shared/assets/pause.svg"),
+    "seek-forward": resolveAssetUrl("shared/assets/seek-forward.svg"),
+    "seek-rewind": resolveAssetUrl("shared/assets/seek-rewind.svg"),
+};
+
 export default class Splash {
     constructor() {
         this.actorAudit = new ActorAudit();
@@ -313,10 +361,6 @@ class ActorAuditEntry {
     }
 }
 
-const BADGE_ANIMATION_IN = "spring_in";
-const BADGE_ANIMATION_IN_DURATION_MS = 600;
-const BADGE_ANIMATION_IN_EASING = "cubic-bezier(0.34, 1.56, 0.64, 1)";
-
 const BADGE_BY_ACTION = {
     "action-pause": PlayPauseBadge,
     "action-play": PlayPauseBadge,
@@ -326,48 +370,4 @@ const BADGE_BY_ACTION = {
     "action-seek-backward": SeekBadge,
     "action-frame-forward": FrameStepBadge,
     "action-frame-backward": FrameStepBadge,
-};
-
-function getActionFromPlaybackData(playbackData) {
-    if (playbackData?.frame_step != null) {
-        return playbackData.frame_step > 0 ? "action-frame-forward" : "action-frame-backward";
-    }
-
-    const mapped = TRIGGER_TO_ACTION[playbackData?.trigger];
-    return typeof mapped === "function" ? mapped(playbackData) : mapped || "action-unknown";
-}
-
-function getActionLabel(actionClass) {
-    if (!actionClass) return "";
-    return actionClass.replace("action-", "").replaceAll("-", " ");
-}
-
-function actionClassToIconKey(actionClass) {
-    return ICON_KEY_BY_ACTION[actionClass] || null;
-}
-
-const TRIGGER_TO_ACTION = {
-    "room.control.pause": "action-pause",
-    "room.control.play": "action-play",
-    "room.control.restartvideo": "action-restart",
-    "room.control.seek": (pd) =>
-        pd.delta_ms === null ? "action-seek" : pd.delta_ms > 0 ? "action-seek-forward" : "action-seek-backward",
-};
-
-const ICON_KEY_BY_ACTION = {
-    "action-pause": "pause",
-    "action-play": "play",
-    "action-restart": "play",
-    "action-seek": "seek-forward",
-    "action-seek-forward": "seek-forward",
-    "action-seek-backward": "seek-rewind",
-    "action-frame-forward": "seek-forward",
-    "action-frame-backward": "seek-rewind",
-};
-
-const ICON_URL_BY_KEY = {
-    play: resolveAssetUrl("shared/assets/play.svg"),
-    pause: resolveAssetUrl("shared/assets/pause.svg"),
-    "seek-forward": resolveAssetUrl("shared/assets/seek-forward.svg"),
-    "seek-rewind": resolveAssetUrl("shared/assets/seek-rewind.svg"),
 };

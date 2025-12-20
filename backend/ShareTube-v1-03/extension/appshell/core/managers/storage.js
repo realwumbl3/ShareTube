@@ -67,19 +67,6 @@ export default class StorageManager {
         }
     }
 
-    // Compatibility aliases
-    async getLocalStorage(key, defaultValue) {
-        return this.get(key, defaultValue, "local");
-    }
-
-    async setLocalStorage(key, value) {
-        return this.set(key, value, "local");
-    }
-
-    async removeLocalStorage(keys) {
-        return this.remove(keys, "local");
-    }
-
     attachBrowserListeners() {
         if (this.isExtension) {
             this.storageListener = (changes, area) => {

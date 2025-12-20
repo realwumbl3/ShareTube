@@ -1,7 +1,7 @@
 #sharetube_hub {
-    min-width: 320px;
     max-width: 520px;
-    max-height: min(520px, calc(95vh - 100px));
+    max-height: min(620px, calc(95vh - 100px));
+    min-width: min(95vw, 550px);
     overflow: hidden;
     color: var(--text-primary, #fff);
     background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), rgba(18, 18, 18, 0.96));
@@ -14,9 +14,11 @@
     grid-template-rows: repeat(2, max-content) auto;
     justify-content: stretch;
     font-size: 12px;
-    min-width: min(95vw, 550px);
     user-select: none;
-
+    isolation: isolate;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    
     #sharetube_main & {
         aspect-ratio: 1 / 1;
     }
@@ -25,15 +27,15 @@
 
 #sharetube_hub .hub-pages {
     display: grid;
-    grid-template-rows:1fr max-content ;
+    grid-template-rows: auto max-content;
     place-items: stretch;
+    overflow: hidden;
 }
 
 #sharetube_hub .hub-view {
     display: grid;
-    grid-template: 1fr/1fr;
-    place-items: stretch;
-    overflow: hidden;
+
+    position: relative;
 }
 
 #sharetube_hub .hub-page {
@@ -43,6 +45,8 @@
         transform 0.3s cubic-bezier(0.2, 0, 0, 1);
     opacity: 1;
     transform: translateX(0);
+    position: absolute;
+    inset: 0;
 
     @starting-style {
         & {
@@ -61,10 +65,9 @@
     display: flex;
     flex-direction: row;
     gap: 4px;
-    padding: 8px 4px;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    padding: 4px 0px;
 }
 
 #sharetube_hub .hub-page-selector-item {

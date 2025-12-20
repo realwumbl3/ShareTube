@@ -19,7 +19,7 @@ export default class ShareTubePill {
         this.logo = new Logo();
 
         // Load locked state from storage
-        this.app.storageManager.getLocalStorage("locked", false).then((locked) => this.pillLocked.set(locked));
+        this.app.storageManager.get("locked", false).then((locked) => this.pillLocked.set(locked));
 
         html`
             <div id="sharetube_pill" is_locked=${this.pillLocked.interp()}>
@@ -107,7 +107,7 @@ export default class ShareTubePill {
 
     async setLock(locked) {
         this.pillLocked.set(locked);
-        await this.app.storageManager.setLocalStorage("locked", locked);
+        await this.app.storageManager.set("locked", locked);
         if (locked) {
             this.sharetube_pill.classList.add("revealed");
         } else {

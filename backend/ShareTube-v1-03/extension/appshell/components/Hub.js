@@ -41,13 +41,13 @@ export default class ShareTubeHub {
                         <div class="hub-page" zyx-radioview="pages.roomSettings">${this.roomSettings || ""}</div>
                     </div>
                     <div class="hub-page-selector">
-                        <div class="hub-page-selector-item" zyx-radioview="pages.queueList.open">Queue List</div>
+                        <div class="hub-page-selector-item" zyx-radioview="pages.queueList.open">Queues</div>
                         <div
                             class="hub-page-selector-item"
                             zyx-radioview="pages.roomSettings.open"
                             zyx-if=${state.isOperator}
                         >
-                            Room Settings
+                            Settings
                         </div>
                     </div>
                 </div>
@@ -64,12 +64,10 @@ export default class ShareTubeHub {
 
 css`
     #sharetube_hub .toggle-embedded-player-btn {
-        top: 0;
-        right: 0;
         z-index: 1;
         margin: 8px;
-        position: absolute;
         padding: 4px 10px;
+        height: max-content;
         font-size: 11px;
         border-radius: 999px;
         border: 1px solid rgba(255, 255, 255, 0.22);

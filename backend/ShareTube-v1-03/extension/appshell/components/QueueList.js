@@ -22,7 +22,7 @@ export default class QueueList {
                         zyx-radioview="queues.queued.open"
                         title="${state.queueQueued.interp((v) => `${v.length} videos queued`)}"
                     >
-                        <img src=${queuedSVG} alt="Queued" class="queue_selector_icon" />
+                        <img src=${queuedSVG} alt="Queued" class="queue_selector_icon" draggable="false" />
                         <span class="queue_selector_count">${state.queueQueued.interp((v) => v.length)}</span>
                     </div>
                     <div
@@ -30,7 +30,7 @@ export default class QueueList {
                         zyx-radioview="queues.played.open"
                         title="${state.queuePlayed.interp((v) => `${v.length} videos played`)}"
                     >
-                        <img src=${playSVG} alt="Played" class="queue_selector_icon" />
+                        <img src=${playSVG} alt="Played" class="queue_selector_icon" draggable="false" />
                         <span class="queue_selector_count">${state.queuePlayed.interp((v) => v.length)}</span>
                     </div>
                     <div
@@ -38,7 +38,7 @@ export default class QueueList {
                         zyx-radioview="queues.skipped.open"
                         title="${state.queueSkipped.interp((v) => `${v.length} videos skipped`)}"
                     >
-                        <img src=${skipSVG} alt="Skipped" class="queue_selector_icon" />
+                        <img src=${skipSVG} alt="Skipped" class="queue_selector_icon" draggable="false" />
                         <span class="queue_selector_count">${state.queueSkipped.interp((v) => v.length)}</span>
                     </div>
                     <div
@@ -46,7 +46,7 @@ export default class QueueList {
                         zyx-radioview="queues.deleted.open"
                         title="${state.queueDeleted.interp((v) => `${v.length} videos deleted`)}"
                     >
-                        <img src=${xSVG} alt="Deleted" class="queue_selector_icon" />
+                        <img src=${xSVG} alt="Deleted" class="queue_selector_icon" draggable="false" />
                         <span class="queue_selector_count">${state.queueDeleted.interp((v) => v.length)}</span>
                     </div>
                 </div>

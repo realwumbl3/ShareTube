@@ -4,7 +4,7 @@ import { getCurrentPlayingProgressMs } from "../core/state/getters.js";
 import { extractVideoId } from "../core/utils/utils.js";
 
 const YT_API_URL = "https://www.youtube.com/iframe_api";
-const SYNC_INTERVAL_MS = 1000;
+const SYNC_INTERVAL_MS = 200;
 const SYNC_DRIFT_THRESHOLD_SEC = 2;
 
 const YT_STATE = {
@@ -153,9 +153,6 @@ export default class EmbeddedPlayer {
             <div class="EmbeddedPlayer" this="container" zyx-if=${state.embeddedPlayerVisible}>
                 <div this="player_container" class="embedded-player-container">
                     <div this="player_iframe"></div>
-                </div>
-                <div class="embedded-player-overlay">
-
                 </div>
                 <div class="embedded-player-loading" zyx-if=${[this.isLoading, (v) => v]}>Loading player...</div>
                 <div class="embedded-player-placeholder" zyx-if=${[state.currentPlaying.item, (item) => !item]}>

@@ -64,7 +64,7 @@ export default class ShareTubeApp {
         this.sharetubePill = new ShareTubePill(this);
         this.qrCode = new QRCodeComponent(this);
 
-        this.storageManager.getLocalStorage("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
+        this.storageManager.get("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
 
         html`
             <div id="sharetube_main" class="st_reset">${this.hub} ${this.debugMenu} ${this.sharetubePill}</div>
@@ -92,7 +92,7 @@ export default class ShareTubeApp {
         document.addEventListener("keydown", (e) => {
             if (e.key.toLowerCase() === "d" && e.altKey) {
                 state.debug_mode.set(!state.debug_mode.get());
-                this.storageManager.setLocalStorage("debug_mode", state.debug_mode.get());
+                this.storageManager.set("debug_mode", state.debug_mode.get());
                 return;
             }
         });

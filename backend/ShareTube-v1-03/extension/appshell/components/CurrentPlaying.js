@@ -92,6 +92,27 @@ export default class CurrentPlaying {
                     />
                 </div>
                 <div class="current_playing_container" zyx-if=${state.currentPlaying.item}>
+                    <div class="currently_playing_header">
+                        <div class="current_playing_meta_overlay">
+                            <span class="current_playing_title_overlay"
+                                >${state.currentPlaying.item.interp((v) => v?.title)}</span
+                            >
+                            <span class="current_playing_author_overlay"
+                                >${state.currentPlaying.item.interp(
+                                    (v) => v?.youtube_author?.title || "Unknown Author"
+                                )}</span
+                            >
+                        </div>
+                        <button
+                            class="rounded_btn toggle-embedded-player-btn"
+                            zyx-if=${isMobileRemote}
+                            aria-label="Toggle embedded player"
+                            title="Toggle embedded player"
+                            zyx-click=${() => state.embeddedPlayerVisible.set(!state.embeddedPlayerVisible.get())}
+                        >
+                            ${state.embeddedPlayerVisible.interp((v) => (v ? "Hide Player" : "Show Player"))}
+                        </button>
+                    </div>
                     <div class="current_playing_artwork">
                         <div class="current_playing_thumb_container">
                             <div
@@ -118,6 +139,7 @@ export default class CurrentPlaying {
                                             v > 0 ? pauseSVG : playSVG
                                         )}
                                         alt="Play/Pause"
+                                        draggable="false"
                                     />
                                     <img
                                         title="Seek forward 10 seconds"
@@ -128,16 +150,6 @@ export default class CurrentPlaying {
                                     />
                                 </div>
                             </div>
-                        </div>
-                        <div class="current_playing_meta_overlay">
-                            <span class="current_playing_title_overlay"
-                                >${state.currentPlaying.item.interp((v) => v?.title)}</span
-                            >
-                            <span class="current_playing_author_overlay"
-                                >${state.currentPlaying.item.interp(
-                                    (v) => v?.youtube_author?.title || "Unknown Author"
-                                )}</span
-                            >
                         </div>
                         <div class="seekbar_container">
                             <div class="seekbar_button">
@@ -151,7 +163,7 @@ export default class CurrentPlaying {
                             </div>
                             <div
                                 this="current_playing_progress"
-                                class="current_playing_progress"
+                                class="current_playing_progress" 
                                 zyx-if=${state.currentPlaying.item}
                             >
                                 <div class="progress_bar">
@@ -180,15 +192,6 @@ export default class CurrentPlaying {
                                 </button>
                             </div>
                         </div>
-                        <button
-                            class="rounded_btn toggle-embedded-player-btn"
-                            zyx-if=${isMobileRemote}
-                            aria-label="Toggle embedded player"
-                            title="Toggle embedded player"
-                            zyx-click=${() => state.embeddedPlayerVisible.set(!state.embeddedPlayerVisible.get())}
-                        >
-                            ${state.embeddedPlayerVisible.interp((v) => (v ? "Hide Player" : "Show Player"))}
-                        </button>
                     </div>
                     ${this.continueNextOverlay} ${this.splash}
                 </div>
