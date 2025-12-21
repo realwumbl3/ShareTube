@@ -67,7 +67,7 @@ export default class ShareTubeApp {
         this.storageManager.get("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
 
         html`
-            <div id="sharetube_main" class="st_reset">${this.hub} ${this.debugMenu} ${this.sharetubePill}</div>
+            <div id="sharetube_main" class="extension-ui st_reset">${this.hub} ${this.debugMenu} ${this.sharetubePill}</div>
             ${this.qrCode}
         `.bind(this);
 

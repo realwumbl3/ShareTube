@@ -1,10 +1,11 @@
 import { html, css, LiveVar } from "../../shared/dep/zyx.js";
 import state from "../core/state/state.js";
 
-import QueueList from "./QueueList.js";
+import QueueListsComponent from "./QueueLists.js";
 import CurrentPlaying from "./CurrentPlaying.js";
 import EmbeddedPlayer from "./EmbeddedPlayer.js";
 import RoomSettings from "./RoomSettings.js";
+import UserIcons from "./UserIcons.js";
 import { resolveAssetUrl } from "../../shared/urlResolver.js";
 
 css`
@@ -20,8 +21,10 @@ export default class ShareTubeHub {
 
         this.currentPlaying = new CurrentPlaying(app, { isMobileRemote: this.isMobileRemote });
 
-        this.queueList = new QueueList();
+        this.queueList = new QueueListsComponent();
         this.roomSettings = new RoomSettings(app);
+
+        this.userIcons = new UserIcons(app, { showShareButton: isMobileRemote });
 
         html`
             <div
@@ -37,14 +40,17 @@ export default class ShareTubeHub {
                         <div class="hub-page" zyx-radioview="pages.queueList">${this.queueList || ""}</div>
                         <div class="hub-page" zyx-radioview="pages.roomSettings">${this.roomSettings || ""}</div>
                     </div>
-                    <div class="hub-page-selector">
-                        <div class="hub-page-selector-item" zyx-radioview="pages.queueList.open">Queues</div>
-                        <div
-                            class="hub-page-selector-item"
-                            zyx-radioview="pages.roomSettings.open"
-                            zyx-if=${state.isOperator}
-                        >
-                            Settings
+                    <div class="hub-footer">
+                        <div class="hub-page-selector">
+                            ${this.userIcons}
+                            <div class="hub-page-selector-item" zyx-radioview="pages.queueList.open">Queues</div>
+                            <div
+                                class="hub-page-selector-item"
+                                zyx-radioview="pages.roomSettings.open"
+                                zyx-if=${state.isOperator}
+                            >
+                                Settings
+                            </div>
                         </div>
                     </div>
                 </div>

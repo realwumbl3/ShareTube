@@ -18,8 +18,8 @@
     isolation: isolate;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-    
-    #sharetube_main & {
+
+    #sharetube_main.extension-ui & {
         aspect-ratio: 1 / 1;
     }
 
@@ -36,6 +36,14 @@
     display: grid;
 
     position: relative;
+}
+
+#sharetube_hub .hub-footer {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
 }
 
 #sharetube_hub .hub-page {

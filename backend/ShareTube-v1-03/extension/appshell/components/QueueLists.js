@@ -10,7 +10,7 @@ css`
     @import url(${resolveAssetUrl("shared/css/hub-queue-list.css")});
 `;
 
-export default class QueueList {
+export default class QueueListsComponent {
     constructor() {
         this.dragManager = new ShareTubeQueueDrag();
 

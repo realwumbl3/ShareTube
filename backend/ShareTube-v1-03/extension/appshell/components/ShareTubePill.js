@@ -15,7 +15,7 @@ export default class ShareTubePill {
 
         // Components
         this.controls = new Controls(this.app);
-        this.userIcons = new UserIcons(this.app);
+        this.userIcons = new UserIcons(this.app, { showShareButton: true });
         this.logo = new Logo();
 
         // Load locked state from storage

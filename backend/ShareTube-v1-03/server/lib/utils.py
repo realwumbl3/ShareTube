@@ -316,12 +316,14 @@ def flush_with_retry(
             session.flush()
             return
         except (sqlite3.OperationalError, SAOperationalError) as e:
+            current_app.logger.exception("flush_with_retry: error flushing session")
             msg = str(e).lower()
             if "database is locked" not in msg:
                 raise
             try:
                 session.rollback()
             except Exception:
+                current_app.logger.exception("flush_with_retry: error rolling back session")
                 pass
             time.sleep(delay)
             delay *= backoff
@@ -330,7 +332,7 @@ def flush_with_retry(
             try:
                 session.rollback()
             except Exception:
-                pass
+                current_app.logger.exception("flush_with_retry: error rolling back session")
             raise
     if last_exc:
         raise last_exc

@@ -24,8 +24,8 @@
 #sharetube_hub .queue-list {
     position: absolute;
     inset: 0;
-    overflow-y: scroll;
     padding: 6px 8px 8px;
+    overflow-y: scroll;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
     mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 1em), transparent 100%);
@@ -61,6 +61,7 @@
     word-break: break-word;
     transition: background 120ms ease, border-color 120ms ease, transform 80ms ease, box-shadow 120ms ease;
     position: relative;
+    max-width: 500px;
 }
 
 #sharetube_hub .queue-item:hover {

@@ -1,6 +1,6 @@
 import state from "../state/state.js";
 import ShareTubeUser from "../models/user.js";
-import { syncLiveList } from "../utils/utils.js";
+import { syncLiveList, isYouTubeUrl } from "../utils/utils.js";
 
 // RoomManager handles room creation, joining, URL management, and room-related socket events
 export default class RoomManager {
@@ -17,9 +17,16 @@ export default class RoomManager {
     }
 
     updateCodeHashInUrl(code) {
-        const url = new URL(window.location.href);
+        const isYoutube = isYouTubeUrl(window.location.href);
+        const url = isYoutube ? new URL(window.location.href) : new URL("https://www.youtube.com/");
+
         url.hash = this.stHash(code);
-        history.replaceState(null, "", url.toString());
+
+        if (isYoutube) {
+            history.replaceState(null, "", url.toString());
+        } else {
+            window.location.href = url.toString();
+        }
     }
 
     async createRoom() {
@@ -41,7 +48,10 @@ export default class RoomManager {
         const code = state.roomCode.get();
         if (!code) return;
         try {
-            await navigator.clipboard.writeText(`${window.location.origin}#st:${code}`);
+            const isYoutube = isYouTubeUrl(window.location.href);
+            const url = isYoutube ? new URL(window.location.href) : new URL("https://www.youtube.com/");
+            url.hash = this.stHash(code);
+            await navigator.clipboard.writeText(url.toString());
         } catch (_) {
             console.warn("ShareTube copyCurrentRoomCodeToClipboard failed", _);
         }

@@ -36,7 +36,7 @@ export default class QueueList extends ShareTubeHub {
 css`
     .remote-content .queue-section #sharetube_hub {
         width: 100%;
-        max-width: unset;
+        max-width: 1600px;
         max-height: unset;
         min-width: unset;
         outline: none;

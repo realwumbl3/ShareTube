@@ -58,10 +58,11 @@ export default class MobileRemoteApp {
         html`
             <div
                 this="main"
+                id="sharetube_main"
                 class=${this.isReady.interp((r) => (r ? "mobile-remote-app visible" : "mobile-remote-app"))}
             >
                 <main class="remote-content" zyx-if=${state.inRoom}>
-                    <section class="queue-section glass-panel">${this.queueList}</section>
+                    <section class="queue-section">${this.queueList}</section>
                 </main>
                 <main class="remote-content" zyx-else>
                     <section class="playback-section-unavailable glass-panel">
@@ -345,6 +346,8 @@ css`
         overflow: hidden;
         padding: 0;
         background: var(--bg-app);
+        justify-content: center;
+        align-items: center;
     }
 
     .queue-section > * {

@@ -292,6 +292,9 @@ export default class EmbeddedPlayer {
     createPlayer(videoId) {
         if (!this.player_iframe) return;
 
+        const { progressMs } = getCurrentPlayingProgressMs();
+        const startSeconds = progressMs ? Math.floor(progressMs / 1000) : 0;
+
         try {
             this.player = new window.YT.Player(this.player_iframe, {
                 width: "100%",
@@ -305,6 +308,7 @@ export default class EmbeddedPlayer {
                     rel: 0,
                     iv_load_policy: 3,
                     fs: 1,
+                    start: startSeconds,
                 },
                 events: {
                     onReady: () => {
@@ -388,6 +392,11 @@ export default class EmbeddedPlayer {
                     if (isEffectivelyPaused) {
                         console.log(`[EmbeddedPlayer] Enforcing PLAY (current state: ${playerState})`);
                         this.player.playVideo();
+                        // If we are far off when starting to play, seek immediately
+                        if (drift > 1) {
+                            console.log(`[EmbeddedPlayer] Immediate seek on play to ${targetTime.toFixed(2)}s`);
+                            this.player.seekTo(targetTime, true);
+                        }
                     }
                 } else {
                     // We should be paused.
@@ -398,8 +407,13 @@ export default class EmbeddedPlayer {
                     if (isEffectivelyPlaying) {
                         console.log(`[EmbeddedPlayer] Enforcing PAUSE (current state: ${playerState})`);
                         this.player.pauseVideo();
-                        // Re-sync time exactly on pause
-                        if (drift > 0.2) this.player.seekTo(targetTime, true);
+                    }
+                    
+                    // Always ensure we are at the correct time when supposed to be paused,
+                    // even if the player is already "paused" (e.g. CUED or UNSTARTED at wrong time).
+                    if (drift > 0.5 && !justSeeked) {
+                        console.log(`[EmbeddedPlayer] Re-syncing pause time to ${targetTime.toFixed(2)}s (drift: ${drift.toFixed(2)}s, state: ${playerState})`);
+                        this.player.seekTo(targetTime, true);
                     }
                 }
             } finally {

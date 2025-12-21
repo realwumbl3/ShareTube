@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from flask import current_app
 
 from ....extensions import db, socketio
 from ....models import QueueEntry, Room, RoomMembership, User
@@ -16,6 +17,7 @@ def register() -> None:
     @require_room
     def _on_user_ready(room: Room, user_id: int, data: dict):
         res, _rej = Room.emit(room.code, trigger="user.ready")
+        current_app.logger.info("user.ready: room=%s, user_id=%s, data=%s", room.code, user_id, data)
         try:
             membership = (
                 db.session.query(RoomMembership)
@@ -25,6 +27,7 @@ def register() -> None:
                 .first()
             )
             if not membership:
+                current_app.logger.warning("user.ready: no membership for room=%s, user_id=%s", room.code, user_id)
                 return
 
             ready = bool((data or {}).get("ready"))
@@ -37,6 +40,7 @@ def register() -> None:
                 {"user_id": user_id, "ready": ready},
                 room=f"room:{room.code}",
             )
+            current_app.logger.info("user.ready.update: room=%s, user_id=%s, ready=%s", room.code, user_id, ready)
 
             midroll_payload = None
 

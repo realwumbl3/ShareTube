@@ -5,6 +5,7 @@
 /* Import extension CSS files */
 @import "/extension/shared/css/styles-base.css";
 @import "/extension/shared/css/splash.css";
+@import "/extension/shared/css/styles-components.css";
 
 * {
     margin: 0;

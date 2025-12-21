@@ -4,6 +4,10 @@
     gap: 4px;
     padding: 8px 4px;
     align-items: center;
+    overflow-y: scroll;
+    overflow-x: clip;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 #sharetube_hub .queue_selector .queue_selector_item {
@@ -17,9 +21,11 @@
     transition: background 120ms ease, transform 80ms ease;
     position: relative;
     min-width: 48px;
+    outline-offset: -2px;
 
     &.zyx-radioview-active {
         background: rgba(255, 255, 255, 0.2);
+        outline: 2px solid rgb(255 255 255 / 1);
     }
 
     &:hover {
@@ -47,7 +53,7 @@
     color: var(--text-secondary);
     opacity: 0.7;
     transition: opacity 120ms ease, color 120ms ease;
-    
+
 }
 
 #sharetube_hub .queue_selector .queue_selector_item:hover .queue_selector_count,

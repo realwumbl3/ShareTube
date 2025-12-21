@@ -4,6 +4,7 @@ from typing import Callable, Optional, Any
 from functools import wraps
 
 from flask import request
+from flask_socketio import rooms
 
 from ..extensions import db    
 from ..models import Room, RoomMembership, Queue, QueueEntry, User
@@ -99,16 +100,15 @@ def require_room(handler: Callable) -> Callable:
             )
             return None, "require_room: no user_id"
         user = db.session.get(User, user_id)
-        if not user or not user.active:
-            room = None
-        else:
-            membership = (
-                db.session.query(RoomMembership)
-                .filter_by(user_id=user_id)
-                .order_by(RoomMembership.joined_at.desc())
-                .first()
-            )
-            room = membership.room if membership else None
+        room = None
+        if user and user.active:
+            code = (data or {}).get("code")
+            if code:
+                potential_room = Room.query.filter_by(code=code).first()
+                if potential_room:
+                    membership = db.session.query(RoomMembership).filter_by(room_id=potential_room.id, user_id=user_id).first()
+                    if membership:
+                        room = potential_room
         if not room:
             logging.warning(
                 "require_room: no active room for user=%s "
