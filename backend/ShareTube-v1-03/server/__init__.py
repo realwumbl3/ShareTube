@@ -27,28 +27,15 @@ from .migrations import run_all_migrations
 
 # Configure a standard log format for file and console handlers
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-# Initialize base logging with INFO level so our explicit logging.info calls show up
-logging.basicConfig(level=logging.INFO, format=log_format)
+# Resolve log level from Config, defaulting to INFO
+_log_level_name = Config.LOG_LEVEL
+_log_level = getattr(logging, _log_level_name, logging.INFO)
+# Initialize base logging. basicConfig handles adding a StreamHandler to the root logger if none are present.
+logging.basicConfig(level=_log_level, format=log_format)
 # Create a logger specific to this module
 logger = logging.getLogger(__name__)
-# Also emit to console for systemd/journald visibility
-try:
-    # Create a console handler
-    _console = logging.StreamHandler()
-    # Set console threshold to INFO
-    _console.setLevel(logging.INFO)
-    # Apply same formatter to console logs
-    _console.setFormatter(logging.Formatter(log_format))
-    # Get root logger to attach handler only once
-    root = logging.getLogger()
-    # Avoid duplicate handlers by checking existing ones
-    if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
-        root.addHandler(_console)
-except Exception:
-    # Never fail startup due to logging configuration problems
-    pass
 
-# Reduce noisy third-party loggers so we only see our explicit INFO logs and exceptions
+# Reduce noisy third-party loggers so we only see our explicit logs and exceptions
 for _noisy_name in (
     "engineio",
     "engineio.server",

@@ -40,10 +40,10 @@ export default class ShareTubeQueueItem {
         }
 
         const sizeMap = {
-            default: "default.jpg",
+            default: "mqdefault.jpg",
             small: "mqdefault.jpg",
-            medium: "hqdefault.jpg",
-            large: "sddefault.jpg",
+            medium: "mqdefault.jpg",
+            large: "maxresdefault.jpg",
             huge: "maxresdefault.jpg",
         };
 

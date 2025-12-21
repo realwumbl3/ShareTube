@@ -283,8 +283,8 @@ export default class VirtualPlayer {
     }
 
     updateCurrentPlayingTiming(playing_since_ms, progress_ms) {
-        state.currentPlaying.playing_since_ms.set(playing_since_ms);
-        state.currentPlaying.progress_ms.set(progress_ms);
+        state.currentPlaying.playingSinceMs.set(playing_since_ms);
+        state.currentPlaying.progressMs.set(progress_ms);
     }
 
     isForCurrentRoom(code) {
@@ -318,10 +318,10 @@ export default class VirtualPlayer {
 
     applyTimestamp() {
         console.log("applyTimestamp");
-        const { progress_ms } = getCurrentPlayingProgressMs();
-        if (progress_ms === null) return;
-        console.log("applyTimestamp: progress_ms", progress_ms);
-        setTimeout(() => this.app.youtubePlayer.setDesiredProgressMs(progress_ms), 1);
+        const { progressMs } = getCurrentPlayingProgressMs();   
+        if (progressMs === null) return;
+        console.log("applyTimestamp: progressMs", progressMs);
+        setTimeout(() => this.app.youtubePlayer.setDesiredProgressMs(progressMs), 1);
     }
 
     gotoVideoIfNotOnVideoPage(current_entry) {
@@ -341,9 +341,9 @@ export default class VirtualPlayer {
     }
 
     async emitRelativeSeek(deltaMs) {
-        const { progress_ms, duration_ms } = getCurrentPlayingProgressMs();
-        let target = progress_ms + deltaMs;
-        if (duration_ms > 0) target = Math.min(Math.max(0, target), duration_ms);
+        const { progressMs, durationMs } = getCurrentPlayingProgressMs();
+        let target = progressMs + deltaMs;
+        if (durationMs > 0) target = Math.min(Math.max(0, target), durationMs);
         this.app.socket.emit("room.control.seek", {
             delta_ms: deltaMs,
             progress_ms: target,

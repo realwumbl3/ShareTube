@@ -97,10 +97,10 @@ export default class PlaybackSyncer {
         }
 
         const video = this.youtubePlayer.video;
-        const { progress_ms } = getCurrentPlayingProgressMs();
+        const { progressMs } = getCurrentPlayingProgressMs();
 
         // Validate progress data
-        if (progress_ms == null || !isFinite(progress_ms)) {
+        if (progressMs == null || !isFinite(progressMs)) {
             if (this.last_applied_playrate !== 1) {
                 this.resetPlaybackRate();
             }
@@ -119,7 +119,7 @@ export default class PlaybackSyncer {
             return;
         }
 
-        const driftMs = progress_ms - actualMs;
+        const driftMs = progressMs - actualMs;
         const absDriftMs = Math.abs(driftMs);
 
         // Update state with current drift
@@ -127,7 +127,7 @@ export default class PlaybackSyncer {
 
         // Large drift: seek immediately
         if (absDriftMs >= PLAYBACK_DRIFT_SEEK_THRESHOLD_MS) {
-            this.youtubePlayer.setDesiredProgressMs(progress_ms);
+            this.youtubePlayer.setDesiredProgressMs(progressMs);
             this.resetPlaybackRate(true);
             return;
         }

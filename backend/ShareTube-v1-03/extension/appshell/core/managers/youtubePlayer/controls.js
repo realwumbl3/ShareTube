@@ -361,17 +361,17 @@ export default class PlayerControls {
             this,
             "emitSeekToPercentage",
             () => {
-                const { duration_ms } = getCurrentPlayingProgressMs();
-                if (!duration_ms || duration_ms <= 0) {
+                const { durationMs } = getCurrentPlayingProgressMs();
+                if (!durationMs || durationMs <= 0) {
                     this.verbose && console.log("emitSeekToPercentage: no valid duration");
                     return;
                 }
-                const targetMs = Math.floor(Math.max(0, Math.min(1, percentage)) * duration_ms);
+                const targetMs = Math.floor(Math.max(0, Math.min(1, percentage)) * durationMs);
                 this.verbose &&
                     console.log("emitSeekToPercentage", {
                         percentage,
                         targetMs,
-                        duration_ms,
+                        durationMs,
                     });
                 this.youtubePlayer.app.socket.emit("room.control.seek", {
                     progress_ms: targetMs,

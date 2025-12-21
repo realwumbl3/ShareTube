@@ -80,27 +80,27 @@ export default class CurrentPlaying {
             ? new EmbeddedPlayer(app)
             : html`<div title="Embedded Player disabled outside of mobile remote"></div>`;
 
+        const embedVisible = state.embeddedPlayerVisible;
+        const currentItem = state.currentPlaying.item;
         html`
             <div this="current_playing" class="current_playing">
                 <div class="current_playing_bg">
                     <img
                         class="current_playing_background"
-                        src=${state.currentPlaying.item.interp((v) => v?.thumbnailUrl("default") || null)}
+                        src=${currentItem.interp((v) => v?.thumbnailUrl("large") || null)}
                         loading="lazy"
                     />
                 </div>
                 <div
                     class="current_playing_container"
-                    embeded-player-visible=${state.embeddedPlayerVisible.interp((v) => (v ? "true" : "false"))}
-                    zyx-if=${state.currentPlaying.item}
+                    embeded-player-visible=${embedVisible.interp((v) => (v ? "true" : "false"))}
+                    zyx-if=${currentItem}
                 >
                     <div class="currently_playing_header">
                         <div class="meta">
-                            <span class="title">${state.currentPlaying.item.interp((v) => v?.title)}</span>
+                            <span class="title">${currentItem.interp((v) => v?.title)}</span>
                             <span class="author"
-                                >${state.currentPlaying.item.interp(
-                                    (v) => v?.youtube_author?.title || "Unknown Author"
-                                )}</span
+                                >${currentItem.interp((v) => v?.youtube_author?.title || "Unknown Author")}</span
                             >
                         </div>
                         <button
@@ -108,9 +108,9 @@ export default class CurrentPlaying {
                             zyx-if=${isMobileRemote}
                             aria-label="Toggle embedded player"
                             title="Toggle embedded player"
-                            zyx-click=${() => state.embeddedPlayerVisible.set(!state.embeddedPlayerVisible.get())}
+                            zyx-click=${() => embedVisible.toggle()}
                         >
-                            ${state.embeddedPlayerVisible.interp((v) => (v ? "Hide Player" : "Show Player"))}
+                            ${embedVisible.interp((v) => (v ? "Hide Player" : "Show Player"))}
                         </button>
                     </div>
                     <div class="current_playing_content">
@@ -120,8 +120,8 @@ export default class CurrentPlaying {
                         >
                             <img
                                 class="cover_content_image"
-                                alt=${state.currentPlaying.item.interp((v) => v?.title || "")}
-                                src=${state.currentPlaying.item.interp((v) => v?.thumbnailUrl("large") || null)}
+                                alt=${currentItem.interp((v) => v?.title || "")}
+                                src=${currentItem.interp((v) => v?.thumbnailUrl("large") || null)}
                                 loading="lazy"
                                 draggable="false"
                             />
@@ -135,7 +135,7 @@ export default class CurrentPlaying {
                                     draggable="false"
                                 />
                                 <img
-                                    src=${state.currentPlaying.playing_since_ms.interp((v) =>
+                                    src=${state.currentPlaying.playingSinceMs.interp((v) =>
                                         v > 0 ? pauseSVG : playSVG
                                     )}
                                     alt="Play/Pause"
@@ -160,11 +160,7 @@ export default class CurrentPlaying {
                                     <img src=${restartSVG} alt="Restart" />
                                 </button>
                             </div>
-                            <div
-                                this="current_playing_progress"
-                                class="current_playing_progress"
-                                zyx-if=${state.currentPlaying.item}
-                            >
+                            <div this="current_playing_progress" class="current_playing_progress" zyx-if=${currentItem}>
                                 <div class="progress_bar">
                                     <div class="bar_inner"></div>
                                 </div>
@@ -175,9 +171,7 @@ export default class CurrentPlaying {
                                         )}</span
                                     >
                                     <span class="timestamp-duration"
-                                        >${state.currentPlaying.item.interp((v) =>
-                                            msDurationTimeStamp(v?.duration_ms || 0)
-                                        )}</span
+                                        >${currentItem.interp((v) => msDurationTimeStamp(v?.duration_ms || 0))}</span
                                     >
                                 </div>
                             </div>
@@ -233,10 +227,10 @@ export default class CurrentPlaying {
     }
 
     updateTimeSeek() {
-        const { progress_ms, duration_ms } = getCurrentPlayingProgressMs();
-        if (progress_ms === null) return;
-        const percent = progress_ms / duration_ms;
-        state.currentPlayingTimestamp.set(progress_ms);
+        const { progressMs, durationMs } = getCurrentPlayingProgressMs();
+        if (progressMs === null) return;
+        const percent = progressMs / durationMs;
+        state.currentPlayingTimestamp.set(progressMs);
         this.current_playing_progress.style.setProperty("--progress-int", percent);
     }
 }

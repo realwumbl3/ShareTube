@@ -62,7 +62,6 @@ css`
         align-items: center;
         gap: 10px;
         padding: 8px 12px;
-        pointer-events: auto;
     }
 
     .control-button {
@@ -147,21 +146,20 @@ export default class EmbeddedPlayer {
         this.app = app;
         this.player = null;
         this.currentVideoId = null;
-        this.pendingVideoId = null;
         this.syncInterval = null;
         this.apiReady = false;
         this.isLoading = new LiveVar(false);
-        this.resizeHandler = null;
-        this.volumeSlider = null;
-        this.muteButton = null;
-        this.fullscreenButton = null;
+        this._lastSeekTime = 0;
+        this._isEnsuringState = false;
 
         html`
             <div class="EmbeddedPlayer" this="container" zyx-if=${state.embeddedPlayerVisible}>
                 <div this="player_container" class="embedded-player-container">
                     <div this="player_iframe"></div>
                 </div>
-                <div class="embedded-player-loading" zyx-if=${[this.isLoading, (v) => v]}>Loading player...</div>
+                <div class="embedded-player-loading" zyx-if=${[this.isLoading, (v) => v]}>
+                    Loading player...
+                </div>
                 <div class="embedded-player-placeholder" zyx-if=${[state.currentPlaying.item, (item) => !item]}>
                     No video playing
                 </div>
@@ -175,7 +173,6 @@ export default class EmbeddedPlayer {
     async init() {
         await this.loadYouTubeAPI();
         this.setupStateListeners();
-        this.setupControlListeners();
     }
 
     loadYouTubeAPI() {
@@ -199,10 +196,9 @@ export default class EmbeddedPlayer {
             if (!document.querySelector(`script[src*="youtube.com/iframe_api"]`)) {
                 const tag = document.createElement("script");
                 tag.src = YT_API_URL;
-                tag.onerror = () => console.error("EmbeddedPlayer: Failed to load YouTube API script");
+                tag.onerror = () => console.error("[EmbeddedPlayer] Failed to load YouTube API script");
                 document.head.appendChild(tag);
             } else {
-                // Poll if script exists but API not ready
                 this.pollForAPI(resolve);
             }
         });
@@ -215,82 +211,22 @@ export default class EmbeddedPlayer {
         } else if (attempts < 20) {
             setTimeout(() => this.pollForAPI(resolve, attempts + 1), 100);
         } else {
-            console.warn("EmbeddedPlayer: YouTube API load timeout");
-            resolve(); // Resolve anyway to avoid blocking
+            console.warn("[EmbeddedPlayer] YouTube API load timeout");
+            resolve();
         }
     }
 
     processPendingVideo() {
-        if (this.pendingVideoId) {
-            this.loadVideo(this.pendingVideoId);
-            this.pendingVideoId = null;
+        const item = state.currentPlaying.item.get();
+        if (item) {
+            const videoId = extractVideoId(item.url);
+            if (videoId) this.loadVideo(videoId);
         }
     }
 
     setupStateListeners() {
         state.currentPlaying.item.subscribe(this.handleVideoChange);
         state.embeddedPlayerVisible.subscribe(this.handleVisibilityChange);
-    }
-
-    setupControlListeners() {
-        if (this.muteButton) {
-            this.muteButton.addEventListener("click", () => this.toggleMute());
-        }
-
-        if (this.volumeSlider) {
-            this.volumeSlider.addEventListener("input", (e) => this.setVolume(e.target.value));
-            this.volumeSlider.addEventListener("change", (e) => this.setVolume(e.target.value));
-        }
-
-        if (this.fullscreenButton) {
-            this.fullscreenButton.addEventListener("click", () => this.toggleFullscreen());
-        }
-    }
-
-    toggleMute() {
-        if (!this.player) return;
-
-        const isMuted = this.player.isMuted();
-        if (isMuted) {
-            this.player.unMute();
-            this.muteButton.textContent = "🔊";
-        } else {
-            this.player.mute();
-            this.muteButton.textContent = "🔇";
-        }
-    }
-
-    setVolume(volume) {
-        if (!this.player) return;
-
-        this.player.setVolume(volume);
-        if (volume > 0 && this.player.isMuted()) {
-            this.player.unMute();
-            this.muteButton.textContent = "🔊";
-        }
-    }
-
-    toggleFullscreen() {
-        if (!this.player) return;
-
-        const container = this.container;
-        if (!document.fullscreenElement) {
-            container.requestFullscreen().catch((err) => {
-                console.error("Error attempting to enable fullscreen:", err);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    }
-
-    initializeVolumeControl() {
-        if (!this.player || !this.volumeSlider) return;
-
-        const currentVolume = this.player.getVolume();
-        this.volumeSlider.value = currentVolume;
-
-        const isMuted = this.player.isMuted();
-        this.muteButton.textContent = isMuted ? "🔇" : "🔊";
     }
 
     handleVideoChange = (item) => {
@@ -309,7 +245,6 @@ export default class EmbeddedPlayer {
             if (state.embeddedPlayerVisible.get()) {
                 this.loadVideo(videoId);
             } else {
-                // Just update ID if invisible, will load when visible
                 this.currentVideoId = videoId;
             }
         }
@@ -322,14 +257,11 @@ export default class EmbeddedPlayer {
         }
 
         const item = state.currentPlaying.item.get();
-        if (!item) return;
+        const videoId = item ? extractVideoId(item.url) : null;
 
-        const videoId = extractVideoId(item.url);
-        if (!videoId) return;
-
-        if (videoId !== this.currentVideoId || !this.player) {
+        if (videoId && (videoId !== this.currentVideoId || !this.player)) {
             this.loadVideo(videoId);
-        } else {
+        } else if (this.player) {
             this.syncPlayback();
         }
     };
@@ -337,8 +269,20 @@ export default class EmbeddedPlayer {
     loadVideo(videoId) {
         if (!videoId) return;
 
-        console.log("Loading video", videoId);
+        // If we already have a player and just need to change the video, use loadVideoById
+        // to avoid expensive iframe recreation and flickering.
+        if (this.player && typeof this.player.loadVideoById === "function") {
+            console.log(`[EmbeddedPlayer] Switching video: ${videoId}`);
+            this.currentVideoId = videoId;
+            const { progressMs } = getCurrentPlayingProgressMs();
+            this.player.loadVideoById({
+                videoId: videoId,
+                startSeconds: progressMs ? progressMs / 1000 : 0
+            });
+            return;
+        }
 
+        console.log(`[EmbeddedPlayer] Creating new player for: ${videoId}`);
         this.currentVideoId = videoId;
         this.isLoading.set(true);
         this.destroyPlayer();
@@ -346,8 +290,9 @@ export default class EmbeddedPlayer {
     }
 
     createPlayer(videoId) {
+        if (!this.player_iframe) return;
+
         try {
-            console.log("Creating player", { player_iframe: this.player_iframe });
             this.player = new window.YT.Player(this.player_iframe, {
                 width: "100%",
                 height: "100%",
@@ -365,16 +310,15 @@ export default class EmbeddedPlayer {
                     onReady: () => {
                         this.isLoading.set(false);
                         this.startSync();
-                        this.initializeVolumeControl();
                     },
                     onError: (e) => {
-                        console.error("EmbeddedPlayer: YT error", e.data);
+                        console.error("[EmbeddedPlayer] YT error", e.data);
                         this.isLoading.set(false);
                     },
                 },
             });
         } catch (e) {
-            console.error("EmbeddedPlayer: Create player error", e);
+            console.error("[EmbeddedPlayer] Create player error", e);
             this.isLoading.set(false);
         }
     }
@@ -396,40 +340,80 @@ export default class EmbeddedPlayer {
             return;
         }
 
-        const { progress_ms } = getCurrentPlayingProgressMs();
-        if (progress_ms === null) return;
+        // Avoid re-entry if we are currently performing an operation
+        if (this._isEnsuringState) return;
 
-        const playingSinceMs = state.currentPlaying.playing_since_ms.get();
+        const { progressMs } = getCurrentPlayingProgressMs();
+        if (progressMs === null) return;
+
+        const playingSinceMs = state.currentPlaying.playingSinceMs.get();
         const isPlaying = playingSinceMs > 0;
+        const targetTime = progressMs / 1000;
 
         try {
+            const playerState = this.player.getPlayerState();
             const currentTime = this.player.getCurrentTime();
-            const targetTime = progress_ms / 1000;
             const drift = Math.abs(currentTime - targetTime);
+            const now = Date.now();
 
-            if (drift > SYNC_DRIFT_THRESHOLD_SEC) {
-                this.player.seekTo(targetTime, true);
+            // 1. Time Synchronization (Seeking)
+            const isBuffering = playerState === YT_STATE.BUFFERING;
+            const threshold = isBuffering ? SYNC_DRIFT_THRESHOLD_SEC * 2 : SYNC_DRIFT_THRESHOLD_SEC;
+            const justSeeked = this._lastSeekTime && (now - this._lastSeekTime < 1500);
+
+            if (drift > threshold && !justSeeked) {
+                // If drift is significant, seek. 
+                // Don't hammer the player if it's already buffering unless drift is extreme (>10s).
+                if (!isBuffering || drift > 10) {
+                    console.log(`[EmbeddedPlayer] Seeking to ${targetTime.toFixed(2)}s (drift: ${drift.toFixed(2)}s)`);
+                    this._lastSeekTime = now;
+                    this.player.seekTo(targetTime, true);
+                    // We'll continue to state enforcement in the same tick to ensure it keeps playing
+                }
             }
 
-            const playerState = this.player.getPlayerState();
-            if (isPlaying && playerState !== YT_STATE.PLAYING && playerState !== YT_STATE.BUFFERING) {
-                this.player.playVideo();
-            } else if (
-                !isPlaying &&
-                playerState !== YT_STATE.PAUSED &&
-                playerState !== YT_STATE.UNSTARTED &&
-                playerState !== YT_STATE.ENDED
-            ) {
-                this.player.pauseVideo();
+            // 2. Playback State Synchronization
+            this._isEnsuringState = true;
+            try {
+                const playerState = this.player.getPlayerState();
+                if (isPlaying) {
+                    // We should be playing.
+                    // If we are currently paused (2), ended (0), unstarted (-1), or cued (5), force play.
+                    const isEffectivelyPaused = 
+                        playerState === YT_STATE.PAUSED || 
+                        playerState === YT_STATE.ENDED || 
+                        playerState === YT_STATE.UNSTARTED || 
+                        playerState === YT_STATE.CUED;
+                    
+                    if (isEffectivelyPaused) {
+                        console.log(`[EmbeddedPlayer] Enforcing PLAY (current state: ${playerState})`);
+                        this.player.playVideo();
+                    }
+                } else {
+                    // We should be paused.
+                    const isEffectivelyPlaying = 
+                        playerState === YT_STATE.PLAYING || 
+                        playerState === YT_STATE.BUFFERING;
+
+                    if (isEffectivelyPlaying) {
+                        console.log(`[EmbeddedPlayer] Enforcing PAUSE (current state: ${playerState})`);
+                        this.player.pauseVideo();
+                        // Re-sync time exactly on pause
+                        if (drift > 0.2) this.player.seekTo(targetTime, true);
+                    }
+                }
+            } finally {
+                this._isEnsuringState = false;
             }
         } catch (e) {
-            // Ignore minor sync errors (player might be in transition)
+            this._isEnsuringState = false;
         }
     }
 
     destroyPlayer() {
         this.stopSync();
         this.isLoading.set(false);
+        this.currentVideoId = null;
 
         if (this.player) {
             try {

@@ -1,7 +1,9 @@
+import os
+
 # Bind Gunicorn to a Unix domain socket for local Nginx proxying
 bind = "unix:&PROJECT_ROOT/instance/&VERSION/&APP_NAME.sock"
-# Number of worker processes (SocketIO prefers 1 unless using a message queue)
-workers = 2
+# Number of worker processes (SocketIO requires 1 unless using a message queue like Redis)
+workers = 1
 # Time to gracefully stop workers on restart/shutdown
 graceful_timeout = 5
 # Use Gevent WebSocket worker to support Flask-SocketIO
@@ -22,17 +24,13 @@ umask = 0o007
 user = "&USERNAME"
 # Group under which Gunicorn workers should run (matches web server group)
 group = "www-data"
-# Access log file path
-accesslog = "&PROJECT_ROOT/instance/&VERSION/&APP_NAME.access.log"
 # Error log file path
 errorlog = "&PROJECT_ROOT/instance/&VERSION/&APP_NAME.log"
-# Logging level for Gunicorn
-loglevel = "debug"
+# Logging level for Gunicorn (defaults to INFO, can be overridden via LOG_LEVEL env var)
+loglevel = os.getenv("LOG_LEVEL", "info").lower()
 # Capture stdout/stderr of workers into Gunicorn logs
 capture_output = True
 # PID file to manage the Gunicorn process
 pidfile = "&PROJECT_ROOT/instance/&VERSION/&APP_NAME.pid"
-# Additional log file (legacy compatibility)
-logfile = "&PROJECT_ROOT/instance/&VERSION/&APP_NAME.log"
 # Enable reload on code changes for development
 reload = True

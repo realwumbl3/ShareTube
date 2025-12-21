@@ -71,6 +71,9 @@ class Config:
     DEBUG = os.getenv("DEBUG", "false").lower() == "true"
     TEMPLATES_AUTO_RELOAD = os.getenv("TEMPLATES_AUTO_RELOAD", "true").lower() == "true"
 
+    # Global logging level
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
     # Pong timeout in seconds for user health checks (users inactive longer than this will be considered disconnected)
     PONG_TIMEOUT_SECONDS = int(os.getenv("PONG_TIMEOUT_SECONDS", "20"))
     # Heartbeat interval in seconds for periodic cleanup of inactive users across all rooms

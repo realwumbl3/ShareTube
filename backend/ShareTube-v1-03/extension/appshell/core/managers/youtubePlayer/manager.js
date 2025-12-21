@@ -424,11 +424,11 @@ export default class YoutubePlayerManager {
         // Use authoritative server-side timing to decide when the video is "near end"
         // rather than the raw <video> element, which can still reflect a previous
         // clip or pre‑roll ad (especially around user.ready → room.playback).
-        const { progress_ms, duration_ms } = getCurrentPlayingProgressMs();
-        if (duration_ms === null || duration_ms === undefined || duration_ms <= 0) return;
-        if (progress_ms === null || progress_ms === undefined) return;
+        const { progressMs, durationMs } = getCurrentPlayingProgressMs();
+        if (durationMs === null || durationMs === undefined || durationMs <= 0) return;
+        if (progressMs === null || progressMs === undefined) return;
 
-        const remainingMs = duration_ms - progress_ms;
+        const remainingMs = durationMs - progressMs;
         const thresholdMs = 1000; // 1s from real content end
 
         // Only treat as near-end when the actual room playback is almost finished.

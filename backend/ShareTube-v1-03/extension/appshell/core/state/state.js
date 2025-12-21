@@ -44,8 +44,8 @@ class ShareTubeState {
         // Current playing
         this.currentPlaying = {
             item: new LiveVar(null),
-            playing_since_ms: new LiveVar(0),
-            progress_ms: new LiveVar(0),
+            playingSinceMs: new LiveVar(0),
+            progressMs: new LiveVar(0),
         };
         
         this.currentPlayingTimestamp = new LiveVar(0);

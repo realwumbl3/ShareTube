@@ -4,7 +4,7 @@ from __future__ import annotations
 # Import time to record timestamps for model defaults
 import time
 import secrets
-
+import logging
 # Provide Optional typing for clarity in relationships or lookups
 from typing import Optional, TYPE_CHECKING, Callable
 
@@ -113,6 +113,7 @@ class Room(db.Model):
                 },
                 room=f"room:{code}",
             )
+            logging.info(f"Rejected {event} for room {code}: {error}")
 
         return resolve, reject
 
