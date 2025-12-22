@@ -34,7 +34,7 @@ import jwt
 from flask_cors import CORS
 
 # Import configuration object
-from .config import Config
+from .config import Config, START_DEBUG_CONFIG_DUMP
 
 # Import shared Flask extensions (SQLAlchemy and SocketIO)
 from .extensions import db, socketio
@@ -163,7 +163,7 @@ def create_app() -> Flask:
             handler.setFormatter(gunicorn_formatter)
     # Load configuration from the Config class
     app.config.from_object(Config)
-    
+    # START_DEBUG_CONFIG_DUMP(logger, app)
     # Emit boot diagnostics after Gunicorn logging is fully initialized
     # Use Gunicorn's error logger if available, otherwise use app.logger
     try:

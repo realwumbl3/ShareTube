@@ -41,7 +41,6 @@ cleanup() {
     echo "Stopping log follower..."
     kill $LOG_PID 2>/dev/null || true
     sudo pkill -f "tail.*-F.*$LOG_FILE" 2>/dev/null || true
-    exit 0
 }
 
 # Ensure the background process is killed when this script exits

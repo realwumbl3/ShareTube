@@ -1,16 +1,9 @@
 # Import the standard library module used for environment variables and filesystem paths
 import os
-
+import logging
+from flask import Flask
 # Import timedelta to compute durations in seconds for token expiry
 from datetime import timedelta
-
-# Import helper to load environment variables from a .env file
-from dotenv import load_dotenv
-
-
-# Load variables from a .env file into process environment if present
-load_dotenv()
-
 
 # Define a configuration holder class for the Flask application
 class Config:
@@ -92,3 +85,23 @@ class Config:
     # This accounts for the delay between when playback is initiated and when videos actually start playing
     # Prevents players from needing to speed up to catch up immediately after start
     PLAYBACK_START_BUFFER_MS = int(os.getenv("PLAYBACK_START_BUFFER_MS", "200"))
+
+
+
+def START_DEBUG_CONFIG_DUMP(logger: logging.Logger, app: Flask):
+    # Log all environment variables and configuration for debugging
+    logger.info("=== ENVIRONMENT VARIABLES ===")
+    for key, value in sorted(os.environ.items()):
+        # Mask sensitive values
+        if any(sensitive in key.upper() for sensitive in ['SECRET', 'KEY', 'TOKEN', 'PASSWORD', 'CREDENTIAL']):
+            logger.info(f"{key}=***MASKED***")
+        else:
+            logger.info(f"{key}={value}")
+
+    logger.info("=== FLASK APP CONFIGURATION ===")
+    for key, value in sorted(app.config.items()):
+        # Mask sensitive values
+        if any(sensitive in key.upper() for sensitive in ['SECRET', 'KEY', 'TOKEN', 'PASSWORD', 'CREDENTIAL']):
+            logger.info(f"{key}=***MASKED***")
+        else:
+            logger.info(f"{key}={value}")

@@ -26,6 +26,7 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
         pong_timeout = app.config.get("PONG_TIMEOUT_SECONDS", 20)
 
     while True:
+        logging.info("heartbeat: cleanup cycle starting")
         try:
             with app.app_context():
                 cutoff_time = int(time.time()) - pong_timeout
@@ -40,10 +41,12 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
                         if membership.user.active and membership.user.last_seen < cutoff_time
                     ]
                     if not inactive_memberships:
+                        # logging.info("heartbeat: no inactive memberships found for room %s", room.code)
                         continue
 
                     removed_user_ids: list[int] = []
                     for membership in inactive_memberships:
+                        logging.info("heartbeat: removing user %s from room %s", membership.user_id, room.code)
                         user = db.session.get(User, membership.user_id)
                         if user:
                             user.last_seen = int(time.time())
@@ -75,6 +78,7 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
                 for room_code in removed_by_room.keys():
                     room = Room.query.filter_by(code=room_code).first()
                     if room:
+                        logging.info("heartbeat: emitting presence for room %s", room.code)
                         emit_presence(room)
         except Exception:
             try:

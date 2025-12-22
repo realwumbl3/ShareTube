@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+# Load .env from the backend directory
+load_dotenv("&PROJECT_ROOT/backend/&VERSION/.env")
 
 # Bind Gunicorn to a Unix domain socket for local Nginx proxying
 bind = "unix:&PROJECT_ROOT/instance/&VERSION/&APP_NAME.sock"
@@ -35,7 +39,7 @@ capture_output = True
 # PID file to manage the Gunicorn process
 pidfile = "&PROJECT_ROOT/instance/&VERSION/&APP_NAME.pid"
 # Enable reload on code changes for development (disabled by default in production)
-reload = os.getenv("GUNICORN_RELOAD", "false").lower() == "true"
+reload = os.getenv("GUNICORN_RELOAD", "false").lower() in ("true", "1", "yes", "on")
 
 # Gunicorn hooks to ensure boot logs are written when workers start
 def post_fork(server, worker):
@@ -51,6 +55,10 @@ def post_fork(server, worker):
         sys.path.insert(0, backend_path)
     try:
         from server.config import Config
+        # Log reload configuration
+        gunicorn_reload_env = os.getenv("GUNICORN_RELOAD", "false")
+        reload_check = gunicorn_reload_env.lower() in ("true", "1", "yes", "on")
+        logger.info("[worker] boot: reload=GUNICORN_RELOAD='%s' -> %s (config: %s)", gunicorn_reload_env, reload_check, reload)
         logger.info(
             "[worker] boot: version=%s app=%s log_level=%s pid=%s",
             Config.VERSION,

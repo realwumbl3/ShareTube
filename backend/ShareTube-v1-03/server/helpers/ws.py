@@ -41,7 +41,7 @@ def emit_function_after_delay(
             with context.app_context():
                 function(room)
         except Exception:
-            logging.exception("emit_function_after_delay: delayed function emission failed")
+            logging.exception("emit_function_after_delay: delayed function emission failed (function=%s, room=%s)", function, room)
         socketio.sleep(delay_seconds)
 
     socketio.start_background_task(background_task, current_app._get_current_object())
