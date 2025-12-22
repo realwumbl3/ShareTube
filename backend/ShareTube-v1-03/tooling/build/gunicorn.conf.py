@@ -8,6 +8,8 @@ workers = int(os.getenv("WEB_WORKERS", "6"))
 graceful_timeout = 5
 # Use Gevent WebSocket worker to support Flask-SocketIO
 worker_class = "geventwebsocket.gunicorn.workers.GeventWebSocketWorker"
+# Avoid importing the app in the master process (important for gevent monkey-patching order)
+preload_app = False
 # Change working directory to the project root before loading app
 chdir = "&PROJECT_ROOT"
 
@@ -32,5 +34,33 @@ loglevel = os.getenv("LOG_LEVEL", "info").lower()
 capture_output = True
 # PID file to manage the Gunicorn process
 pidfile = "&PROJECT_ROOT/instance/&VERSION/&APP_NAME.pid"
-# Enable reload on code changes for development
-reload = True
+# Enable reload on code changes for development (disabled by default in production)
+reload = os.getenv("GUNICORN_RELOAD", "false").lower() == "true"
+
+# Gunicorn hooks to ensure boot logs are written when workers start
+def post_fork(server, worker):
+    """Called just after a worker has been forked. Logs boot information."""
+    import logging
+    import os
+    import sys
+    # Get Gunicorn's error logger - this writes directly to errorlog
+    logger = logging.getLogger('gunicorn.error')
+    # Add backend version to Python path to import server.config
+    backend_path = "&PROJECT_ROOT/backend/&VERSION"
+    if backend_path not in sys.path:
+        sys.path.insert(0, backend_path)
+    try:
+        from server.config import Config
+        logger.info(
+            "[worker] boot: version=%s app=%s log_level=%s pid=%s",
+            Config.VERSION,
+            Config.APP_NAME,
+            Config.LOG_LEVEL,
+            os.getpid(),
+        )
+        logger.info("[worker] boot: db=%s", Config.SQLALCHEMY_DATABASE_URI)
+        # Force flush to ensure logs are written immediately
+        for handler in logger.handlers:
+            handler.flush()
+    except Exception as e:
+        logger.error(f"[worker] Failed to log boot info: {e}")

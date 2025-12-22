@@ -136,7 +136,7 @@ def main() -> None:
          "sudo systemctl daemon-reload",
         f"sudo systemctl enable --now {APP_NAME}.{args.version}.target",
          # Ensure correct ownership and permissions on the unix socket so Nginx (www-data) can read/write it
-         f'sudo ln -sf "$&PROJECT_ROOT/instance/ShareTube-nginx.conf" /etc/nginx/sites-enabled/ShareTube-entry.conf'
+         f'sudo ln -sf "$PROJECT_ROOT/instance/ShareTube-nginx.conf" /etc/nginx/sites-enabled/ShareTube-nginx.conf',
          "sudo nginx -t && sudo systemctl reload nginx",
          # Run this command after the deployment is successful to ensure the correct ownership and permissions are set.
          f'sudo chmod 770 "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',

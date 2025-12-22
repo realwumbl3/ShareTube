@@ -1,6 +1,7 @@
 [Unit]
 Description=&APP_NAME Gunicorn (gevent)
 After=network.target
+PartOf=&APP_NAME.&VERSION.target
 
 [Service]
 User=&USERNAME

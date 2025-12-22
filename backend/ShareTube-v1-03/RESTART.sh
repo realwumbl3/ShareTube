@@ -15,22 +15,45 @@ LOG_FILE="$INSTANCE_DIR/ShareTube.log"
 BG_LOG_FILE="$INSTANCE_DIR/ShareTube.bg.log"
 
 # cleanup background tails from previous runs to prevent duplicates/confusion
-sudo pkill -f "tail -n 0 -F $LOG_FILE" 2>/dev/null || true
+sudo pkill -f "tail.*-F.*$LOG_FILE" 2>/dev/null || true
 
-# Ensure log files exist and start fresh (logs are root:www-data, so we need sudo)
+# Ensure log files exist (logs are root:www-data, so we need sudo)
 sudo touch "$LOG_FILE" "$BG_LOG_FILE"
+
+# Stop services first to ensure clean restart
+echo "Restarting ShareTube.$VERSION.target..."
+sudo systemctl stop "ShareTube.$VERSION.target" 2>/dev/null || true
+
+# Truncate log files for clean start
 sudo truncate -s 0 "$LOG_FILE" "$BG_LOG_FILE"
 
-# Check new logs - follow the ShareTube log files
-# awk filters consecutive duplicates and flushes immediately
-sudo tail -n 0 -F "$LOG_FILE" "$BG_LOG_FILE" | awk '$0 != last { print; last = $0; fflush() }' &
+# Start tail to follow the log files
+# Use tail -F (capital F) which retries if files are removed/truncated
+# Filter out "file truncated" messages and consecutive duplicates
+sudo bash -c "tail -F '$LOG_FILE' '$BG_LOG_FILE' 2>&1" | \
+    grep --line-buffered -v "file truncated" | \
+    awk '$0 != last { print; last = $0; fflush() }' &
 LOG_PID=$!
 
+# Cleanup function to kill tail process
+cleanup() {
+    echo ""
+    echo "Stopping log follower..."
+    kill $LOG_PID 2>/dev/null || true
+    sudo pkill -f "tail.*-F.*$LOG_FILE" 2>/dev/null || true
+    exit 0
+}
+
 # Ensure the background process is killed when this script exits
-trap "kill $LOG_PID 2>/dev/null" EXIT
+trap cleanup EXIT INT TERM
 
-# Restart the service
-sudo systemctl restart "ShareTube.$VERSION.target"
+# Start services - tail is already watching
+sudo systemctl start "ShareTube.$VERSION.target"
 
-# Wait for the log process to complete
+echo ""
+echo "Following logs (Press Ctrl+C to exit)..."
+echo "---"
+echo ""
+
+# Wait for the log process (will run until interrupted)
 wait $LOG_PID

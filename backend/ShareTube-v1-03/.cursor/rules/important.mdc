@@ -14,8 +14,6 @@ The .instance path refers to: /home/wumbl3wsl/ShareTube/instance/ShareTube-v1-03
 
 When opening any file, always open it from the working directory and not from the root directory.
 
-Do not attempt to run Python directly (e.g., do not run `python app.py`). Instruct the user to use the restart.sh script instead.
-
 This is a MV3 (Manifest V3) Chrome extension. Pollyfilling is not allowed. Use the latest features and APIs available in the Chrome extension API.
 
 The extension is loaded in chrome://extensions/ and I inspect it using developer tools including sockets messages and the console.

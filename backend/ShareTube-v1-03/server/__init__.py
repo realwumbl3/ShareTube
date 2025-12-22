@@ -1,12 +1,28 @@
 # Future annotations for forward reference typing compatibility
 from __future__ import annotations
 
+# NOTE: When running under Gunicorn with gevent workers, we must monkey-patch as early as
+# possible (before importing ssl/urllib3/jwt/redis) to avoid runtime warnings and subtle bugs.
+# We gate this on SOCKETIO_ASYNC_MODE so local non-gevent runs aren't affected.
+import os
+
+if os.getenv("SOCKETIO_ASYNC_MODE") == "gevent":
+    try:
+        from gevent import monkey  # type: ignore
+
+        monkey.patch_all()
+    except Exception:
+        # Never prevent the app from starting due to patch failures; Gunicorn/gevent will surface
+        # the underlying issue if this is actually misconfigured.
+        pass
+
 # Standard lib imports for timing and logging, and SQLAlchemy inspector for schema checks
 import time
 from typing import Optional
-from sqlalchemy import inspect
+from datetime import datetime
 import logging
-import os
+
+from sqlalchemy import inspect
 
 # Flask primitives for creating the app and request-scoped utilities
 from flask import Flask, request, g, current_app
@@ -26,28 +42,43 @@ from .extensions import db, socketio
 # Import migrations runner (currently placeholder)
 from .migrations import run_all_migrations
 
-# Configure a standard log format for file and console handlers
-log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Custom formatter to match Gunicorn log format with timezone and process ID
+class GunicornStyleFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        """Format the record's time with timezone offset to match Gunicorn format."""
+        # Get local time with timezone
+        dt = datetime.fromtimestamp(record.created)
+        # Convert to local timezone-aware datetime
+        dt_local = dt.astimezone()
+        # Format: YYYY-MM-DD HH:MM:SS -HHMM (strftime('%z') returns -0500 format)
+        tz_offset = dt_local.strftime('%z')
+        return f"{dt_local.strftime('%Y-%m-%d %H:%M:%S')} {tz_offset}]"
+
+    def format(self, record):
+        """Format the log record to match Gunicorn style."""
+        # Format: YYYY-MM-DD HH:MM:SS -HHMM] [PID] [LEVEL] [LOGGER] - message
+        time_str = self.formatTime(record)
+        return f"[{time_str} [{record.process}] [{record.levelname}] [{record.name}] - {record.getMessage()}"
+
+
+# Configure logging with Gunicorn-style format
 # Resolve log level from Config, defaulting to INFO
 _log_level_name = Config.LOG_LEVEL
 _log_level = getattr(logging, _log_level_name, logging.INFO)
 # Initialize base logging. basicConfig handles adding a StreamHandler to the root logger if none are present.
-logging.basicConfig(level=_log_level, format=log_format)
+# We'll configure the formatter after basicConfig
+logging.basicConfig(level=_log_level)
+# Apply custom formatter to root logger's handlers
+gunicorn_formatter = GunicornStyleFormatter()
+for handler in logging.root.handlers:
+    handler.setFormatter(gunicorn_formatter)
 # Create a logger specific to this module
 logger = logging.getLogger(__name__)
 
-# Emit high-signal boot diagnostics after logging is configured (so they go to gunicorn errorlog).
-try:
-    logger.info(
-        "boot: version=%s app=%s log_level=%s pid=%s",
-        Config.VERSION,
-        Config.APP_NAME,
-        Config.LOG_LEVEL,
-        os.getpid(),
-    )
-    logger.info("boot: db=%s", Config.SQLALCHEMY_DATABASE_URI)
-except Exception:
-    pass
+# Note: Boot diagnostics are emitted inside create_app() to ensure they're captured
+# by Gunicorn's logging system. Module-level logs may be written before Gunicorn
+# has initialized its logging infrastructure.
 
 # Reduce noisy third-party loggers so we only see our explicit logs and exceptions
 for _noisy_name in (
@@ -122,8 +153,51 @@ def get_user_id_from_auth_header() -> Optional[int]:
 def create_app() -> Flask:
     # Create the Flask app instance
     app = Flask(__name__)
+    # Ensure Flask's logger handlers also use our Gunicorn-style formatter
+    gunicorn_formatter = GunicornStyleFormatter()
+    for handler in app.logger.handlers:
+        handler.setFormatter(gunicorn_formatter)
+    # Also ensure root logger handlers still have the formatter (in case they were reset)
+    for handler in logging.root.handlers:
+        if not isinstance(handler.formatter, GunicornStyleFormatter):
+            handler.setFormatter(gunicorn_formatter)
     # Load configuration from the Config class
     app.config.from_object(Config)
+    
+    # Emit boot diagnostics after Gunicorn logging is fully initialized
+    # Use Gunicorn's error logger if available, otherwise use app.logger
+    try:
+        # Try to use Gunicorn's logger first (it writes directly to errorlog)
+        gunicorn_logger = logging.getLogger('gunicorn.error')
+        if gunicorn_logger.handlers:
+            boot_logger = gunicorn_logger
+        else:
+            boot_logger = app.logger
+        
+        boot_logger.info(
+            "boot: version=%s app=%s log_level=%s pid=%s",
+            Config.VERSION,
+            Config.APP_NAME,
+            Config.LOG_LEVEL,
+            os.getpid(),
+        )
+        boot_logger.info("boot: db=%s", Config.SQLALCHEMY_DATABASE_URI)
+        
+        # Force flush all handlers to ensure logs are written immediately
+        for handler in boot_logger.handlers:
+            handler.flush()
+        for handler in app.logger.handlers:
+            handler.flush()
+        for handler in logging.root.handlers:
+            handler.flush()
+        # Also flush stderr/stdout
+        import sys
+        if hasattr(sys.stderr, 'flush'):
+            sys.stderr.flush()
+        if hasattr(sys.stdout, 'flush'):
+            sys.stdout.flush()
+    except Exception:
+        pass
     # Ensure Jinja picks up template changes without restart
     if app.config.get("TEMPLATES_AUTO_RELOAD", False):
         app.jinja_env.auto_reload = True
@@ -288,4 +362,3 @@ def register_routes(app: Flask) -> None:
 
 # Create the Flask app instance for WSGI servers
 app = create_app()
-
