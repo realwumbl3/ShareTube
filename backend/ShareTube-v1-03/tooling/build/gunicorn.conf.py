@@ -3,7 +3,7 @@ import os
 # Bind Gunicorn to a Unix domain socket for local Nginx proxying
 bind = "unix:&PROJECT_ROOT/instance/&VERSION/&APP_NAME.sock"
 # Number of worker processes (SocketIO requires 1 unless using a message queue like Redis)
-workers = 1
+workers = int(os.getenv("WEB_WORKERS", "6"))
 # Time to gracefully stop workers on restart/shutdown
 graceful_timeout = 5
 # Use Gevent WebSocket worker to support Flask-SocketIO

@@ -92,11 +92,16 @@ def register() -> None:
                         paused_progress = 0
                 else:
                     current_entry_for_pause = queue.current_entry
-                    initial_progress_ms = current_entry_for_pause.progress_ms or 0
-                    paused_progress = (
-                        max(0, pause_now_ms - (current_entry_for_pause.playing_since_ms or 0))
-                        + initial_progress_ms
-                    )
+                    initial_progress_ms = int(current_entry_for_pause.progress_ms or 0)
+                    # Idempotent pause math: if already paused (playing_since_ms is None),
+                    # don't add epoch time.
+                    playing_since = current_entry_for_pause.playing_since_ms
+                    elapsed_ms = max(0, pause_now_ms - playing_since) if playing_since else 0
+                    paused_progress = initial_progress_ms + elapsed_ms
+                    # Clamp to duration when available.
+                    duration_ms = int(current_entry_for_pause.duration_ms or 0)
+                    if duration_ms > 0:
+                        paused_progress = max(0, min(paused_progress, duration_ms))
                     current_entry_for_pause.playing_since_ms = None
                     current_entry_for_pause.progress_ms = paused_progress
                     current_entry_for_pause.paused_at = pause_now_ms

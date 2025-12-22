@@ -84,7 +84,10 @@ export default class PlayerControls {
         const tag = (t && t.tagName && t.tagName.toLowerCase()) || "";
         const isEditable =
             (t && (t.isContentEditable || tag === "input" || tag === "textarea" || tag === "select")) || false;
-        if (isEditable) return;
+        if (isEditable) {
+            console.log("onKeyDownCapture return: isEditable");
+            return;
+        }
         switch (e.code) {
             case "Space":
             case "KeyK":

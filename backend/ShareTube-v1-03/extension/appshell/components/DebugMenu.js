@@ -82,28 +82,28 @@ export default class DebugMenu {
                         <div class="debug-section-header">
                             <span class="debug-section-title">Player Controls</span>
                             <span class="debug-status"
-                                >Desired state: ${this.app.youtubePlayer.desired_state.interp((v) => v)}</span
+                                >Desired state: ${this.app.youtubePlayer?.desired_state.interp((v) => v)}</span
                             >
                             <span class="debug-status"
                                 >Enforcing:
-                                ${this.app.youtubePlayer.is_enforcing.interp((v) => (v ? "Yes" : "No"))}</span
+                                ${this.app.youtubePlayer?.is_enforcing.interp((v) => (v ? "Yes" : "No"))}</span
                             >
                             <span class="debug-status"
                                 >Ad playing:
-                                ${this.app.youtubePlayer.ad_playing.interp((v) => (v ? "Yes" : "No"))}</span
+                                ${this.app.youtubePlayer?.ad_playing.interp((v) => (v ? "Yes" : "No"))}</span
                             >
                         </div>
 
                         <div class="debug-actions">
                             <button
                                 class="rounded_btn"
-                                zyx-click=${() => this.app.youtubePlayer.setDesiredState("playing")}
+                                zyx-click=${() => this.app.youtubePlayer?.setDesiredState("playing")}
                             >
                                 Set desired state to playing
                             </button>
                             <button
                                 class="rounded_btn"
-                                zyx-click=${() => this.app.youtubePlayer.setDesiredState("paused")}
+                                zyx-click=${() => this.app.youtubePlayer?.setDesiredState("paused")}
                             >
                                 Set desired state to paused
                             </button>
@@ -113,8 +113,8 @@ export default class DebugMenu {
                             <button
                                 class="rounded_btn"
                                 zyx-click=${() =>
-                                    this.app.youtubePlayer.setDesiredProgressMs(
-                                        Math.random() * this.app.youtubePlayer.videoDurationMs
+                                    this.app.youtubePlayer?.setDesiredProgressMs(
+                                        Math.random() * this.app.youtubePlayer?.videoDurationMs
                                     )}
                             >
                                 Set desired progress to random position

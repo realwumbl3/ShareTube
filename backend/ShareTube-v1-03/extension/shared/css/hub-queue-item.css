@@ -1,0 +1,297 @@
+#sharetube_hub .queue-item {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas: "drag thumb meta actions";
+    align-items: center;
+    gap: 4px;
+    padding: .3em;
+    border-radius: 8px;
+    background: transparent;
+    outline: 1px solid transparent;
+    font-size: 12px;
+    word-break: break-word;
+    transition: background 120ms ease, border-color 120ms ease, transform 80ms ease, box-shadow 120ms ease;
+    position: relative;
+    max-width: 500px;
+}
+
+#sharetube_hub .queue-item:hover {
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.06),
+            rgba(0, 0, 0, 0.7));
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+#sharetube_hub .queue-item.dragging {
+    opacity: 0.5;
+    transform: scale(.9);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+}
+
+#sharetube_hub .queue-item.drop-target-above::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 1px;
+    z-index: 10;
+}
+
+#sharetube_hub .queue-item.drop-target-below::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 1px;
+    z-index: 10;
+}
+
+#sharetube_hub .queue-item .meta {
+    grid-area: meta;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+    margin-left: 4px;
+}
+
+#sharetube_hub .queue-item .meta .title {
+    grid-area: title;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    user-select: text;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+#sharetube_hub .queue-item .meta .author {
+    display: block;
+    font-size: 11px;
+    opacity: 0.7;
+    cursor: pointer;
+    user-select: text;
+    transition: opacity 100ms ease;
+}
+
+#sharetube_hub .queue-item .meta .author:hover {
+    opacity: 1;
+}
+
+#sharetube_hub .queue-item .meta .author-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#sharetube_hub .queue-item .meta .url {
+    opacity: 0.7;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+}
+
+#sharetube_hub .queue-item .meta .url .title {
+    margin-bottom: 0;
+}
+
+#sharetube_hub .queue-item .meta .author-row .up-next-badge {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0.15rem 0.6rem;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    color: var(--text-primary, #fff);
+    background: rgba(20, 192, 4, 0.432);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+}
+
+#sharetube_hub .queue-list.queued .queue-item[list-index="0"] .meta .author-row .up-next-badge {
+    display: inline-flex;
+}
+
+
+#sharetube_hub .queue-item .topRightContainer .inline-icon {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.6;
+    margin-left: 4px;
+    cursor: pointer;
+    transition: opacity 100ms ease;
+
+    &>img {
+        width: 12px;
+        height: 12px;
+        display: block;
+    }
+}
+
+#sharetube_hub .queue-item .topRightContainer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+
+    &:hover {
+        background: rgb(0 0 0 / 0.08);
+
+        & .inline-icon {
+            opacity: 1;
+        }
+    }
+}
+
+#sharetube_hub .queue-item .topRightContainer .inline-icon.link-drag-icon:active {
+    cursor: grabbing;
+}
+
+#sharetube_hub .queue-item .queue-item-duration {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    margin: 3px;
+    font-size: 9px;
+    opacity: 0.9;
+    text-align: right;
+    padding: 2px 4px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
+
+}
+
+#sharetube_hub .queue-item .queue-item-drag-handle {
+    grid-area: drag;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    align-self: stretch;
+    height: 100%;
+    padding: 0 6px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    transition: background 120ms ease, color 120ms ease, transform 80ms ease;
+    position: relative;
+    z-index: 1;
+}
+
+#sharetube_hub .queue-item:hover .queue-item-drag-handle {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+#sharetube_hub .queue-item.dragging .queue-item-drag-handle {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.8);
+    transform: scale(0.95);
+}
+
+#sharetube_hub .queue-item-thumbnail {
+    grid-area: thumb;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+
+    &>img {
+        width: 100px;
+        height: 55px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #111;
+        flex: 0 0 auto;
+    }
+}
+
+#sharetube_hub .queue-item .queue-item-actions {
+    grid-area: actions;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+#sharetube_hub .queue-item .x-button {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 1px;
+    display: grid;
+    place-items: center;
+    transition: background 120ms ease, border-color 120ms ease, transform 80ms ease, box-shadow 120ms ease;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    z-index: 10;
+}
+
+#sharetube_hub .queue-item .requeue-button {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary, #fff);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    font-size: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    height: 2em;
+    width: 2em;
+    padding: 0px;
+    display: grid;
+    place-items: center;
+    transition: background 120ms ease, border-color 120ms ease, transform 80ms ease, box-shadow 120ms ease;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+#sharetube_hub .queue-item .x-button img {
+    width: 11px;
+    height: 11px;
+    display: block;
+    opacity: 0.9;
+}
+
+#sharetube_hub .queue-item .requeue-button img {
+    width: 14px;
+    height: 14px;
+    display: block;
+    opacity: 0.9;
+}
+
+#sharetube_hub .queue-item .x-button:hover,
+#sharetube_hub .queue-item .requeue-button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.28);
+    transform: translateY(-0.5px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+#sharetube_hub .queue-item .x-button:focus-visible,
+#sharetube_hub .queue-item .requeue-button:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.4);
+    outline-offset: 1px;
+}

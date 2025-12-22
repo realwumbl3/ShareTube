@@ -35,7 +35,12 @@ def register() -> None:
             if user:
                 user.last_seen = int(time.time())
 
-            db.session.delete(membership)
+            # Bulk delete avoids SAWarning when another handler already removed this membership.
+            (
+                db.session.query(RoomMembership)
+                .filter_by(id=membership.id)
+                .delete(synchronize_session=False)
+            )
 
             other_memberships = (
                 db.session.query(RoomMembership)

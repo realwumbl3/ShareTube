@@ -3,7 +3,6 @@ import state from "../core/state/state.js";
 
 import QueueListsComponent from "./QueueLists.js";
 import CurrentPlaying from "./CurrentPlaying.js";
-import EmbeddedPlayer from "./EmbeddedPlayer.js";
 import RoomSettings from "./RoomSettings.js";
 import UserIcons from "./UserIcons.js";
 import { resolveAssetUrl } from "../../shared/urlResolver.js";

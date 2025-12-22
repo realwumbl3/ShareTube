@@ -80,12 +80,16 @@ def main() -> None:
 
     BUILD_TEMPLATE_DIR = f"backend/{args.version}/tooling/build"
 
-    TEMPLATES = {
-        # source -> destination relative to --output-dir
-        f"{BUILD_TEMPLATE_DIR}/nginx.conf": f"{args.version}/deploy/nginx.conf",
-        f"{BUILD_TEMPLATE_DIR}/service.service": f"{args.version}/deploy/service.service",
-        f"{BUILD_TEMPLATE_DIR}/gunicorn.conf.py": f"{args.version}/deploy/gunicorn.conf.py",
-    }
+    templates: dict[str, str] = {
+         # source -> destination relative to --output-dir
+         f"{BUILD_TEMPLATE_DIR}/nginx.conf": f"{args.version}/deploy/nginx.conf",
+         f"{BUILD_TEMPLATE_DIR}/service.service": f"{args.version}/deploy/service.service",
+         f"{BUILD_TEMPLATE_DIR}/gunicorn.conf.py": f"{args.version}/deploy/gunicorn.conf.py",
+        # new: background pool + target
+        f"{BUILD_TEMPLATE_DIR}/service.bg.service": f"{args.version}/deploy/service.bg.service",
+        f"{BUILD_TEMPLATE_DIR}/service.target": f"{args.version}/deploy/service.target",
+        f"{BUILD_TEMPLATE_DIR}/gunicorn.bg.conf.py": f"{args.version}/deploy/gunicorn.bg.conf.py",
+     }
 
     # Derive inputs based on provided flags
     if args.this and (args.username or args.project_path):
@@ -102,7 +106,7 @@ def main() -> None:
         username = args.username
         project_path = args.project_path
 
-    for src_rel, dst_rel in TEMPLATES.items():
+    for src_rel, dst_rel in templates.items():
         src_path = repo_root / src_rel
         if not src_path.exists():
             raise FileNotFoundError(f"Template not found: {src_path}")
@@ -120,18 +124,25 @@ def main() -> None:
         project_path if project_path.startswith("/") else f"/home/{username}/Dev/NewApp"
     )
 
+
     commands = [
-        f'export PROJECT_ROOT="{linux_project_path}"',
+         f'export PROJECT_ROOT="{linux_project_path}"',
+        # interactive pool
         f'sudo ln -sf "$PROJECT_ROOT/instance/{args.version}/deploy/service.service" /etc/systemd/system/{APP_NAME}.{args.version}.service',
-        "sudo systemctl daemon-reload",
-        f"sudo systemctl enable --now {APP_NAME}.{args.version}.service",
-        # Ensure correct ownership and permissions on the unix socket so Nginx (www-data) can read/write it
-        f'sudo ln -sf "$&PROJECT_ROOT/instance/ShareTube-nginx.conf" /etc/nginx/sites-enabled/ShareTube-entry.conf'
-        "sudo nginx -t && sudo systemctl reload nginx",
-        # Run this command after the deployment is successful to ensure the correct ownership and permissions are set.
-        f'sudo chmod 770 "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
-        f'sudo chown {username}:www-data "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
-    ]
+        # background pool
+        f'sudo ln -sf "$PROJECT_ROOT/instance/{args.version}/deploy/service.bg.service" /etc/systemd/system/{APP_NAME}.{args.version}.bg.service',
+        # target (one restart command controls both)
+        f'sudo ln -sf "$PROJECT_ROOT/instance/{args.version}/deploy/service.target" /etc/systemd/system/{APP_NAME}.{args.version}.target',
+         "sudo systemctl daemon-reload",
+        f"sudo systemctl enable --now {APP_NAME}.{args.version}.target",
+         # Ensure correct ownership and permissions on the unix socket so Nginx (www-data) can read/write it
+         f'sudo ln -sf "$&PROJECT_ROOT/instance/ShareTube-nginx.conf" /etc/nginx/sites-enabled/ShareTube-entry.conf'
+         "sudo nginx -t && sudo systemctl reload nginx",
+         # Run this command after the deployment is successful to ensure the correct ownership and permissions are set.
+         f'sudo chmod 770 "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
+         f'sudo chown {username}:www-data "$PROJECT_ROOT/instance/{args.version}/{APP_NAME}.sock" || true',
+     ]
+
     print("--------------------------------")
     print("Run the following commands on the server to deploy the application:")
     print("--------------------------------")

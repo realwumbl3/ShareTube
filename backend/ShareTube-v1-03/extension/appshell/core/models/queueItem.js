@@ -43,8 +43,8 @@ export default class ShareTubeQueueItem {
             default: "mqdefault.jpg",
             small: "mqdefault.jpg",
             medium: "mqdefault.jpg",
-            large: "maxresdefault.jpg",
-            huge: "maxresdefault.jpg",
+            large: "hqdefault.jpg",
+            huge: "sddefault.jpg",
         };
 
         const suffix = sizeMap[size];

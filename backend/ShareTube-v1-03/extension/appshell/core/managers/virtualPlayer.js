@@ -175,7 +175,7 @@ export default class VirtualPlayer {
         this.updateServerClock(result);
         state.roomCode.set(result.code);
         state.inRoom.set(true);
-        this.app.youtubePlayer.start?.();
+        this.app.youtubePlayer?.start();
 
         const snapshot = result.snapshot;
         state.adSyncMode.set(snapshot.ad_sync_mode);
@@ -256,11 +256,11 @@ export default class VirtualPlayer {
     }
 
     playerStateChange(priorState, newState) {
-        if (priorState === "playing" && newState === "paused") return this.app.youtubePlayer.setDesiredState("paused");
-        if (priorState === "paused" && newState === "playing") return this.app.youtubePlayer.setDesiredState("playing");
-        if (newState === "playing") return this.app.youtubePlayer.setDesiredState("playing");
+        if (priorState === "playing" && newState === "paused") return this.app.youtubePlayer?.setDesiredState("paused");
+        if (priorState === "paused" && newState === "playing") return this.app.youtubePlayer?.setDesiredState("playing");
+        if (newState === "playing") return this.app.youtubePlayer?.setDesiredState("playing");
         if (newState === "starting" || newState === "paused" || newState === "midroll")
-            return this.app.youtubePlayer.setDesiredState("paused");
+            return this.app.youtubePlayer?.setDesiredState("paused");
         console.warn(`playerStateChange: no transition implemented. ${priorState} -> ${newState}`);
         return;
     }
@@ -269,7 +269,7 @@ export default class VirtualPlayer {
         if (!newState) return;
         const priorState = state.roomState.get();
         state.roomState.set(newState);
-        this.app.youtubePlayer.onRoomStateChange(newState);
+        this.app.youtubePlayer?.onRoomStateChange(newState);
         this.playerStateChange(priorState, newState);
     }
 
@@ -318,10 +318,10 @@ export default class VirtualPlayer {
 
     applyTimestamp() {
         console.log("applyTimestamp");
-        const { progressMs } = getCurrentPlayingProgressMs();   
+        const { progressMs } = getCurrentPlayingProgressMs();
         if (progressMs === null) return;
         console.log("applyTimestamp: progressMs", progressMs);
-        setTimeout(() => this.app.youtubePlayer.setDesiredProgressMs(progressMs), 1);
+        setTimeout(() => this.app.youtubePlayer?.setDesiredProgressMs(progressMs), 1);
     }
 
     gotoVideoIfNotOnVideoPage(current_entry) {

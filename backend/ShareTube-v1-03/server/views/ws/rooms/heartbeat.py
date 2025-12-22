@@ -10,6 +10,7 @@ from flask import Flask
 
 from ....extensions import db, socketio
 from ....lib.utils import commit_with_retry
+from ....lib.background_slots import claim_background_slot
 from ....models import Room, RoomMembership, User
 
 from .common import emit_presence
@@ -47,7 +48,13 @@ def _heartbeat_cleanup_forever(app: Flask) -> None:
                         if user:
                             user.last_seen = int(time.time())
 
-                        db.session.delete(membership)
+                        # Use a bulk delete to avoid SAWarning in race conditions where the row
+                        # was already removed by another handler/process.
+                        (
+                            db.session.query(RoomMembership)
+                            .filter_by(id=membership.id)
+                            .delete(synchronize_session=False)
+                        )
 
                         other_memberships = (
                             db.session.query(RoomMembership)
@@ -86,9 +93,25 @@ def start_heartbeat_if_needed(app: Flask) -> None:
         if _heartbeat_thread_started:
             return
 
-        interval = app.config.get("HEARTBEAT_INTERVAL_SECONDS", 20)
+        # Ensure only a subset of workers run background tasks in multi-worker deployments.
+        # Only one worker should run heartbeat even if you run multiple background workers.
+        slot = claim_background_slot(app, task="heartbeat", slots=1)
+        if not slot:
+            try:
+                app.logger.info(
+                    "heartbeat: background tasks disabled in this worker (no slot claimed; BACKGROUND_TASK_SLOTS=%s)",
+                    app.config.get("BACKGROUND_TASK_SLOTS", 2),
+                )
+            except Exception:
+                pass
+            return
+
         socketio.start_background_task(_heartbeat_cleanup_forever, app)
         _heartbeat_thread_started = True
+        try:
+            app.logger.info("heartbeat: started background cleanup (slot=%s)", slot)
+        except Exception:
+            pass
     except Exception:
         logging.exception("failed to start heartbeat cleanup thread")
 

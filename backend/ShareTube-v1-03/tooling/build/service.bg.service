@@ -1,5 +1,5 @@
 [Unit]
-Description=&APP_NAME Gunicorn (gevent)
+Description=&APP_NAME Background Gunicorn (gevent)
 After=network.target
 
 [Service]
@@ -12,19 +12,16 @@ Environment=VERSION=&VERSION
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=SOCKETIO_MESSAGE_QUEUE=redis://127.0.0.1:6379/0
-# Force gevent async mode for Flask-SocketIO
 Environment=SOCKETIO_ASYNC_MODE=gevent
-# Enable Flask template auto-reload
 Environment=TEMPLATES_AUTO_RELOAD=true
 #
-# Interactive workers must not start background tasks (heartbeat / long-running jobs).
-Environment=BACKGROUND_TASK_SLOTS=0
-# Default interactive worker pool size (override as needed).
-Environment=WEB_WORKERS=6
+# Enable background slot claiming for background workers.
+Environment=BACKGROUND_TASK_SLOTS=2
+Environment=BG_WORKERS=2
 UMask=007
 
 ExecStart=&PROJECT_ROOT/.venv/bin/gunicorn \
-  -c &PROJECT_ROOT/instance/&VERSION/deploy/gunicorn.conf.py
+  -c &PROJECT_ROOT/instance/&VERSION/deploy/gunicorn.bg.conf.py
 
 Restart=always
 RestartSec=2

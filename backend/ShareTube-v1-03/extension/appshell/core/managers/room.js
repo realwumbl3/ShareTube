@@ -45,16 +45,22 @@ export default class RoomManager {
     }
 
     async copyCurrentRoomCodeToClipboard() {
-        const code = state.roomCode.get();
-        if (!code) return;
+        const url = this.getRoomYoutubeUrl();
+        if (!url) return;
         try {
-            const isYoutube = isYouTubeUrl(window.location.href);
-            const url = isYoutube ? new URL(window.location.href) : new URL("https://www.youtube.com/");
-            url.hash = this.stHash(code);
-            await navigator.clipboard.writeText(url.toString());
+            await navigator.clipboard.writeText(url);
         } catch (_) {
             console.warn("ShareTube copyCurrentRoomCodeToClipboard failed", _);
         }
+    }
+
+    getRoomYoutubeUrl() {
+        const code = state.roomCode.get();
+        if (!code) return;
+        const isYoutube = isYouTubeUrl(window.location.href);
+        const url = isYoutube ? new URL(window.location.href) : new URL("https://www.youtube.com/");
+        url.hash = this.stHash(code);
+        return url.toString();
     }
 
     async onSocketPresenceUpdate(presence) {
@@ -75,5 +81,4 @@ export default class RoomManager {
         if (!user || !user.ready) return;
         user.ready.set(Boolean(payload.ready));
     }
-
 }

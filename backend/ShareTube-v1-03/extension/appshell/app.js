@@ -1,5 +1,5 @@
 console.log("appshell/app.js loaded");
-import { html, css, LiveVar, ZyXInput } from "../shared/dep/zyx.js";
+import { html, css, LiveVar } from "../shared/dep/zyx.js";
 
 import state from "./core/state/state.js";
 
@@ -14,8 +14,6 @@ import StorageManager from "./core/managers/storage.js";
 
 import SearchBox from "./components/SearchBox.js";
 import QRCodeComponent from "./components/QRCode.js";
-
-export const zyxInput = new ZyXInput();
 
 import ShareTubePill from "./components/ShareTubePill.js";
 import ShareTubeHub from "./components/Hub.js";
@@ -45,8 +43,8 @@ export default class ShareTubeApp {
 
     resetRoomState() {
         state.resetRoomState();
-        this.youtubePlayer.stop();
-        this.youtubePlayer.onRoomStateChange("");
+        this.youtubePlayer?.stop();
+        this.youtubePlayer?.onRoomStateChange("");
     }
 
     constructor() {
@@ -165,6 +163,6 @@ export default class ShareTubeApp {
     navKick() {
         console.log("ShareTube navKick", this);
         // Rebind video player on navigation if needed
-        this.youtubePlayer.onNavigation();
+        this.youtubePlayer?.onNavigation();
     }
 }

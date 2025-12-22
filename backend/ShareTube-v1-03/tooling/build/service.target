@@ -1,0 +1,9 @@
+[Unit]
+Description=&APP_NAME &VERSION (interactive + background)
+Wants=&APP_NAME.&VERSION.service &APP_NAME.&VERSION.bg.service
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+

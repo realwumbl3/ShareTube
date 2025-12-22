@@ -41,7 +41,12 @@ def handle_user_disconnect(user_id: int) -> None:
         if user:
             user.last_seen = int(time.time())
 
-        db.session.delete(membership)
+        # Bulk delete avoids SAWarning when another code path already removed this membership.
+        (
+            db.session.query(RoomMembership)
+            .filter_by(id=membership.id)
+            .delete(synchronize_session=False)
+        )
 
         other_memberships = (
             db.session.query(RoomMembership)
@@ -75,7 +80,12 @@ def handle_user_disconnect_delayed(user_id: int) -> None:
         if user:
             user.last_seen = int(time.time())
 
-        db.session.delete(membership)
+        # Bulk delete avoids SAWarning when another code path already removed this membership.
+        (
+            db.session.query(RoomMembership)
+            .filter_by(id=membership.id)
+            .delete(synchronize_session=False)
+        )
 
         other_memberships = (
             db.session.query(RoomMembership)

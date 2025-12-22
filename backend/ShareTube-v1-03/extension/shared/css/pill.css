@@ -60,17 +60,6 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
 }
 
-#sharetube_pill .room_code {
-    font-size: 12px;
-    opacity: 0.7;
-    outline: 1px solid rgba(255, 255, 255, 0.5);
-    background: #00000063;
-    border-radius: 999px;
-    padding: 1.1px 4px;
-    line-height: 1;
-    font-family: 'Roboto';
-}
-
 #sharetube_toggle_hub {
     display: inline-flex;
     align-items: center;

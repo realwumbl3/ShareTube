@@ -48,7 +48,17 @@ def register() -> None:
                     error = "room.seek_video: no current entry"
                 else:
                     current_entry = queue.current_entry
-                    current_entry.progress_ms = progress_ms
+                    # Sanitize and clamp client-provided progress
+                    try:
+                        progress_ms_int = int(progress_ms)
+                    except Exception:
+                        progress_ms_int = 0
+                    duration_ms = max(0, int(current_entry.duration_ms or 0))
+                    if duration_ms > 0:
+                        progress_ms_int = max(0, min(progress_ms_int, duration_ms))
+                    else:
+                        progress_ms_int = max(0, progress_ms_int)
+                    current_entry.progress_ms = progress_ms_int
                     current_entry.playing_since_ms = _now_ms if play else None
                     room.state = "playing" if play else "paused"
             else:

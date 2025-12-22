@@ -21,6 +21,7 @@ export default class Controls {
                         <img
                             src=${state.roomState.interp((v) => this.stateToButtonLabel(v))}
                             alt=${this.stateToButtonTitle(state.roomState.get())}
+                            draggable="false"
                         />
                     </button>
                 </div>
@@ -33,7 +34,7 @@ export default class Controls {
                     ]}
                 >
                     <button title="Skip to next video" class="main_btn" zyx-click=${(e) => this.onSkipButtonClick(e)}>
-                        <img src=${skipSVG} alt="Skip" />
+                        <img src=${skipSVG} alt="Skip" draggable="false" />
                     </button>
                 </div>
                 <div class="control">
@@ -42,7 +43,7 @@ export default class Controls {
                         class="main_btn qr_btn"
                         zyx-click=${(e) => this.onQRButtonClick(e)}
                     >
-                        <img src=${remoteSVG} alt="QR Code" />
+                        <img src=${remoteSVG} alt="QR Code" draggable="false" />
                     </button>
                 </div>
             </div>

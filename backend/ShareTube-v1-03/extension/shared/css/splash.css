@@ -17,7 +17,7 @@
     --splash-text: rgba(255, 255, 255, 0.92);
     --splash-text-muted: rgba(255, 255, 255, 0.68);
     --splash-border: rgba(255, 255, 255, 0.14);
-    --splash-surface: rgba(0, 0, 0, 0.63);
+    --splash-surface: rgba(0, 0, 0, 0.7);
     --splash-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
     --splash-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
     --splash-avatar-border: rgba(255, 255, 255, 0.18);
@@ -39,7 +39,7 @@
                 position: absolute;
                 height: 92px;
                 aspect-ratio: 1 / 1;
-                background: rgba(0, 0, 0, 0.8);
+                background: var(--splash-surface);
                 border-radius: 50%;
                 display: grid;
                 place-items: center;

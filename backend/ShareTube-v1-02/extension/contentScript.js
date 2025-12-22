@@ -47,5 +47,5 @@ console.log("contentScript.js loaded");
         }
     }
     // Kick off bootstrap
-    start();
+    // start();
 })();

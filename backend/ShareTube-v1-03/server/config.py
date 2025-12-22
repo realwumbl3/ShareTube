@@ -20,9 +20,6 @@ class Config:
     VERSION = os.getenv("VERSION", "v1-01")
     APP_NAME = os.getenv("APP_NAME", "ShareTube")
 
-    print(f"VERSION: {VERSION}")
-    print(f"APP_NAME: {APP_NAME}")
-
     # JWT signing secret; defaults to SECRET_KEY if not explicitly provided
     JWT_SECRET = os.getenv("JWT_SECRET", SECRET_KEY)
     # Prefer absolute DB path under instance/ directory at repo root for SQLite
@@ -31,8 +28,6 @@ class Config:
     _DB_DEFAULT = (
         f"sqlite:///{os.path.join(_ROOT, 'instance', VERSION, f'{APP_NAME}.db')}"
     )
-
-    print(f"_DB_DEFAULT: {_DB_DEFAULT}")
 
     # Database URL taken from env when present, otherwise fallback to default
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", _DB_DEFAULT)
@@ -78,6 +73,20 @@ class Config:
     PONG_TIMEOUT_SECONDS = int(os.getenv("PONG_TIMEOUT_SECONDS", "20"))
     # Heartbeat interval in seconds for periodic cleanup of inactive users across all rooms
     HEARTBEAT_INTERVAL_SECONDS = int(os.getenv("HEARTBEAT_INTERVAL_SECONDS", "20"))
+
+    # Background worker slotting:
+    # In a multi-worker Gunicorn deployment, every worker will import the app and run init code.
+    # Some init tasks (heartbeat cleanup, future long-running jobs) must only run in a subset of
+    # workers. We implement this by letting workers "claim" one of N background slots at startup.
+    #
+    # Example: with 8 Gunicorn workers and BACKGROUND_TASK_SLOTS=2, exactly 2 workers will run
+    # background loops; the remaining 6 will only handle room/playback/socket work.
+    BACKGROUND_TASK_SLOTS = int(os.getenv("BACKGROUND_TASK_SLOTS", "2"))
+    # Optional directory for local file-lock based slot claiming. When empty, defaults to
+    # "<project_root>/instance/<VERSION>/".
+    BACKGROUND_TASK_LOCK_DIR = os.getenv("BACKGROUND_TASK_LOCK_DIR", "")
+    # Redis lease seconds for slot claiming when Redis is used as the coordination backend.
+    BACKGROUND_TASK_LEASE_SECONDS = int(os.getenv("BACKGROUND_TASK_LEASE_SECONDS", "60"))
 
     # Buffer time in milliseconds added to playing_since_ms when playback starts
     # This accounts for the delay between when playback is initiated and when videos actually start playing

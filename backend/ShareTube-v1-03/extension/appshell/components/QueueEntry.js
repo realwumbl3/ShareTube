@@ -1,6 +1,11 @@
-import { html, LiveVar } from "../../shared/dep/zyx.js";
+import { html, css, LiveVar } from "../../shared/dep/zyx.js";
 import { msDurationTimeStamp } from "../core/utils/utils.js";
 import { openInNewTabSVG, linkSVG, xSVG, requeueSVG } from "../../shared/assets/svgs.js";
+import { resolveAssetUrl } from "../../shared/urlResolver.js";
+
+css`
+    @import url(${resolveAssetUrl("shared/css/hub-queue-item.css")});
+`;
 
 // UI component representing a queued YouTube item
 export class ShareTubeQueueComponent {
@@ -23,19 +28,9 @@ export class ShareTubeQueueComponent {
                         loading="lazy"
                         draggable="false"
                     />
-                    <div class="queue-item-duration">${msDurationTimeStamp(this.item.duration_ms)}</div>
-                </div>
-                <div class="meta">
-                    <div class="author-row">
-                        <span class="up-next-badge">Up next</span>
-                        <div class="author" zyx-click=${() => this.item.openYoutubeAuthorUrl()}>
-                            ${this.item.youtube_author?.title}
-                        </div>
-                    </div>
-                    <div class="url">
-                        <div class="title">${this.item.title}</div>
+                    <div class="topRightContainer">
                         <span
-                            class="link-drag-icon"
+                            class="inline-icon link-drag-icon"
                             draggable="true"
                             title="Drag link or click to copy to clipboard."
                             zyx-dragstart=${(e) => {
@@ -48,11 +43,23 @@ export class ShareTubeQueueComponent {
                                 navigator.clipboard.writeText(this.item.url);
                             }}
                         >
-                            <img src="${linkSVG}" alt="Drag link" draggable="false" />
+                            <img  src="${linkSVG}" alt="Drag link" draggable="false" />
                         </span>
-                        <span class="external-link-icon" title="Open in new tab" zyx-click=${() => this.item.openUrl()}>
+                        <span class="inline-icon external-link-icon" title="Open in new tab" zyx-click=${() => this.item.openUrl()}>
                             <img src="${openInNewTabSVG}" alt="Open in new tab" draggable="false" />
                         </span>
+                    </div>
+                    <div class="queue-item-duration">${msDurationTimeStamp(this.item.duration_ms)}</div>
+                </div>
+                <div class="meta">
+                    <div class="author-row">
+                        <span class="up-next-badge">Up next</span>
+                        <div class="author" zyx-click=${() => this.item.openYoutubeAuthorUrl()}>
+                            ${this.item.youtube_author?.title}
+                        </div>
+                    </div>
+                    <div class="url">
+                        <div class="title">${this.item.title}</div>
                     </div>
                 </div>
                 <div class="queue-item-actions">

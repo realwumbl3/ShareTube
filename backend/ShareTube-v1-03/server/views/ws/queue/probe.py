@@ -24,11 +24,14 @@ def register() -> None:
             completed_entry = current_entry
 
             _now_ms = now_ms()
-            base_progress_ms = current_entry.progress_ms or 0
+            duration_ms = max(0, int(current_entry.duration_ms or 0))
+            base_progress_ms = int(current_entry.progress_ms or 0)
             playing_since_ms = current_entry.playing_since_ms or 0
             elapsed_ms = max(0, _now_ms - playing_since_ms) if playing_since_ms else 0
             effective_progress_ms = base_progress_ms + elapsed_ms
-            duration_ms = max(0, int(current_entry.duration_ms or 0))
+            # Keep progress sane; protects against any remaining edge cases / corrupted state.
+            if duration_ms > 0:
+                effective_progress_ms = max(0, min(effective_progress_ms, duration_ms))
             near_end_ms = max(0, duration_ms - 6000)
             has_completed = duration_ms > 0 and effective_progress_ms >= near_end_ms
 

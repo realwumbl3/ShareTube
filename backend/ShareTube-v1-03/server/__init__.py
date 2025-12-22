@@ -6,6 +6,7 @@ import time
 from typing import Optional
 from sqlalchemy import inspect
 import logging
+import os
 
 # Flask primitives for creating the app and request-scoped utilities
 from flask import Flask, request, g, current_app
@@ -34,6 +35,19 @@ _log_level = getattr(logging, _log_level_name, logging.INFO)
 logging.basicConfig(level=_log_level, format=log_format)
 # Create a logger specific to this module
 logger = logging.getLogger(__name__)
+
+# Emit high-signal boot diagnostics after logging is configured (so they go to gunicorn errorlog).
+try:
+    logger.info(
+        "boot: version=%s app=%s log_level=%s pid=%s",
+        Config.VERSION,
+        Config.APP_NAME,
+        Config.LOG_LEVEL,
+        os.getpid(),
+    )
+    logger.info("boot: db=%s", Config.SQLALCHEMY_DATABASE_URI)
+except Exception:
+    pass
 
 # Reduce noisy third-party loggers so we only see our explicit logs and exceptions
 for _noisy_name in (

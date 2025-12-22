@@ -41,10 +41,16 @@ def register() -> None:
                     paused_progress_ms = 0
             else:
                 current_entry = queue.current_entry
-                initial_progress_ms = current_entry.progress_ms or 0
-                paused_progress_ms = (
-                    max(0, _now_ms - (current_entry.playing_since_ms or 0)) + initial_progress_ms
-                )
+                initial_progress_ms = int(current_entry.progress_ms or 0)
+                # IMPORTANT: pause must be idempotent. If we receive repeated pause events while
+                # already paused (playing_since_ms is None), we must NOT add epoch time.
+                playing_since = current_entry.playing_since_ms
+                elapsed_ms = max(0, _now_ms - playing_since) if playing_since else 0
+                paused_progress_ms = initial_progress_ms + elapsed_ms
+                # Clamp to duration when available to keep virtual clock sane.
+                duration_ms = int(current_entry.duration_ms or 0)
+                if duration_ms > 0:
+                    paused_progress_ms = max(0, min(paused_progress_ms, duration_ms))
                 current_entry.playing_since_ms = None
                 current_entry.progress_ms = paused_progress_ms
                 current_entry.paused_at = _now_ms

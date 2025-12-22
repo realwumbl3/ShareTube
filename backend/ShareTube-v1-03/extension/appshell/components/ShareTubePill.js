@@ -29,14 +29,14 @@ export default class ShareTubePill {
                     class="lock_btn"
                     zyx-click=${() => this.setLock(false)}
                 >
-                    <img src=${lockSVG} alt="Lock" />
+                    <img src=${lockSVG} alt="Lock" draggable="false" />
                 </button>
                 <img
                     zyx-if=${state.userId}
                     class="user_icon_avatar"
                     draggable="false"
                     alt="Profile"
-                    src=${state.avatarUrl.interp((v) => v || "")}
+                    src=${state.avatarUrl.interp((v) => v || null)}
                     user-ready=${state.userReady.interp()}
                 />
                 <div
@@ -44,21 +44,18 @@ export default class ShareTubePill {
                     class="sign_in_button rounded_btn"
                     zyx-click=${() => this.app.authManager.openSignInWithGooglePopup()}
                 >
-                    Sign in with <img src=${googleSVG} alt="Google" />
+                    Sign in with <img src=${googleSVG} alt="Google" draggable="false" />
                 </div>
-                ${this.logo}
-                <span zyx-if=${state.userId}>
-                    ${this.userIcons}
-                    <div
-                        zyx-if=${state.roomCode}
-                        id="sharetube_toggle_hub"
-                        class="rounded_btn"
-                        zyx-click=${() => this.app.hub.toggleHubVisibility()}
-                    >
-                        ${state.queueQueued.interp((v) => (v.length > 0 ? `Queue (${v.length})` : "Queue empty."))}
-                    </div>
-                    ${this.controls}
-                </span>
+                ${this.logo} ${this.userIcons}
+                <div
+                    zyx-if=${(state.roomCode, state.userId, (roomCode, userId) => roomCode && userId)}
+                    id="sharetube_toggle_hub"
+                    class="rounded_btn"
+                    zyx-click=${() => this.app.hub.toggleHubVisibility()}
+                >
+                    ${state.queueQueued.interp((v) => (v.length > 0 ? `Queue (${v.length})` : "Queue empty."))}
+                </div>
+                ${this.controls}
                 <button
                     zyx-if=${state.debug_mode}
                     class="rounded_btn"
@@ -68,10 +65,6 @@ export default class ShareTubePill {
                 </button>
             </div>
         `.bind(this);
-        /** zyx-sense @type {HTMLDivElement} */
-        this.sharetube_pill;
-
-        this.app.sharetube_pill = this.sharetube_pill;
 
         // Setup lock behavior
         this.setupPillLockBehavior();

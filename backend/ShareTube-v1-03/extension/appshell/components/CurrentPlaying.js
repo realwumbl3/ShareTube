@@ -76,7 +76,8 @@ export default class CurrentPlaying {
         this.app.virtualPlayer.on("virtualplayer.user-event", (data) => {
             this.splash.call(data);
         });
-        this.embeddedPlayer = isMobileRemote
+
+        this.embeddedPlayer = isMobileRemote.get()
             ? new EmbeddedPlayer(app)
             : html`<div title="Embedded Player disabled outside of mobile remote"></div>`;
 
@@ -87,7 +88,7 @@ export default class CurrentPlaying {
                 <div class="current_playing_bg">
                     <img
                         class="current_playing_background"
-                        src=${currentItem.interp((v) => v?.thumbnailUrl("large") || null)}
+                        src=${currentItem.interp((v) => v?.thumbnailUrl("huge") || null)}
                         loading="lazy"
                     />
                 </div>
@@ -121,7 +122,7 @@ export default class CurrentPlaying {
                             <img
                                 class="cover_content_image"
                                 alt=${currentItem.interp((v) => v?.title || "")}
-                                src=${currentItem.interp((v) => v?.thumbnailUrl("large") || null)}
+                                src=${currentItem.interp((v) => v?.thumbnailUrl("huge") || null)}
                                 loading="lazy"
                                 draggable="false"
                             />

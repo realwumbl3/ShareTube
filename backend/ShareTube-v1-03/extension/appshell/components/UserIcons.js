@@ -22,6 +22,7 @@ export default class UserIcons {
                     zyx-if=${[this.showShareButton, (v) => v]}
                     class="rounded_btn"
                     id="sharetube_plus_button"
+                    draggable="true"
                     title="${state.roomCode.interp((v) =>
                         v
                             ? "Clipboard Watchroom link to share."
@@ -30,6 +31,10 @@ export default class UserIcons {
                     zyx-click=${(z) => {
                         z.e.stopPropagation();
                         this.onPlusClicked();
+                    }}
+                    zyx-dragstart=${(e) => {
+                        e.e.dataTransfer.setData("text/plain", this.app.roomManager.getRoomYoutubeUrl());
+                        e.e.dataTransfer.effectAllowed = "copy";
                     }}
                 >
                     +

@@ -49,17 +49,12 @@ export default class MobileRemoteApp {
         // Create sub-components
         this.queueList = new QueueList(this);
 
-        this.youtubePlayer = {
-            setDesiredState: noop,
-            setDesiredProgressMs: noop,
-            onRoomStateChange: noop,
-        };
-
         html`
             <div
                 this="main"
                 id="sharetube_main"
-                class=${this.isReady.interp((r) => (r ? "mobile-remote-app visible" : "mobile-remote-app"))}
+                ready=${this.isReady.interp((r) => r || null)}
+                class="mobile-remote-app st_reset"
             >
                 <main class="remote-content" zyx-if=${state.inRoom}>
                     <section class="queue-section">${this.queueList}</section>
@@ -228,56 +223,6 @@ export default class MobileRemoteApp {
                 console.error("Mobile Remote: Failed to clean URL", e);
             }
         }
-    }
-
-    togglePlayPause() {
-        if (!this.socket || !state.inRoom.get()) {
-            console.warn("Mobile Remote: Not connected to room");
-            return;
-        }
-
-        const isPlaying = state.roomState.get() === "playing";
-        this.socket.emit(isPlaying ? "room.control.pause" : "room.control.play", {});
-    }
-
-    skipToNext() {
-        if (!this.socket || !state.inRoom.get()) {
-            console.warn("Mobile Remote: Not connected to room");
-            return;
-        }
-
-        this.socket.emit("room.control.skip", {});
-    }
-
-    restartVideo() {
-        if (!this.socket || !state.inRoom.get()) {
-            console.warn("Mobile Remote: Not connected to room");
-            return;
-        }
-
-        this.socket.emit("room.control.restartvideo", {});
-    }
-
-    relativeSeek(delta) {
-        if (!this.socket || !state.inRoom.get()) {
-            console.warn("Mobile Remote: Not connected to room");
-            return;
-        }
-
-        this.socket.emit("room.control.seek", {
-            delta_ms: delta * 1000,
-            play: state.roomState.get() === "playing",
-        });
-    }
-
-    seekToPosition(positionInSeconds) {
-        if (!this.socket || !state.inRoom.get()) {
-            console.warn("Mobile Remote: Not connected to room");
-            return;
-        }
-
-        const progressMs = Math.floor(positionInSeconds * 1000);
-        this.virtualPlayer.emitSeek(progressMs);
     }
 
     selectQueueItem(videoId) {
