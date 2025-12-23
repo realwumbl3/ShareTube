@@ -31,7 +31,7 @@ def register() -> None:
             if not user_id:
                 logging.warning("disconnect: no user_id found for disconnected socket")
                 return
-
+            
             remove_socket_connection(user_id, request.sid)
             has_other_connections = check_user_other_connections(user_id, request.sid)
 
@@ -46,8 +46,8 @@ def register() -> None:
                     },
                 )
                 emit_function_after_delay(
-                    lambda room=None: handle_user_disconnect_delayed(user_id),
-                    None,
+                    handle_user_disconnect_delayed,
+                    user_id,
                     delay_seconds=5.0,
                 )
             else:

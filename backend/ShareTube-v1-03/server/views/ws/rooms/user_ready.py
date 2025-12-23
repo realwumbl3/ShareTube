@@ -129,7 +129,7 @@ def register() -> None:
                             .update({RoomMembership.ready: False}, synchronize_session=False)
                         )
                         db.session.flush()
-                        emit_function_after_delay(emit_presence, room, 0.1)
+                        emit_function_after_delay(emit_presence, room.id, delay_seconds=0.1)
                         progress_ms = (
                             paused_progress
                             if paused_progress is not None

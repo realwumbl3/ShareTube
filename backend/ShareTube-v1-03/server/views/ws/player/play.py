@@ -22,6 +22,7 @@ def register() -> None:
             result = None
             error = None
             queue = room.current_queue
+            current_entry_changed = False
 
             if not queue:
                 error = "room.start_playback: no current queue"
@@ -70,7 +71,6 @@ def register() -> None:
                     "state": "playing",
                     "playing_since_ms": playing_since_ms,
                     "progress_ms": current_entry.progress_ms if current_entry else 0,
-                    "current_entry": current_entry.to_dict() if current_entry else None,
                 }
             elif room.state == "paused":
                 current_entry = queue.current_entry if queue else None
@@ -86,7 +86,6 @@ def register() -> None:
                         "state": "playing",
                         "playing_since_ms": playing_since_ms,
                         "progress_ms": current_entry.progress_ms,
-                        "current_entry": current_entry.to_dict(),
                     }
             else:
                 current_entry = queue.current_entry if queue else None
@@ -95,7 +94,6 @@ def register() -> None:
                         "state": room.state,
                         "playing_since_ms": current_entry.playing_since_ms,
                         "progress_ms": current_entry.progress_ms,
-                        "current_entry": current_entry.to_dict(),
                     }
                 else:
                     error = "room.start_playback: no current entry"

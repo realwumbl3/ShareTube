@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from contextvars import ContextVar
-from typing import Callable, Optional, TYPE_CHECKING
+import traceback
+from typing import Callable, Optional
 from flask import Flask
 
 import logging
@@ -13,9 +14,6 @@ from ..extensions import socketio
 from .redis import (
     get_user_socket_connections,
 )
-
-if TYPE_CHECKING:
-    from ..models import Room
 
 
 def get_user_id_from_socket() -> Optional[int]:
@@ -32,17 +30,18 @@ def get_user_id_from_socket() -> Optional[int]:
 
 
 def emit_function_after_delay(
-    function: Callable[[Room], None],
-    room: Room,
+    function: Callable[..., None],
+    *args,
     delay_seconds: float = 1.0,
 ) -> None:
     def background_task(context: ContextVar[Flask]) -> None:
+        socketio.sleep(delay_seconds)
         try:
             with context.app_context():
-                function(room)
+                function(*args)
         except Exception:
-            logging.exception("emit_function_after_delay: delayed function emission failed (function=%s, room=%s)", function, room)
-        socketio.sleep(delay_seconds)
+            trace = traceback.format_exc()
+            logging.error("emit_function_after_delay: delayed function emission failed (function=%s, args=%s, trace=%s)", function, args, trace)
 
     socketio.start_background_task(background_task, current_app._get_current_object())
 

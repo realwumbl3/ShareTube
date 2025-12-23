@@ -14,19 +14,25 @@ css`
         background: rgba(0, 0, 0, 0.55);
         color: var(--text-primary, #fff);
         font-family: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        font-size: 11px;
-        line-height: 18px;
-        height: 20px;
         cursor: pointer;
         white-space: nowrap;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
         transition: background 140ms ease, border-color 140ms ease, transform 80ms ease, box-shadow 140ms ease,
-            opacity 120ms ease;
+            opacity 120ms ease, width 120ms ease;
         opacity: 0;
         pointer-events: none;
+        width: 0;
+        overflow: hidden;
+        interpolate-size: allow-keywords;
+        > span {
+            display: inline-block;
+            font-size: 11px;
+            line-height: 18px;
+        }
     }
-
-    .sharetube-thumb-add-btn:hover {
+    
+    .sharetube-thumb-enhanced:hover .sharetube-thumb-add-btn {
+        width: auto;
         background: rgba(0, 0, 0, 0.7);
         border-color: rgba(255, 255, 255, 0.45);
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
@@ -130,7 +136,7 @@ export default class ThumbnailExtAddToQueue {
 
         const metadataRow = this.getTargetMetadataRow(rendererRoot);
         if (!metadataRow) return;
-
+        console.log("metadataRow", metadataRow);
         // Prevent double-injection into the same row (e.g., if YouTube reuses DOM).
         if (metadataRow.querySelector(".sharetube-thumb-add-btn")) {
             this.enhanced.add(rendererRoot);
@@ -144,9 +150,11 @@ export default class ThumbnailExtAddToQueue {
                 class="sharetube-thumb-add-btn sharetube-feature"
                 title="Add to ShareTube queue"
             >
-                +ST
+                <span>+ST</span>
             </button>
         `.const();
+
+        metadataRow.classList.add("sharetube-thumb-enhanced");
 
         metadataRow.insertBefore(btn, metadataRow.firstChild || null);
         rendererRoot.classList.add("sharetube-thumb-enhanced");

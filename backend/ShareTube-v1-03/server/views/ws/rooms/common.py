@@ -11,7 +11,11 @@ from ....helpers.ws import emit_function_after_delay
 from ....helpers.redis import get_user_socket_connections, has_user_been_verified
 
 
-def emit_presence(room: Room) -> None:
+def emit_presence(room_id: int) -> None:
+    room = db.session.get(Room, room_id)
+    if not room:
+        return
+
     rows = (
         db.session.query(User, RoomMembership.ready)
         .join(RoomMembership, RoomMembership.user_id == User.id)
@@ -56,7 +60,7 @@ def handle_user_disconnect(user_id: int) -> None:
         if not other_memberships and user:
             user.active = False
         db.session.commit()
-        emit_function_after_delay(emit_presence, room, 0.1)
+        emit_function_after_delay(emit_presence, room.id, delay_seconds=0.1)
     except Exception:
         logging.exception("_handle_user_disconnect error")
 
@@ -95,7 +99,7 @@ def handle_user_disconnect_delayed(user_id: int) -> None:
         if not other_memberships and user:
             user.active = False
         db.session.commit()
-        emit_function_after_delay(emit_presence, room, 0.1)
+        emit_function_after_delay(emit_presence, room.id, delay_seconds=0.1)
     except Exception:
         logging.exception("_handle_user_disconnect_delayed error")
 

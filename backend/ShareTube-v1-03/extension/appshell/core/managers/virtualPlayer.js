@@ -169,7 +169,6 @@ export default class VirtualPlayer {
     }
 
     async onRoomJoinResult(result) {
-        console.log("onRoomJoinResult", result);
         if (!result.ok) return;
 
         this.updateServerClock(result);

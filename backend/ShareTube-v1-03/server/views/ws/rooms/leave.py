@@ -52,7 +52,7 @@ def register() -> None:
             db.session.commit()
             db.session.refresh(room)
             leave_room(f"room:{room.code}")
-            emit_function_after_delay(emit_presence, room, 0.1)
+            emit_function_after_delay(emit_presence, room.id, delay_seconds=0.1)
         except Exception:
             logging.exception("room.leave handler error")
 
