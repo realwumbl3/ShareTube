@@ -14,6 +14,8 @@ class ShareTubeState {
         this.isOperator = new LiveVar(false);
         // Whether this client currently considers itself joined to a room
         this.inRoom = new LiveVar(false);
+        // Room code to rejoin on reconnection (preserved during disconnect)
+        this.reconnectRoomCode = new LiveVar("");
 
         // User
         this.avatarUrl = new LiveVar("");
@@ -63,6 +65,7 @@ class ShareTubeState {
         this.isOperator.set(false);
         this.showContinueNextPrompt.set(false);
         this.nextUpItem.set(null);
+        // Note: reconnectRoomCode is preserved for reconnection logic
     }
 
     serverDateNow() {

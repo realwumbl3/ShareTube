@@ -24,6 +24,12 @@ export default class MobileRemoteApp {
         return backend_url.replace(/\/+$/, "");
     }
 
+    resetRoomState() {
+        state.resetRoomState();
+        this.youtubePlayer?.stop();
+        this.youtubePlayer?.onRoomStateChange("");
+    }
+
     constructor() {
         // Local-only status
         this.isReady = new LiveVar(false);
@@ -162,7 +168,6 @@ export default class MobileRemoteApp {
 
         this.socket.on("disconnect", () => {
             console.log("Mobile Remote: Socket disconnected");
-            state.inRoom.set(false);
         });
 
         this.socket.on("room.joined", (data) => this.handleRoomJoined(data));

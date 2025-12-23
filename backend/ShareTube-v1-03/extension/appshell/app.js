@@ -117,11 +117,14 @@ export default class ShareTubeApp {
     }
 
     async clearAuthState() {
+        console.log("ShareTube: Clearing auth state");
         // Clear auth token from storage
         await this.storageManager.remove(["auth_token"]);
         // Clear user state
         state.userId.set(0);
         state.avatarUrl.set("");
+        // Clear reconnect room code since user is signing out
+        state.reconnectRoomCode.set("");
         // Reset room state
         this.resetRoomState();
         // Disconnect socket to prevent further authenticated requests

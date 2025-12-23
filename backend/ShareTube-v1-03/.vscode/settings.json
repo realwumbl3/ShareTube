@@ -9,5 +9,9 @@
             "database": "${workspaceFolder:ShareTube-v1-03}/.instance/ShareTube.db",
             "name": "ShareTube.db"
         }
-    ]
+    ],
+    "files.exclude": {
+        ".cms": true,
+        "**/node_modules": true
+    }
 }

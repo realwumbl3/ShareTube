@@ -173,6 +173,7 @@ export default class VirtualPlayer {
 
         this.updateServerClock(result);
         state.roomCode.set(result.code);
+        state.reconnectRoomCode.set(result.code); // Store for reconnection
         state.inRoom.set(true);
         this.app.youtubePlayer?.start();
 

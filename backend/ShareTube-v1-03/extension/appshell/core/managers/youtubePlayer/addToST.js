@@ -136,7 +136,6 @@ export default class ThumbnailExtAddToQueue {
 
         const metadataRow = this.getTargetMetadataRow(rendererRoot);
         if (!metadataRow) return;
-        console.log("metadataRow", metadataRow);
         // Prevent double-injection into the same row (e.g., if YouTube reuses DOM).
         if (metadataRow.querySelector(".sharetube-thumb-add-btn")) {
             this.enhanced.add(rendererRoot);

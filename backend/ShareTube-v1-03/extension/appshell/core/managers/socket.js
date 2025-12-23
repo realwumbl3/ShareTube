@@ -36,23 +36,30 @@ export default class SocketManager {
             // Basic connection lifecycle logs
             this.socket.on("connect", () => {
                 console.log("socket.io connected");
+
+                // If we were previously in a room but got disconnected, rejoin automatically
+                const reconnectCode = state.reconnectRoomCode.get();
+                const wasInRoom = state.inRoom.get() && reconnectCode;
+                if (wasInRoom) {
+                    console.log("ShareTube: Reconnecting to room", reconnectCode);
+                    try {
+                        this.joinRoom(reconnectCode);
+                    } catch (e) {
+                        console.warn("ShareTube: Failed to rejoin room on reconnect", e);
+                    }
+                } else {
+                    console.log("ShareTube: Wasn't in a room", { reconnectCode, wasInRoom });
+                }
             });
             this.socket.on("disconnect", () => {
                 console.log("socket.io disconnected");
-                // When the underlying socket disconnects, we are no longer in
-                // a valid room membership. Clear local room state so that the
-                // extension stops emitting user.ready for a room the backend
-                // has already torn down.
-                try {
-                    this.app.resetRoomState();
-                } catch (e) {
-                    console.warn("ShareTube: failed to reset room state on disconnect", e);
-                }
             });
             // Handle authentication expiration
             this.socket.on("auth.expired", async () => {
                 console.warn("ShareTube: Authentication token expired, clearing sign-in state");
                 try {
+                    // Clear reconnect room code since user needs to re-authenticate
+                    state.reconnectRoomCode.set("");
                     await this.app.clearAuthState();
                 } catch (e) {
                     console.warn("ShareTube: failed to clear auth state on token expiration", e);
@@ -118,11 +125,11 @@ export default class SocketManager {
             // Proactively leave the current room and clear local room flags so
             // that any late user.ready emissions (e.g. from video events
             // during navigation) are suppressed client‑side.
-            try {
-                this.app.resetRoomState();
-            } catch (e) {
-                console.warn("ShareTube: failed to clear room state on beforeunload", e);
-            }
+            // try {
+            //     this.app.resetRoomState();
+            // } catch (e) {
+            //     console.warn("ShareTube: failed to clear room state on beforeunload", e);
+            // }
         });
     }
 
