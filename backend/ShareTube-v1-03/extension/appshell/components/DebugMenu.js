@@ -38,6 +38,21 @@ export default class DebugMenu {
                                     })}</span
                                 >
                             </div>
+                            <div class="debug-row">
+                                <span class="debug-label">RTT:</span>
+                                <span class="debug-value"
+                                    >${state.serverRttMs.interp((v) => {
+                                        if (v == null) return "(unknown)";
+                                        return `${v}ms`;
+                                    })}</span
+                                >
+                            </div>
+                            <div class="debug-row">
+                                <span class="debug-label">Sync source:</span>
+                                <span class="debug-value"
+                                    >${state.serverTimeSyncSource.interp((v) => v || "(unknown)")}</span
+                                >
+                            </div>
                         </div>
                         <div class="debug-actions">
                             <button class="rounded_btn" zyx-click=${() => app.logSelf()}>console state/app</button>

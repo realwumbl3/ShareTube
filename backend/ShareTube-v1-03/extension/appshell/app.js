@@ -5,10 +5,12 @@ import state from "./core/state/state.js";
 
 import SocketManager from "./core/managers/socket.js";
 import DebugMenu from "./components/DebugMenu.js";
-import VirtualPlayer from "./core/managers/virtualPlayer.js";
+import VirtualPlayer from "./core/managers/virtualPlayer/virtualPlayer.js";
+import TimeSyncManager from "./core/managers/timeSync.js";
+
 import RoomManager from "./core/managers/room.js";
 import AuthManager from "./core/managers/auth.js";
-import YoutubePlayerManager from "./core/managers/youtubePlayer/manager.js";
+import YoutubePlayerManager from "./core/managers/youtubePlayer/youtubePlayer.js";
 import UIManager from "./core/managers/ui.js";
 import StorageManager from "./core/managers/storage.js";
 
@@ -17,6 +19,8 @@ import QRCodeComponent from "./components/QRCode.js";
 
 import ShareTubePill from "./components/ShareTubePill.js";
 import ShareTubeHub from "./components/Hub.js";
+
+import ContinueNextOverlay from "./components/ContinueNextOverlay.js";
 
 import { resolveAssetUrl } from "../shared/urlResolver.js";
 
@@ -50,11 +54,13 @@ export default class ShareTubeApp {
     constructor() {
         this.socket = new SocketManager(this);
         this.virtualPlayer = new VirtualPlayer(this);
+        this.timeSync = new TimeSyncManager(this);
         this.roomManager = new RoomManager(this);
         this.authManager = new AuthManager(this);
         this.uiManager = new UIManager(this);
         this.storageManager = new StorageManager(this);
         this.youtubePlayer = new YoutubePlayerManager(this);
+        this.continueNextOverlay = new ContinueNextOverlay(this);
 
         // Components
         this.hub = new ShareTubeHub(this);
@@ -65,7 +71,9 @@ export default class ShareTubeApp {
         this.storageManager.get("debug_mode", false).then((debug_mode) => state.debug_mode.set(debug_mode));
 
         html`
-            <div id="sharetube_main" class="extension-ui st_reset">${this.hub} ${this.debugMenu} ${this.sharetubePill}</div>
+            <div id="sharetube_main" class="extension-ui st_reset">
+                ${this.debugMenu} ${this.hub} ${this.continueNextOverlay} ${this.sharetubePill}
+            </div>
             ${this.qrCode}
         `.bind(this);
 
@@ -158,6 +166,7 @@ export default class ShareTubeApp {
         console.log("ShareTube Init");
         this.appendTo(document.body);
         this.attachBrowserListeners();
+        this.timeSync.start();
         this.authManager.applyAvatarFromToken();
         this.roomManager.tryJoinRoomFromUrl();
         setTimeout(() => this.sharetube_main.classList.add("visible"), 1);

@@ -70,7 +70,7 @@ export default class CurrentPlaying {
 
         // this.playbackControls = isMobileRemote ? new PlaybackControls(app) : null;
 
-        this.continueNextOverlay = new ContinueNextOverlay(app);
+        this.continueNextOverlay = isMobileRemote.get() ? new ContinueNextOverlay(app) : null;
         this.splash = new Splash();
 
         this.app.virtualPlayer.on("virtualplayer.user-event", (data) => {

@@ -8,7 +8,6 @@ import PlayerControls from "./controls.js";
 import PlayerExtender from "./extender.js";
 import PlayerOSDDebug from "./components/osdDebug.js";
 import ThumbnailExtAddToQueue from "./addToST.js";
-import ContinueNextOverlay from "../../../components/ContinueNextOverlay.js";
 import Splash from "../../../components/Splash.js";
 
 // Lightweight observer/controller around the active <video> element on YouTube
@@ -57,7 +56,6 @@ export default class YoutubePlayerManager {
             this.splash.call(data);
         });
 
-        this.continueNextOverlay = new ContinueNextOverlay(this.app);
         // this.intermission = new Intermission();
 
         this.playbackSyncer = new PlaybackSyncer(this);
@@ -156,7 +154,6 @@ export default class YoutubePlayerManager {
         this.near_end_probe_sent = false;
         this.video.after(this.osdDebug.main);
         this.video.parentElement.after(this.splash.main);
-        this.video.parentElement.after(this.continueNextOverlay.main);
         this.toggleVideoListeners(this.video, true);
         this.enforceDesiredState("bind");
         this.playbackSyncer.start();
@@ -174,7 +171,6 @@ export default class YoutubePlayerManager {
         this.playbackSyncer.stop();
         this.playbackSyncer.resetPlaybackRate(true);
         this.osdDebug.main.remove();
-        this.continueNextOverlay.main.remove();
         this.playerControls.unbindFromVideo();
         this.playerExtender.unbind();
         this.video = null;

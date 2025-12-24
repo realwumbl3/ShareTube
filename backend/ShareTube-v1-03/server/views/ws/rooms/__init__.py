@@ -8,6 +8,7 @@ from .common import emit_presence
 from .heartbeat import start_heartbeat_if_needed
 from .... import get_user_id_from_auth_header
 from ....extensions import db
+from ....lib.utils import now_ms
 from ....models import Queue, Room, RoomMembership, User
 
 rooms_bp = Blueprint("rooms", __name__, url_prefix="/api")
@@ -45,6 +46,20 @@ def room_create():
     db.session.add(membership)
     db.session.commit()
     return jsonify({"code": room.code})
+
+
+@rooms_bp.route("/time", methods=["GET", "OPTIONS"])
+def time_now():
+    """Minimal time sync endpoint (no auth).
+
+    Returns server time in ms and echoes clientTimestamp (query param) so clients can compute
+    RTT/offset NTP-style.
+    """
+    if request.method == "OPTIONS":
+        return "", 200
+
+    client_timestamp = request.args.get("clientTimestamp", default=None, type=int)
+    return jsonify({"serverNowMs": now_ms(), "clientTimestamp": client_timestamp})
 
 
 from .join import register as register_room_join

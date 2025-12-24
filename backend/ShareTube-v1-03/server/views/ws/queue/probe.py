@@ -62,8 +62,14 @@ def register() -> None:
                 completed_entry.position = max_pos + 1
                 # Keep current_entry_id set to the completed entry (don't clear it)
                 room.state = "idle"
-                
+
                 commit_with_retry(db.session)
+
+                # Refresh room and queue after commit to ensure current_entry relationship is updated
+                db.session.refresh(room)
+                if room.current_queue:
+                    db.session.refresh(room.current_queue)
+
                 try:
                     db.session.refresh(completed_entry)
                 except Exception:

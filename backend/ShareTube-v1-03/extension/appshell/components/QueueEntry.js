@@ -14,10 +14,14 @@ export class ShareTubeQueueComponent {
      */
     constructor(item) {
         this.item = item;
-        this.isQueued = new LiveVar(item.status.get() === "queued");
         html`
             <div class="queue-item" data-id=${this.item.id}>
-                <div zyx-if=${this.isQueued} class="queue-item-drag-handle" title="Drag to reorder" draggable="true">
+                <div
+                    zyx-if=${[item.status, (status) => status === "queued"]}
+                    class="queue-item-drag-handle"
+                    title="Drag to reorder"
+                    draggable="true"
+                >
                     ≡
                 </div>
                 <div class="queue-item-thumbnail">
@@ -43,9 +47,13 @@ export class ShareTubeQueueComponent {
                                 navigator.clipboard.writeText(this.item.url);
                             }}
                         >
-                            <img  src="${linkSVG}" alt="Drag link" draggable="false" />
+                            <img src="${linkSVG}" alt="Drag link" draggable="false" />
                         </span>
-                        <span class="inline-icon external-link-icon" title="Open in new tab" zyx-click=${() => this.item.openUrl()}>
+                        <span
+                            class="inline-icon external-link-icon"
+                            title="Open in new tab"
+                            zyx-click=${() => this.item.openUrl()}
+                        >
                             <img src="${openInNewTabSVG}" alt="Open in new tab" draggable="false" />
                         </span>
                     </div>
@@ -73,7 +81,7 @@ export class ShareTubeQueueComponent {
                         <img src="${xSVG}" alt="Remove" draggable="false" />
                     </button>
                     <button
-                        zyx-if=${[this.isQueued, (v) => !v]}
+                        zyx-if=${[item.status, (status) => status !== "queued"]}
                         class="requeue-button"
                         type="button"
                         aria-label="Move back to top of queue"

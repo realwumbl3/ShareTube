@@ -3,7 +3,7 @@ import state from "../../state/state.js";
 
 // Optimized constants for faster, more responsive syncing
 const PLAYBACK_DRIFT_INTERVAL_MS = 250; // Reduced from 500ms for more responsive checks
-const PLAYBACK_DRIFT_THRESHOLD_MS = 10; // Reduced threshold for tighter sync
+const PLAYBACK_DRIFT_THRESHOLD_MS = 40; // Reduced threshold for tighter sync
 const PLAYBACK_DRIFT_FULL_ADJUST_MS = 1500; // Reduced from 4000ms for faster corrections
 const PLAYBACK_DRIFT_MIN_RATE = 0.85; // More aggressive correction range
 const PLAYBACK_DRIFT_MAX_RATE = 1.2;

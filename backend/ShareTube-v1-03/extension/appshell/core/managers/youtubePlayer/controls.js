@@ -1,6 +1,5 @@
 import { throttle } from "../../utils/utils.js";
 import state from "../../state/state.js";
-import { getCurrentPlayingProgressMs } from "../../state/getters.js";
 
 const SHARETUBE_ROOT_ID = "sharetube_main";
 const PLAYER_CONTAINER_SELECTORS = ["#ytp-player", ".html5-video-player"];
@@ -128,7 +127,7 @@ export default class PlayerControls {
                     // 0 = 0%, 1 = 10%, 2 = 20%, ..., 9 = 90%
                     const digit = parseInt(e.code.replace("Digit", ""), 10);
                     const percentage = digit / 10;
-                    this.emitSeekToPercentage(percentage);
+                    this.app.virtualPlayer.emitSeekToPercentage(percentage);
                 }
                 break;
         }
@@ -266,7 +265,7 @@ export default class PlayerControls {
                 const bounds = progressBar.getBoundingClientRect();
                 const x = e.clientX - bounds.left;
                 const progress = Math.max(0, Math.min(1, x / bounds.width));
-                this.emitSeekToPercentage(progress);
+                this.app.virtualPlayer.emitSeekToPercentage(progress);
             },
             1000
         );
@@ -355,33 +354,6 @@ export default class PlayerControls {
                 this.app.virtualPlayer.emitRelativeSeek(real_delta);
             },
             delay
-        );
-    }
-
-    emitSeekToPercentage(percentage) {
-        // percentage should be between 0 and 1 (0 = 0%, 1 = 100%)
-        throttle(
-            this,
-            "emitSeekToPercentage",
-            () => {
-                const { durationMs } = getCurrentPlayingProgressMs();
-                if (!durationMs || durationMs <= 0) {
-                    this.verbose && console.log("emitSeekToPercentage: no valid duration");
-                    return;
-                }
-                const targetMs = Math.floor(Math.max(0, Math.min(1, percentage)) * durationMs);
-                this.verbose &&
-                    console.log("emitSeekToPercentage", {
-                        percentage,
-                        targetMs,
-                        durationMs,
-                    });
-                this.youtubePlayer.app.socket.emit("room.control.seek", {
-                    progress_ms: targetMs,
-                    play: state.roomState.get() === "playing",
-                });
-            },
-            300
         );
     }
 

@@ -1,7 +1,7 @@
-import state from "../state/state.js";
-import { getCurrentPlayingProgressMs } from "../state/getters.js";
-import { syncLiveList } from "../utils/utils.js";
-import ShareTubeQueueItem from "../models/queueItem.js";
+import state from "../../state/state.js";
+import { getCurrentPlayingProgressMs } from "../../state/getters.js";
+import { syncLiveList, throttle } from "../../utils/utils.js";
+import ShareTubeQueueItem from "../../models/queueItem.js";
 
 // Virtual room player: coordinates backend room state, local state, and the YouTube player
 export default class VirtualPlayer {
@@ -97,6 +97,30 @@ export default class VirtualPlayer {
             if (data.status !== undefined) item.status.set(data.status);
         }
 
+        // Update currentPlaying.item status if it was affected by the move
+        const currentPlayingItem = state.currentPlaying.item.get();
+        if (currentPlayingItem) {
+            let currentItemUpdated = false;
+
+            // Check bulk updates
+            if (Array.isArray(updates) && updates.length) {
+                const update = updates.find(u => u?.id === currentPlayingItem.id);
+                if (update && update.status !== undefined) {
+                    currentPlayingItem.status.set(update.status);
+                    currentItemUpdated = true;
+                }
+            }
+            // Check single update
+            else if (data.id === currentPlayingItem.id && data.status !== undefined) {
+                currentPlayingItem.status.set(data.status);
+                currentItemUpdated = true;
+            }
+
+            if (currentItemUpdated) {
+                console.log(`Updated currentPlaying.item status to: ${currentPlayingItem.status.get()}`);
+            }
+        }
+
         this.refreshQueueLists();
         this.updateNextUpItem();
     }
@@ -171,7 +195,7 @@ export default class VirtualPlayer {
     async onRoomJoinResult(result) {
         if (!result.ok) return;
 
-        this.updateServerClock(result);
+        this.app.timeSync?.updateFromServerPayload(result, { source: "socket:user.join.result" });
         state.roomCode.set(result.code);
         state.reconnectRoomCode.set(result.code); // Store for reconnection
         state.inRoom.set(true);
@@ -237,27 +261,20 @@ export default class VirtualPlayer {
         if (data.current_entry !== undefined) {
             this.updateCurrentPlayingFromEntry(data.current_entry);
             this.gotoVideoIfNotOnVideoPage(data.current_entry);
-            // Hide continue prompt when a new video starts playing
-            state.showContinueNextPrompt.set(false);
         } else {
-            this.updateCurrentPlayingTiming(data.playing_since_ms, data.progress_ms);
+            state.currentPlaying.playingSinceMs.set(data.playing_since_ms);
+            state.currentPlaying.progressMs.set(data.progress_ms);
         }
 
-        if (data.state) {
-            this.setRoomState(data.state);
-        }
-
-        // Show continue prompt when playback event indicates it and there's a next item
-        if (data.show_continue_prompt && state.nextUpItem.get()) {
-            state.showContinueNextPrompt.set(true);
-        }
-
+        if (data.state) this.setRoomState(data.state);
+    
         if (data.trigger === "room.control.seek" && !this.shouldSuppressTimestampUpdate(data)) this.applyTimestamp();
     }
 
     playerStateChange(priorState, newState) {
         if (priorState === "playing" && newState === "paused") return this.app.youtubePlayer?.setDesiredState("paused");
-        if (priorState === "paused" && newState === "playing") return this.app.youtubePlayer?.setDesiredState("playing");
+        if (priorState === "paused" && newState === "playing")
+            return this.app.youtubePlayer?.setDesiredState("playing");
         if (newState === "playing") return this.app.youtubePlayer?.setDesiredState("playing");
         if (newState === "starting" || newState === "paused" || newState === "midroll")
             return this.app.youtubePlayer?.setDesiredState("paused");
@@ -274,17 +291,10 @@ export default class VirtualPlayer {
     }
 
     updateCurrentPlayingFromEntry(entry) {
-        if (entry === null) {
-            state.currentPlaying.item.set(null);
-            return;
-        }
-        state.currentPlaying.item.set(new ShareTubeQueueItem(this.app, entry));
-        this.updateCurrentPlayingTiming(entry?.playing_since_ms, entry?.progress_ms);
-    }
-
-    updateCurrentPlayingTiming(playing_since_ms, progress_ms) {
-        state.currentPlaying.playingSinceMs.set(playing_since_ms);
-        state.currentPlaying.progressMs.set(progress_ms);
+        state.currentPlaying.item.set(entry ? new ShareTubeQueueItem(this.app, entry) : null);
+        if (entry === null) return;
+        state.currentPlaying.playingSinceMs.set(entry.playing_since_ms);
+        state.currentPlaying.progressMs.set(entry.progress_ms);
     }
 
     isForCurrentRoom(code) {
@@ -292,35 +302,9 @@ export default class VirtualPlayer {
         return code === state.roomCode.get();
     }
 
-    updateServerClock({ serverNowMs, clientTimestamp }) {
-        const receiveTime = Date.now() + state.fakeTimeOffset.get();
-        state.serverNowMs.set(serverNowMs);
-
-        const MS_PER_HOUR = 1000 * 60 * 60;
-
-        // If we have the originating client timestamp, compute NTP-style offset:
-        // offset = serverTimeAtSend - (clientSendTime + RTT/2)
-        if (Number.isFinite(clientTimestamp)) {
-            const rtt = receiveTime - clientTimestamp;
-            const offset = serverNowMs - (clientTimestamp + rtt / 2);
-            // Round to nearest hour for timezone compensation
-            const offsetHours = Math.round(offset / MS_PER_HOUR);
-            state.serverMsOffset.set(offsetHours * MS_PER_HOUR);
-            return;
-        }
-
-        // Fallback to naive offset when client timestamp is unavailable
-        const offset = receiveTime - serverNowMs;
-        // Round to nearest hour for timezone compensation
-        const offsetHours = Math.round(offset / MS_PER_HOUR);
-        state.serverMsOffset.set(offsetHours * MS_PER_HOUR);
-    }
-
     applyTimestamp() {
-        console.log("applyTimestamp");
         const { progressMs } = getCurrentPlayingProgressMs();
         if (progressMs === null) return;
-        console.log("applyTimestamp: progressMs", progressMs);
         setTimeout(() => this.app.youtubePlayer?.setDesiredProgressMs(progressMs), 1);
     }
 
@@ -349,6 +333,33 @@ export default class VirtualPlayer {
             progress_ms: target,
             play: state.roomState.get() === "playing",
         });
+    }
+
+    emitSeekToPercentage(percentage) {
+        // percentage should be between 0 and 1 (0 = 0%, 1 = 100%)
+        throttle(
+            this,
+            "emitSeekToPercentage",
+            () => {
+                const { durationMs } = getCurrentPlayingProgressMs();
+                if (!durationMs || durationMs <= 0) {
+                    this.verbose && console.log("emitSeekToPercentage: no valid duration");
+                    return;
+                }
+                const targetMs = Math.floor(Math.max(0, Math.min(1, percentage)) * durationMs);
+                this.verbose &&
+                    console.log("emitSeekToPercentage", {
+                        percentage,
+                        targetMs,
+                        durationMs,
+                    });
+                this.app.socket.emit("room.control.seek", {
+                    progress_ms: targetMs,
+                    play: state.roomState.get() === "playing",
+                });
+            },
+            300
+        );
     }
 
     async enqueueUrlsOrCreateRoom(urls) {

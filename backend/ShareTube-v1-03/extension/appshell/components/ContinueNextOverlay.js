@@ -9,8 +9,9 @@ export default class ContinueNextOverlay {
             class="continue-next-overlay"
             zyx-if=${[
                 state.nextUpItem,
-                state.showContinueNextPrompt,
-                (nextUpItem, show) => nextUpItem !== null && show,
+                state.currentPlaying.item,
+                (nextUpItem, playingItem) =>
+                    nextUpItem !== null && (playingItem === null || playingItem.status.get() === "played"),
             ]}
         >
             <div class="continue-next-content">
@@ -39,8 +40,6 @@ export default class ContinueNextOverlay {
             await this.app.socket.emit("queue.continue_next", {
                 code: state.roomCode.get(),
             });
-            // Hide the prompt after clicking
-            state.showContinueNextPrompt.set(false);
         } catch (error) {
             console.warn("Failed to continue to next:", error);
         }
@@ -49,11 +48,7 @@ export default class ContinueNextOverlay {
 
 css`
     .continue-next-overlay {
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
+        position: relative;
         pointer-events: auto;
         padding: 8px;
         background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.8));
@@ -61,7 +56,6 @@ css`
         border-radius: 12px;
         backdrop-filter: blur(8px);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        animation: slideInFromTop 300ms cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
     }
 
@@ -158,17 +152,6 @@ css`
 
     .continue-next-btn:active {
         transform: translateY(0);
-    }
-
-    @keyframes slideInFromTop {
-        from {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
     }
 
     @keyframes glowSwipe {

@@ -25,6 +25,8 @@ class ShareTubeState {
         // Server
         this.serverNowMs = new LiveVar(0);
         this.serverMsOffset = new LiveVar(0);
+        this.serverRttMs = new LiveVar(null);
+        this.serverTimeSyncSource = new LiveVar("");
 
         // Users
         this.users = new LiveList([]);
@@ -39,8 +41,6 @@ class ShareTubeState {
         this.hubVisible = new LiveVar(false);
         this.embeddedPlayerVisible = new LiveVar(false);
 
-        // Continue next prompt
-        this.showContinueNextPrompt = new LiveVar(false);
         this.nextUpItem = new LiveVar(null);
 
         // Current playing
@@ -63,7 +63,8 @@ class ShareTubeState {
         this.roomAutoadvanceOnEnd.set(true);
         this.roomIsPrivate.set(true);
         this.isOperator.set(false);
-        this.showContinueNextPrompt.set(false);
+        this.serverRttMs.set(null);
+        this.serverTimeSyncSource.set("");
         this.nextUpItem.set(null);
         // Note: reconnectRoomCode is preserved for reconnection logic
     }
