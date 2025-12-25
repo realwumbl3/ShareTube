@@ -92,7 +92,7 @@ export default class PlayerControls {
             case "KeyK":
                 e.preventDefault();
                 e.stopPropagation();
-                this.emitToggleRoomPlayPause();
+                this.app.virtualPlayer.emitToggleRoomPlayPause();
                 break;
 
             case "ArrowLeft":
@@ -210,7 +210,7 @@ export default class PlayerControls {
             if (path.some((el) => el && el.classList?.contains("ytp-play-button"))) {
                 e.preventDefault();
                 e.stopPropagation();
-                this.emitToggleRoomPlayPause();
+                this.app.virtualPlayer.emitToggleRoomPlayPause();
             }
             return;
         } else if (e.target === this.youtubePlayer.video) {
@@ -245,7 +245,7 @@ export default class PlayerControls {
             this.video_click_timeout = setTimeout(() => {
                 this.video_click_timeout = null;
                 this.last_video_click_time = 0;
-                this.emitToggleRoomPlayPause();
+                this.app.virtualPlayer.emitToggleRoomPlayPause();
             }, 200);
         } else {
             this.verbose && console.log("onPlayerClick: other clicked", e);
@@ -264,8 +264,8 @@ export default class PlayerControls {
                 if (!progressBar) return;
                 const bounds = progressBar.getBoundingClientRect();
                 const x = e.clientX - bounds.left;
-                const progress = Math.max(0, Math.min(1, x / bounds.width));
-                this.app.virtualPlayer.emitSeekToPercentage(progress);
+                const percentage = Math.max(0, Math.min(1, x / bounds.width));
+                this.app.virtualPlayer.emitSeekToPercentage(percentage);
             },
             1000
         );
@@ -313,20 +313,6 @@ export default class PlayerControls {
             (e.target instanceof Element ? e.target.closest("a") : null);
         const href = anchor?.getAttribute?.("href") || null;
         if (href) window.open(href, "_blank");
-    }
-
-    emitToggleRoomPlayPause() {
-        const roomState = state.roomState.get();
-        throttle(
-            this,
-            "emitToggleRoomPlayPause",
-            () => {
-                this.youtubePlayer.app.socket.emit(
-                    roomState === "playing" ? "room.control.pause" : "room.control.play"
-                );
-            },
-            300
-        );
     }
 
     keypressSeekRelative(direction, multiplier = 1) {

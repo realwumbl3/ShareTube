@@ -39,6 +39,31 @@ export default class VirtualPlayer {
         socket.on("room.error", this.onRoomError.bind(this));
     }
 
+    async enqueueUrlsOrCreateRoom(urls) {
+        if (!urls) return;
+        const urlList = Array.isArray(urls) ? urls : [urls];
+        if (urlList.length === 0) return;
+
+        if (!state.inRoom.get()) {
+            const code = await this.app.createRoom();
+            if (code) {
+                this.app.roomManager.updateCodeHashInUrl(code);
+                await this.app.roomManager.tryJoinRoomFromUrl();
+                // Wait for join to complete
+                const start = Date.now();
+                while (!state.inRoom.get()) {
+                    if (Date.now() - start > 5000) break;
+                    // eslint-disable-next-line no-await-in-loop
+                    await new Promise((r) => setTimeout(r, 100));
+                }
+            }
+        }
+
+        if (state.inRoom.get()) {
+            urlList.forEach((u) => this.app.enqueueUrl(u));
+        }
+    }
+    
     async onQueueAdded(data) {
         if (!data.item) return;
         const item = new ShareTubeQueueItem(this.app, data.item);
@@ -104,7 +129,7 @@ export default class VirtualPlayer {
 
             // Check bulk updates
             if (Array.isArray(updates) && updates.length) {
-                const update = updates.find(u => u?.id === currentPlayingItem.id);
+                const update = updates.find((u) => u?.id === currentPlayingItem.id);
                 if (update && update.status !== undefined) {
                     currentPlayingItem.status.set(update.status);
                     currentItemUpdated = true;
@@ -167,6 +192,11 @@ export default class VirtualPlayer {
         state.nextUpItem.set(!nextUpEntry ? null : new ShareTubeQueueItem(this.app, nextUpEntry));
     }
 
+    isForCurrentRoom(code) {
+        if (!code) return false;
+        return code === state.roomCode.get();
+    }
+
     async onRoomSettingsUpdate(data) {
         const setting = data.setting;
         const value = data.value;
@@ -226,27 +256,6 @@ export default class VirtualPlayer {
         this.emit("virtualplayer.room-join-result", result);
     }
 
-    async emitSkipVideo() {
-        return await this.app.socket.emit("room.control.skip");
-    }
-
-    async emitRestartVideo() {
-        return await this.app.socket.emit("room.control.restartvideo");
-    }
-
-    async emitToggleRoomPlayPause() {
-        return await this.app.socket.emit(
-            state.roomState.get() === "playing" ? "room.control.pause" : "room.control.play"
-        );
-    }
-
-    shouldSuppressTimestampUpdate(data) {
-        const localUserId = state.userId && state.userId.get ? state.userId.get() : null;
-        const isOwnActor = data.actor_user_id && localUserId && data.actor_user_id === localUserId;
-        const isFrameStep = data.frame_step !== undefined && data.frame_step !== null;
-        return isOwnActor && isFrameStep;
-    }
-
     async onRoomPlayback(data) {
         if (!this.isForCurrentRoom(data.code)) return;
 
@@ -267,7 +276,7 @@ export default class VirtualPlayer {
         }
 
         if (data.state) this.setRoomState(data.state);
-    
+
         if (data.trigger === "room.control.seek" && !this.shouldSuppressTimestampUpdate(data)) this.applyTimestamp();
     }
 
@@ -297,11 +306,6 @@ export default class VirtualPlayer {
         state.currentPlaying.progressMs.set(entry.progress_ms);
     }
 
-    isForCurrentRoom(code) {
-        if (!code) return false;
-        return code === state.roomCode.get();
-    }
-
     applyTimestamp() {
         const { progressMs } = getCurrentPlayingProgressMs();
         if (progressMs === null) return;
@@ -317,14 +321,27 @@ export default class VirtualPlayer {
         )}`;
     }
 
-    async emitSeek(progressMs) {
-        return this.app.socket.emit("room.control.seek", {
+    emitSkipVideo() {
+        this.app.socket.emit("room.control.skip");
+    }
+
+    emitRestartVideo() {
+        this.app.socket.emit("room.control.restartvideo");
+    }
+
+    emitToggleRoomPlayPause() {
+        const roomState = state.roomState.get();
+        this.app.socket.emit(roomState === "playing" ? "room.control.pause" : "room.control.play");
+    }
+
+    emitSeek(progressMs) {
+        this.app.socket.emit("room.control.seek", {
             progress_ms: progressMs,
             play: state.roomState.get() === "playing",
         });
     }
 
-    async emitRelativeSeek(deltaMs) {
+    emitRelativeSeek(deltaMs) {
         const { progressMs, durationMs } = getCurrentPlayingProgressMs();
         let target = progressMs + deltaMs;
         if (durationMs > 0) target = Math.min(Math.max(0, target), durationMs);
@@ -337,53 +354,19 @@ export default class VirtualPlayer {
 
     emitSeekToPercentage(percentage) {
         // percentage should be between 0 and 1 (0 = 0%, 1 = 100%)
-        throttle(
-            this,
-            "emitSeekToPercentage",
-            () => {
-                const { durationMs } = getCurrentPlayingProgressMs();
-                if (!durationMs || durationMs <= 0) {
-                    this.verbose && console.log("emitSeekToPercentage: no valid duration");
-                    return;
-                }
-                const targetMs = Math.floor(Math.max(0, Math.min(1, percentage)) * durationMs);
-                this.verbose &&
-                    console.log("emitSeekToPercentage", {
-                        percentage,
-                        targetMs,
-                        durationMs,
-                    });
-                this.app.socket.emit("room.control.seek", {
-                    progress_ms: targetMs,
-                    play: state.roomState.get() === "playing",
-                });
-            },
-            300
-        );
+        const { durationMs } = getCurrentPlayingProgressMs();
+        if (!durationMs || durationMs <= 0) {
+            this.verbose && console.log("emitSeekToPercentage: no valid duration");
+            return;
+        }
+        const targetMs = Math.floor(Math.max(0, Math.min(1, percentage)) * durationMs);
+        this.emitSeek(targetMs);
     }
 
-    async enqueueUrlsOrCreateRoom(urls) {
-        if (!urls) return;
-        const urlList = Array.isArray(urls) ? urls : [urls];
-        if (urlList.length === 0) return;
-
-        if (!state.inRoom.get()) {
-            const code = await this.app.createRoom();
-            if (code) {
-                this.app.roomManager.updateCodeHashInUrl(code);
-                await this.app.roomManager.tryJoinRoomFromUrl();
-                // Wait for join to complete
-                const start = Date.now();
-                while (!state.inRoom.get()) {
-                    if (Date.now() - start > 5000) break;
-                    // eslint-disable-next-line no-await-in-loop
-                    await new Promise((r) => setTimeout(r, 100));
-                }
-            }
-        }
-
-        if (state.inRoom.get()) {
-            urlList.forEach((u) => this.app.enqueueUrl(u));
-        }
+    shouldSuppressTimestampUpdate(data) {
+        const localUserId = state.userId && state.userId.get ? state.userId.get() : null;
+        const isOwnActor = data.actor_user_id && localUserId && data.actor_user_id === localUserId;
+        const isFrameStep = data.frame_step !== undefined && data.frame_step !== null;
+        return isOwnActor && isFrameStep;
     }
 }

@@ -2,7 +2,9 @@ import { html, css, LiveVar } from "/extension/shared/dep/zyx.js";
 import HeroSection from "./HeroSection.js";
 import FeaturesSection from "./FeaturesSection.js";
 import AboutSection from "./AboutSection.js";
-import AmbientBackground, { shaderFragmentPathMap } from "/extension/shared/components/AmbientBackground/AmbientBackground.js";
+import AmbientBackground, {
+    shaderFragmentPathMap,
+} from "/extension/shared/components/AmbientBackground/AmbientBackground.js";
 
 export default class HomepageApp {
     constructor() {
@@ -20,7 +22,10 @@ export default class HomepageApp {
         this.init();
 
         html`
-            <div class=${this.isReady.interp((r) => (r ? "homepage-app visible" : "homepage-app"))} peek=${this.peekBackground.interp((v) => v || null)}>
+            <div
+                class=${this.isReady.interp((r) => (r ? "homepage-app visible" : "homepage-app"))}
+                peek=${this.peekBackground.interp((v) => v || null)}
+            >
                 ${this.ambientBackground}
 
                 <header class="homepage-header glass-panel">
@@ -29,9 +34,27 @@ export default class HomepageApp {
                         <span class="extension-badge">Chrome Extension</span>
                     </div>
                     <nav class="homepage-nav">
-                        <button class="nav-btn glass-button" active=${this.currentTab.interp((v) => v === "home")} zyx-click=${() => this.setTab("home")}>Home</button>
-                        <button class="nav-btn glass-button" active=${this.currentTab.interp((v) => v === "features")} zyx-click=${() => this.setTab("features")}>Features</button>
-                        <button class="nav-btn glass-button" active=${this.currentTab.interp((v) => v === "about")} zyx-click=${() => this.setTab("about")}>About</button>
+                        <button
+                            class="nav-btn glass-button"
+                            active=${this.currentTab.interp((v) => v === "home")}
+                            zyx-click=${() => this.setTab("home")}
+                        >
+                            Home
+                        </button>
+                        <button
+                            class="nav-btn glass-button"
+                            active=${this.currentTab.interp((v) => v === "features")}
+                            zyx-click=${() => this.setTab("features")}
+                        >
+                            Features
+                        </button>
+                        <button
+                            class="nav-btn glass-button"
+                            active=${this.currentTab.interp((v) => v === "about")}
+                            zyx-click=${() => this.setTab("about")}
+                        >
+                            About
+                        </button>
                     </nav>
                 </header>
 
@@ -40,7 +63,9 @@ export default class HomepageApp {
                     <div class="view" zyx-if=${[this.currentTab, (v) => v === "home"]}>${new HeroSection()}</div>
 
                     <!-- Features Tab -->
-                    <div class="view" zyx-if=${[this.currentTab, (v) => v === "features"]}>${new FeaturesSection()}</div>
+                    <div class="view" zyx-if=${[this.currentTab, (v) => v === "features"]}>
+                        ${new FeaturesSection()}
+                    </div>
 
                     <!-- About Tab -->
                     <div class="view" zyx-if=${[this.currentTab, (v) => v === "about"]}>${new AboutSection()}</div>
@@ -53,7 +78,10 @@ export default class HomepageApp {
                         <div class="selector-menu">
                             ${Object.keys(shaderFragmentPathMap).map(
                                 (shader) =>
-                                    html`<div class="shader-selector-item" zyx-click=${() => this.ambientBackground.setShader(shader)}>
+                                    html`<div
+                                        class="shader-selector-item"
+                                        zyx-click=${() => this.ambientBackground.setShader(shader)}
+                                    >
                                         ${shader
                                             .replace("Fragment", "")
                                             .replace(/([A-Z])/g, " $1")
@@ -62,7 +90,9 @@ export default class HomepageApp {
                             )}
                         </div>
                     </div>
-                    <button class="peek-btn glass-button" zyx-click=${() => this.peekBackground.toggle()}>${this.peekBackground.interp((v) => (v ? "Hide" : "Peek"))}</button>
+                    <button class="peek-btn glass-button" zyx-click=${() => this.peekBackground.toggle()}>
+                        ${this.peekBackground.interp((v) => (v ? "Hide" : "Peek"))}
+                    </button>
                 </footer>
             </div>
         `.bind(this);

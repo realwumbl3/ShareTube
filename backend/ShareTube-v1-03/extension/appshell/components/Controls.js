@@ -83,25 +83,11 @@ export default class Controls {
     }
 
     async onMainButtonClick() {
-        throttle(
-            this,
-            "onMainButtonClick",
-            async () => {
-                return await this.app.virtualPlayer.emitToggleRoomPlayPause();
-            },
-            1000
-        );
+        return this.app.virtualPlayer.emitToggleRoomPlayPause();
     }
 
     async onSkipButtonClick() {
-        throttle(
-            this,
-            "onSkipButtonClick",
-            async () => {
-                return await this.app.virtualPlayer.emitSkipVideo();
-            },
-            10000
-        );
+        return this.app.virtualPlayer.emitSkipVideo();
     }
 
     onQRButtonClick() {
