@@ -2,7 +2,7 @@ import { html, css, LiveVar } from "/extension/shared/dep/zyx.js";
 import QueueList from "./QueueList.js";
 
 import SocketManager from "/extension/appshell/core/managers/socket.js";
-import VirtualPlayer from "/extension/appshell/core/managers/virtualPlayer/manager.js";
+import VirtualPlayer from "/extension/appshell/core/managers/virtualPlayer/virtualPlayer.js";
 import RoomManager from "/extension/appshell/core/managers/room.js";
 import AuthManager from "/extension/appshell/core/managers/auth.js";
 import StorageManager from "/extension/appshell/core/managers/storage.js";
