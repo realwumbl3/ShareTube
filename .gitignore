@@ -23,3 +23,5 @@ node_modules/
 
 **/__pycache__/**
 *.session.sql
+
+legacy_versions/
