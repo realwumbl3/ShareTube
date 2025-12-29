@@ -74,7 +74,6 @@ def register() -> None:
                     "ok": True,
                     "code": room.code,
                     "snapshot": room.to_dict(),
-                    "serverNowMs": now_ms(),
                     "clientTimestamp": client_timestamp,
                 },
                 to=request.sid,

@@ -3,7 +3,6 @@ import { LiveVar, LiveList } from "../../../shared/dep/zyx.js";
 class ShareTubeState {
     constructor() {
         this.debug_mode = new LiveVar(false);
-        this.fakeTimeOffset = new LiveVar(1000 * 60 * 60 * 0); // 0 hours
 
         // Room
         this.roomCode = new LiveVar("");
@@ -23,8 +22,6 @@ class ShareTubeState {
         this.userReady = new LiveVar(false);
 
         // Server
-        this.serverNowMs = new LiveVar(0);
-        this.serverMsOffset = new LiveVar(0);
         this.serverRttMs = new LiveVar(null);
         this.serverTimeSyncSource = new LiveVar("");
 
@@ -69,9 +66,6 @@ class ShareTubeState {
         // Note: reconnectRoomCode is preserved for reconnection logic
     }
 
-    serverDateNow() {
-        return Date.now() + this.serverMsOffset.get() + this.fakeTimeOffset.get();
-    }
 
     getUserById(userId) {
         return this.users.find((u) => u && u.id === userId) || null;

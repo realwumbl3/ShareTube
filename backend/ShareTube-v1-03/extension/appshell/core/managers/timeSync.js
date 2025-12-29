@@ -11,7 +11,6 @@ export default class TimeSyncManager {
     constructor(app) {
         this.app = app;
         this._interval = null;
-        this._emaOffsetMs = null;
         this._lastRttMs = null;
         this._lastSyncSource = null;
     }
@@ -21,13 +20,9 @@ export default class TimeSyncManager {
         return Date.now();
     }
 
-    // Client clock including fakeTimeOffset (used for debugging drift scenarios)
+    // Client clock
     clientNowMs() {
-        return Date.now() + state.fakeTimeOffset.get();
-    }
-
-    get timeOffsetMs() {
-        return state.serverMsOffset.get();
+        return Date.now();
     }
 
     get lastRttMs() {
@@ -48,27 +43,22 @@ export default class TimeSyncManager {
     start({ intervalMs = 60_000 } = {}) {
         this.stop();
         // Fire an initial sync soon, then keep it fresh.
-        setTimeout(() => this.syncOnce().catch(() => {}), 1000);
+        setTimeout(() => this.syncOnce().catch(() => {}), 2000);
         this._interval = setInterval(() => this.syncOnce().catch(() => {}), intervalMs);
     }
 
     /**
-     * Apply a time sample from any source that provides serverNowMs and echoed client timestamp.
-     * @param {{serverNowMs:number, clientTimestamp?:number}} payload
+     * Apply a time sample from any source that provides echoed client timestamp.
+     * @param {{clientTimestamp?:number}} payload
      * @param {{source?:string}} opts
      */
     updateFromServerPayload(payload, opts = {}) {
-        const serverNowMs = payload?.serverNowMs;
-        if (!Number.isFinite(serverNowMs)) return;
-
-        const fake = state.fakeTimeOffset.get();
-        const receiveMs = Date.now() + fake;
+        const receiveMs = Date.now();
 
         const rawClientTs = payload?.clientTimestamp;
-        const sendMs = Number.isFinite(rawClientTs) ? rawClientTs + fake : null;
+        const sendMs = Number.isFinite(rawClientTs) ? rawClientTs : null;
 
         this._applySample({
-            serverNowMs,
             clientSendMs: sendMs,
             clientReceiveMs: receiveMs,
             source: opts.source || "unknown",
@@ -77,7 +67,7 @@ export default class TimeSyncManager {
 
     /**
      * Fetch current server time via HTTP.
-     * Uses `/api/time` which returns `{serverNowMs, clientTimestamp}`.
+     * Uses `/api/time` which returns `{clientTimestamp}`.
      */
     async syncOnce() {
         const base = await this.app.backEndUrl();
@@ -100,49 +90,17 @@ export default class TimeSyncManager {
         this.updateFromServerPayload(data, { source: "http:/api/time" });
     }
 
-    _applySample({ serverNowMs, clientSendMs, clientReceiveMs, source }) {
-        // If we have an originating client timestamp, do NTP-style offset.
-        // offset = serverTimeAtSend - (clientSend + RTT/2)
-        // where offset is (serverTime - clientTime)
-        let offsetSampleMs = null;
+    _applySample({ clientSendMs, clientReceiveMs, source }) {
         let rttMs = null;
 
         if (Number.isFinite(clientSendMs)) {
             rttMs = clientReceiveMs - clientSendMs;
             if (!Number.isFinite(rttMs) || rttMs < 0) return;
-            offsetSampleMs = serverNowMs - (clientSendMs + rttMs / 2);
-        } else {
-            // Fallback: naive offset at receive time (still correct sign).
-            offsetSampleMs = serverNowMs - clientReceiveMs;
         }
 
-        // Basic sanity checks (avoid wrecking playback on bogus samples).
-        if (!Number.isFinite(offsetSampleMs)) return;
-        // Reject totally wild offsets (e.g. wrong units) beyond 48h.
-        if (Math.abs(offsetSampleMs) > 1000 * 60 * 60 * 48) return;
         // Reject extremely laggy samples (they add more noise than value).
         if (Number.isFinite(rttMs) && rttMs > 5000) return;
 
-        // Approximate server "now" at client receive time for debug display.
-        const approxServerNowAtReceive = Number.isFinite(rttMs) ? serverNowMs + rttMs / 2 : serverNowMs;
-        state.serverNowMs.set(Math.round(approxServerNowAtReceive));
-
-        // Smoothing: EMA unless it looks like a big jump.
-        if (this._emaOffsetMs == null) {
-            this._emaOffsetMs = offsetSampleMs;
-        } else {
-            const delta = offsetSampleMs - this._emaOffsetMs;
-            // If the apparent offset jumped a lot, snap (likely system clock correction).
-            if (Math.abs(delta) > 1000 * 30) {
-                this._emaOffsetMs = offsetSampleMs;
-            } else {
-                // Weight better RTT samples higher.
-                const alpha = !Number.isFinite(rttMs) ? 0.25 : rttMs < 150 ? 0.35 : rttMs < 500 ? 0.2 : 0.12;
-                this._emaOffsetMs = this._emaOffsetMs * (1 - alpha) + offsetSampleMs * alpha;
-            }
-        }
-
-        state.serverMsOffset.set(Math.round(this._emaOffsetMs));
         this._lastRttMs = Number.isFinite(rttMs) ? Math.round(rttMs) : null;
         this._lastSyncSource = source;
 
@@ -151,5 +109,3 @@ export default class TimeSyncManager {
         state.serverTimeSyncSource.set(this._lastSyncSource || "");
     }
 }
-
-

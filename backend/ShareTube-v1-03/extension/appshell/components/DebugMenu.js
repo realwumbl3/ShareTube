@@ -25,20 +25,6 @@ export default class DebugMenu {
                         </div>
                         <div class="debug-section-table">
                             <div class="debug-row">
-                                <span class="debug-label">Server time:</span>
-                                <span class="debug-value"
-                                    >${state.serverNowMs.interp((v) => epochToTimeString(v))}</span
-                                >
-                            </div>
-                            <div class="debug-row">
-                                <span class="debug-label">Server offset:</span>
-                                <span class="debug-value"
-                                    >${state.serverMsOffset.interp((v) => {
-                                        return v > 0 ? `+${v}ms` : `${v}ms`;
-                                    })}</span
-                                >
-                            </div>
-                            <div class="debug-row">
                                 <span class="debug-label">RTT:</span>
                                 <span class="debug-value"
                                     >${state.serverRttMs.interp((v) => {

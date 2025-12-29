@@ -16,7 +16,16 @@ export function getCurrentPlayingLengthMs() {
 }
 
 export function calculateRealProgressMs(progressMs, playingSinceMs) {
-    return progressMs + (playingSinceMs ? state.serverDateNow() - playingSinceMs : 0);
+    if (!playingSinceMs) return progressMs;
+
+    const clientTime = Date.now();
+    const rttMs = state.serverRttMs.get();
+
+    // If we have RTT, use it to compensate for network latency
+    // Add half RTT to account for one-way latency in sync messages
+    const latencyCompensation = rttMs ? rttMs / 2 : 0;
+
+    return progressMs + (clientTime - playingSinceMs + latencyCompensation);
 }
 
 export function currentPlayingProgressMsPercentageToMs(percentage) {

@@ -59,7 +59,7 @@ def time_now():
         return "", 200
 
     client_timestamp = request.args.get("clientTimestamp", default=None, type=int)
-    return jsonify({"serverNowMs": now_ms(), "clientTimestamp": client_timestamp})
+    return jsonify({"clientTimestamp": client_timestamp})
 
 
 from .join import register as register_room_join
